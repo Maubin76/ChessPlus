@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3 validée : direction « Accent pleine largeur » (`docs/design/suggestions/suggestion-10-pleine-largeur.png`) ; étapes 4 et 5 : maquettes `@Preview` rendues (`docs/design/maquettes/`) et propositions validées par Mathieu ; étape 6, `docs/DESIGN.md` complété, en attente de validation finale avant la phase 5.
+**Phase 5 — Écrans** : écran de jeu implémenté, en attente du test de Mathieu sur son téléphone.
 
 ## Fait
 
@@ -69,10 +69,22 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - Cotes de 399 à 3330 ; solutions de 2 à 34 demi-coups (2 : 921 479, 4 : 3 132 447, 6 : 1 628 493, 8 : 364 028, au-delà : < 150 000).
 - 73 thèmes : masque sur deux colonnes `INTEGER`.
 
+### Phase 4
+
+- Terminée le 2026-11-20 : direction « Accent pleine largeur », maquettes rendues (`docs/design/maquettes/`), `docs/DESIGN.md` complet ; Mathieu a lancé la phase 5.
+
+### Phase 5 — écran de jeu
+
+- `GameController` (logique sans Android, testée) : premier coup de l'adversaire après une pause, toucher-toucher et glisser-déposer, promotion, bon coup / mauvais coup / mat alternatif, indice, recommencer, suivant, enregistrement du résultat dès qu'il est connu (une seule fois), sauvegarde après chaque coup et reprise exacte.
+- `GameViewModel`, `GameScreen` (Compose) : échiquier pleine largeur animé (`ui/board/ChessBoard`), orientation selon le camp du joueur, retour haptique (Confirm/Reject), promotion, volet de bilan (cote, thèmes en français, lien Lichess).
+- `AppContainer` : injection manuelle ; la base des problèmes est copiée explicitement depuis les assets au premier lancement (`installPuzzleDatabase`, version mémorisée dans `puzzles.db.version`) au lieu de `createFromAsset`.
+- Thème de production (`ui/theme`), noms des 73 thèmes en ressources (`res/values/theme_names.xml`, `ui/ThemeNames.kt`, générés).
+- Tests : 9 tests de `GameController` ; captures de l'écran réel (`app/src/screenshotTest/.../GameScreenShots.kt`). 177 tests au total, tous verts.
+- Provisoire : l'application s'ouvre directement sur l'entraînement (pas encore d'accueil ni de navigation), cote de départ 1500 tant que l'écran de choix du niveau n'existe pas, le bouton retour ferme l'application.
+
 ## Reste à faire
 
-- Phase 4 : design (questions préalables, inventaire des écrans, directions visuelles, maquettes `@Preview`, `docs/DESIGN.md`).
-- Phase 5 : écrans.
+- Phase 5 : entraînement continu (accueil, navigation, choix du niveau), filtres, historique, statistiques, réglages.
 - Phase 6 : finitions.
 
 ## Décisions prises
