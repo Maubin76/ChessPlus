@@ -1,5 +1,7 @@
 package com.chessplus.app.ui.components
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +13,7 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -24,12 +27,15 @@ import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -74,10 +80,10 @@ fun ScreenTopBar(inTitle: String, inOnBack: (() -> Unit)? = null, inActionIcon: 
  * Bouton principal pleine largeur, en pastille noire.
  */
 @Composable
-fun PrimaryButton(inText: String, inOnClick: () -> Unit, inModifier: Modifier = Modifier, inIcon: Int? = null, inEnabled: Boolean = true) {
+fun PrimaryButton(inText: String, inOnClick: () -> Unit, inModifier: Modifier = Modifier, inIcon: Int? = null, inEnabled: Boolean = true, inHeight: Int = 60) {
 	val vColors = kLocalChessColors.current
 	Row(
-		inModifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(30.dp)).background(if (inEnabled) vColors.primary else vColors.track).clickable(enabled = inEnabled, onClick = inOnClick),
+		inModifier.fillMaxWidth().height(inHeight.dp).clip(RoundedCornerShape(30.dp)).background(if (inEnabled) vColors.primary else vColors.track).clickable(enabled = inEnabled, onClick = inOnClick),
 		horizontalArrangement = Arrangement.Center,
 		verticalAlignment = Alignment.CenterVertically,
 	) {
@@ -94,10 +100,10 @@ fun PrimaryButton(inText: String, inOnClick: () -> Unit, inModifier: Modifier = 
  * Bouton secondaire pleine largeur, en pastille claire.
  */
 @Composable
-fun SecondaryButton(inText: String, inOnClick: () -> Unit, inIcon: Int? = null) {
+fun SecondaryButton(inText: String, inOnClick: () -> Unit, inIcon: Int? = null, inModifier: Modifier = Modifier, inHeight: Int = 56) {
 	val vColors = kLocalChessColors.current
 	Row(
-		Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(28.dp)).background(vColors.surface).clickable(onClick = inOnClick),
+		inModifier.fillMaxWidth().height(inHeight.dp).clip(RoundedCornerShape(28.dp)).background(vColors.surface).clickable(onClick = inOnClick),
 		horizontalArrangement = Arrangement.Center,
 		verticalAlignment = Alignment.CenterVertically,
 	) {
@@ -208,31 +214,52 @@ enum class NavTab {
 }
 
 /**
- * Barre de navigation du bas à trois onglets : Accueil, Historique, Statistiques.
+ * Navigation du bas : pilule flottante centrée (forme reprise de PatrimoinePlus). Au repos, un
+ * onglet n'affiche que son icône en gris ; l'onglet actif devient une capsule à l'encre qui
+ * s'élargit pour afficher son nom. Ombre douce en clair, liseré en sombre.
  */
 @Composable
 fun BottomNavBar(inSelected: NavTab, inOnSelect: (NavTab) -> Unit) {
 	val vColors = kLocalChessColors.current
+	val vDark = vColors.background.luminance() < 0.5f
 	val vItems = listOf(
 		Triple(NavTab.Home, R.string.nav_home, R.drawable.ic_home to R.drawable.ic_home_fill1),
 		Triple(NavTab.History, R.string.nav_history, R.drawable.ic_history to R.drawable.ic_history_fill1),
 		Triple(NavTab.Stats, R.string.nav_stats, R.drawable.ic_bar_chart to R.drawable.ic_bar_chart_fill1),
 	)
-	Row(Modifier.fillMaxWidth().background(vColors.surface).navigationBarsPadding().height(72.dp), verticalAlignment = Alignment.CenterVertically) {
-		for ((vTab, vLabel, vIcons) in vItems) {
-			val vActive = vTab == inSelected
-			Column(
-				Modifier.weight(1f).clickable { inOnSelect(vTab) }.padding(vertical = 8.dp),
-				horizontalAlignment = Alignment.CenterHorizontally,
-			) {
-				Box(
-					Modifier.width(56.dp).height(30.dp).background(if (vActive) vColors.track else vColors.surface, RoundedCornerShape(15.dp)),
-					contentAlignment = Alignment.Center,
+	Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(top = 8.dp, bottom = 12.dp), contentAlignment = Alignment.Center) {
+		Row(
+			Modifier
+				.then(if (vDark) Modifier else Modifier.shadow(10.dp, CircleShape, ambientColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f), spotColor = androidx.compose.ui.graphics.Color.Black.copy(alpha = 0.18f)))
+				.clip(CircleShape)
+				.background(vColors.surface)
+				.then(if (vDark) Modifier.border(1.dp, vColors.track, CircleShape) else Modifier)
+				.height(64.dp)
+				.padding(6.dp),
+			horizontalArrangement = Arrangement.spacedBy(8.dp),
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			for ((vTab, vLabel, vIcons) in vItems) {
+				val vActive = vTab == inSelected
+				val vBackground by animateColorAsState(if (vActive) vColors.primary else vColors.surface, label = "fondOnglet")
+				val vInk by animateColorAsState(if (vActive) vColors.onPrimary else vColors.muted, label = "encreOnglet")
+				val vName = stringResource(vLabel)
+				Row(
+					Modifier
+						.fillMaxHeight()
+						.clip(CircleShape)
+						.background(vBackground)
+						.clickable(onClickLabel = vName) { inOnSelect(vTab) }
+						.animateContentSize()
+						.padding(horizontal = if (vActive) 18.dp else 14.dp),
+					verticalAlignment = Alignment.CenterVertically,
 				) {
-					Icon(painterResource(if (vActive) vIcons.second else vIcons.first), contentDescription = null, tint = if (vActive) vColors.text else vColors.muted, modifier = Modifier.size(22.dp))
+					Icon(painterResource(if (vActive) vIcons.second else vIcons.first), contentDescription = vName, tint = vInk, modifier = Modifier.size(22.dp))
+					if (vActive) {
+						Spacer(Modifier.width(8.dp))
+						Text(vName, style = ChessType.kBodyStrong, color = vInk, maxLines = 1)
+					}
 				}
-				Spacer(Modifier.height(4.dp))
-				Text(stringResource(vLabel), style = ChessType.kLabel, color = if (vActive) vColors.text else vColors.muted)
 			}
 		}
 	}

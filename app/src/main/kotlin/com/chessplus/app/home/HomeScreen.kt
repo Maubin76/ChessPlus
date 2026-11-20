@@ -2,6 +2,7 @@ package com.chessplus.app.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -55,6 +56,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
+
+/** Hauteur des boutons de l'accueil, plus compacts que les boutons pleine largeur. */
+private const val kHomeButtonHeight = 48
 
 /**
  * Problème en cours affiché sur l'accueil.
@@ -207,10 +211,11 @@ fun HomeContent(
 				}
 			}
 			Spacer(Modifier.weight(1f))
-			SecondaryButton(stringResource(R.string.home_targeted), inOnTargeted, R.drawable.ic_tune)
-			Spacer(Modifier.height(12.dp))
-			PrimaryButton(stringResource(R.string.home_train), inOnTrain, inIcon = R.drawable.ic_bolt_fill1)
-			Spacer(Modifier.height(20.dp))
+			Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+				SecondaryButton(stringResource(R.string.home_targeted), inOnTargeted, R.drawable.ic_tune, Modifier.weight(1f), inHeight = kHomeButtonHeight)
+				PrimaryButton(stringResource(R.string.home_train), inOnTrain, Modifier.weight(1f), inIcon = R.drawable.ic_bolt_fill1, inHeight = kHomeButtonHeight)
+			}
+			Spacer(Modifier.height(8.dp))
 		}
 		BottomNavBar(NavTab.Home, inOnTab)
 	}
