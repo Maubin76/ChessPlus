@@ -5,6 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
 	alias(libs.plugins.android.application)
 	alias(libs.plugins.kotlin.compose)
+	alias(libs.plugins.compose.screenshot)
 }
 
 android {
@@ -35,6 +36,14 @@ android {
 	buildFeatures {
 		compose = true
 	}
+
+	// Captures des maquettes : ./gradlew :app:updateDebugScreenshotTest
+	experimentalProperties["android.experimental.enableScreenshotTest"] = true
+
+	testOptions {
+		// Exigé par le rendu des @Preview (ressources compilées disponibles hors appareil).
+		unitTests.isIncludeAndroidResources = true
+	}
 }
 
 kotlin {
@@ -57,6 +66,16 @@ dependencies {
 	implementation(libs.compose.material3)
 	debugImplementation(libs.compose.ui.tooling)
 
+	screenshotTestImplementation(libs.screenshot.validation.api)
+	screenshotTestImplementation(libs.compose.ui.tooling)
+
 	testImplementation(libs.kotlin.test.junit)
 	testImplementation(libs.junit)
+}
+
+// Le rendu des @Preview (plugin com.android.compose.screenshot) exige des tests unitaires sur chaque variante.
+androidComponents {
+	beforeVariants(selector().withBuildType("release")) { inVariant ->
+		inVariant.hostTests[com.android.build.api.variant.HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
+	}
 }
