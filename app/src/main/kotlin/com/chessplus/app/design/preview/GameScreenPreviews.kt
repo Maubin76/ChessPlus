@@ -68,7 +68,7 @@ private fun GameScreen(
 /** Joueur au trait : pièce sélectionnée, coups possibles marqués. */
 @DesignPreviews
 @Composable
-private fun GameSelectionPreview() = DesignTheme {
+fun GameSelectionPreview() = DesignTheme {
 	GameScreen(
 		"Les blancs jouent", "Trouvez le meilleur coup", FeedbackTone.Neutral, kStartPlacement,
 		BoardMarks(lastMove = setOf("e8", "d7"), selected = "a2", dots = setOf("b1", "b3", "c4", "d5", "e6")),
@@ -79,7 +79,7 @@ private fun GameSelectionPreview() = DesignTheme {
 /** Bon coup : message vert, pastille sur la case d'arrivée, l'adversaire va répondre. */
 @DesignPreviews
 @Composable
-private fun GameCorrectPreview() = DesignTheme {
+fun GameCorrectPreview() = DesignTheme {
 	GameScreen(
 		"Bon coup !", "Les noirs réfléchissent…", FeedbackTone.Success, kCorrectPlacement,
 		BoardMarks(lastMove = setOf("a2", "e6"), badgeSquare = "e6"),
@@ -90,7 +90,7 @@ private fun GameCorrectPreview() = DesignTheme {
 /** Mauvais coup : message rouge, pastille ✕ sur la case visée, la pièce est revenue. */
 @DesignPreviews
 @Composable
-private fun GameWrongPreview() = DesignTheme {
+fun GameWrongPreview() = DesignTheme {
 	GameScreen(
 		"Pas ce coup-là", "Réessayez, ou demandez un indice", FeedbackTone.Error, kStartPlacement,
 		BoardMarks(lastMove = setOf("e8", "d7"), badgeSquare = "d5", badgeKind = BadgeKind.Error),
@@ -101,7 +101,7 @@ private fun GameWrongPreview() = DesignTheme {
 /** Promotion : choix de la pièce par-dessus l'échiquier. */
 @DesignPreviews
 @Composable
-private fun GamePromotionPreview() = DesignTheme {
+fun GamePromotionPreview() = DesignTheme {
 	val vColors = kLocalDesignColors.current
 	Box(Modifier.fillMaxSize()) {
 		GameScreen(
@@ -193,7 +193,7 @@ private fun SummarySheet(
 /** Problème réussi : position finale (mat) et bilan. */
 @DesignPreviews
 @Composable
-private fun GameSolvedPreview() = DesignTheme {
+fun GameSolvedPreview() = DesignTheme {
 	Box(Modifier.fillMaxSize()) {
 		GameScreen(
 			"Mat !", "Problème terminé", FeedbackTone.Success, kMatePlacement,
@@ -210,7 +210,7 @@ private fun GameSolvedPreview() = DesignTheme {
 /** Problème échoué : bilan après une erreur. */
 @DesignPreviews
 @Composable
-private fun GameFailedPreview() = DesignTheme {
+fun GameFailedPreview() = DesignTheme {
 	Box(Modifier.fillMaxSize()) {
 		GameScreen(
 			"Problème terminé", "Solution affichée", FeedbackTone.Neutral, kMatePlacement,

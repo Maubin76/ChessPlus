@@ -67,6 +67,45 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 - Échiquier pleine largeur ; bon coup signalé par une **pastille ✓ verte** sur la case d'arrivée et le dernier coup surligné en vert.
 - Bas : tuile « Recommencer », gros bouton rond « Indice », tuile « Suivant » (grisée tant que le problème n'est pas terminé).
 
+## Maquettes (validées le 2026-11-20)
+
+- Sources : `app/src/main/kotlin/com/chessplus/app/design/preview/` (jetables, ne pas réutiliser tels quels).
+- Captures : `./gradlew :app:updateDebugScreenshotTest` (plugin `com.android.compose.screenshot`, alpha, développement uniquement), planches dans `docs/design/maquettes/` (`maquettes-jeu.png`, `maquettes-ecrans.png`).
+
+### Écran de jeu
+
+| État | Message (titre / sous-titre) | Échiquier | Commandes |
+| --- | --- | --- | --- |
+| Au trait | « Les blancs jouent » (ou noirs) / « Trouvez le meilleur coup », en couleur de texte | dernier coup surligné, pièce sélectionnée, points sur les cases possibles ; aide discrète sous l'échiquier : « Touchez une pièce puis sa case, ou faites-la glisser » | Suivant grisé |
+| Bon coup | ✓ « Bon coup ! » en vert / « Les noirs réfléchissent… » | pastille ✓ verte sur la case d'arrivée, coup surligné en vert | Suivant grisé |
+| Mauvais coup | ✕ « Pas ce coup-là » en rouge / « Réessayez, ou demandez un indice » | pièce revenue, pastille ✕ rouge sur la case visée ; mention : « Le problème compte comme échoué, mais vous pouvez le terminer » | Suivant grisé |
+| Promotion | inchangé | voile sombre et carte centrée « Promotion — Choisissez la nouvelle pièce » : dame, tour, fou, cavalier | — |
+| Terminé | ✓ « Mat ! » ou « Problème terminé » | position finale | Suivant actif (tuile noire) |
+
+- Bilan (volet bas, sur voile léger) : « Problème réussi » (vert) ou « Problème échoué » (rouge) avec une phrase de détail ; deux encadrés « Ma cote » (valeur et variation colorée) et « Cote du problème » ; thèmes révélés en puces ; lien « Voir sur Lichess (si le réseau est disponible) » ; bouton noir « Suivant ».
+
+### Autres écrans
+
+- **Choix du niveau** : « BIENVENUE », titre « Quel est votre niveau ? », phrase « Votre cote de départ s'ajustera ensuite après chaque problème. » ; cartes Débutant (« Je connais les règles », 800), Intermédiaire (« Je joue de temps en temps », 1 200), Confirmé (« Je joue régulièrement », 1 600), Avancé (« Je joue en club ou en ligne », 2 000), carte sélectionnée bordée de noir avec ✓ ; ligne « Je connais ma cote » avec saisie ; bouton « Commencer ».
+- **Accueil** : titre « ChessPlus » et bouton réglages ; carte « Problèmes résolus » (grand nombre, « Votre cote : … ») ; carte noire « Reprendre le problème » avec vignette de la position et « Coup x sur y · il y a … » si un problème est en cours ; en bas, « Entraînement ciblé » (bouton clair) et « S'entraîner » (bouton noir) ; barre de navigation.
+- **Entraînement ciblé** : « Difficulté » en contrôle segmenté (Plus facile, Mon niveau, Plus difficile) et interrupteur « Tranche précise » ; « Thèmes » en puces par famille (sélection en noir) ; en bas, nombre de problèmes correspondants et bouton « Commencer ».
+- **Historique** : onglets Tous, Réussis, Échoués ; groupes par jour (« AUJOURD'HUI », « HIER ») ; lignes avec vignette, thèmes, cote et date, icône ✓/✕ et variation de cote ; mention « Touchez un problème pour le rejouer (sans effet sur la cote) ».
+- **Statistiques** : carte « Ma cote » (grand nombre, variation sur la période, courbe, période 7 jours / 30 jours / Tout) ; carte « Réussite par thème » avec barres et pourcentages.
+- **Réglages** : Thème (Système, Clair, Sombre) ; Vibration, Sons, Coordonnées ; Niveau de départ ; Crédits (base Lichess CC0, pièces cburnett GPLv2+, Inter OFL, Material Symbols Apache 2.0) ; numéro de version.
+
+### Noms français des thèmes (73)
+
+La famille « Évaluation et origine » s'ajoute aux cinq familles validées pour les thèmes qui n'entrent dans aucune.
+
+| Famille | Thèmes |
+| --- | --- |
+| **Motifs tactiques** (29) | Fourchette (`fork`), Clouage (`pin`), Enfilade (`skewer`), Attaque à la découverte (`discoveredAttack`), Échec à la découverte (`discoveredCheck`), Échec double (`doubleCheck`), Déviation (`deflection`), Attraction (`attraction`), Sacrifice (`sacrifice`), Pièce en prise (`hangingPiece`), Coup intermédiaire (`intermezzo`), Élimination du défenseur (`capturingDefender`), Dégagement (`clearance`), Interception (`interference`), Attaque en rayons X (`xRayAttack`), Pièce piégée (`trappedPiece`), Coup tranquille (`quietMove`), Coup défensif (`defensiveMove`), Zugzwang (`zugzwang`), Roi exposé (`exposedKing`), Attaque à l'aile roi (`kingsideAttack`), Attaque à l'aile dame (`queensideAttack`), Attaque sur f2/f7 (`attackingF2F7`), Pion avancé (`advancedPawn`), Promotion (`promotion`), Sous-promotion (`underPromotion`), Roque (`castling`), Prise en passant (`enPassant`), Coup colinéaire (`collinearMove`) |
+| **Mats** (25) | Mat (`mate`), Mat en 1 (`mateIn1`), Mat en 2 (`mateIn2`), Mat en 3 (`mateIn3`), Mat en 4 (`mateIn4`), Mat en 5 ou plus (`mateIn5`), Mat du couloir (`backRankMate`), Mat étouffé (`smotheredMate`), Mat d'Anastasia (`anastasiaMate`), Mat arabe (`arabianMate`), Mat de Balestra (`balestraMate`), Mat des cochons aveugles (`blindSwineMate`), Mat de Boden (`bodenMate`), Mat du coin (`cornerMate`), Mat des deux fous (`doubleBishopMate`), Mat en queue d'aronde (`dovetailMate`), Mat de l'épaulette (`epauletteMate`), Mat du crochet (`hookMate`), Mat de la boîte (`killBoxMate`), Mat de Morphy (`morphysMate`), Mat de l'Opéra (`operaMate`), Mat de Pillsbury (`pillsburysMate`), Mat en queue d'hirondelle (`swallowstailMate`), Mat du triangle (`triangleMate`), Mat de Vuković (`vukovicMate`) |
+| **Finales** (6) | Finale de pions (`pawnEndgame`), Finale de tours (`rookEndgame`), Finale de fous (`bishopEndgame`), Finale de cavaliers (`knightEndgame`), Finale de dames (`queenEndgame`), Finale dame et tour (`queenRookEndgame`) |
+| **Phase de jeu** (3) | Ouverture (`opening`), Milieu de partie (`middlegame`), Finale (`endgame`) |
+| **Longueur** (4) | Un coup (`oneMove`), Court (`short`), Long (`long`), Très long (`veryLong`) |
+| **Évaluation et origine** (6) | Avantage (`advantage`), Gain décisif (`crushing`), Égalisation (`equality`), Partie de maître (`master`), Maître contre maître (`masterVsMaster`), Super grand maître (`superGM`) |
+
 ## Échiquier et pièces (validé le 2026-11-20)
 
 - Pièces de style **classique Staunton**.

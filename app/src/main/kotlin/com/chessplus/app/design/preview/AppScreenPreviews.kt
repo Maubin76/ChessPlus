@@ -71,7 +71,7 @@ private fun LevelCard(inTitle: String, inDescription: String, inRating: String, 
 /** Premier lancement : choix du niveau de départ. */
 @DesignPreviews
 @Composable
-private fun LevelChoicePreview() = DesignTheme {
+fun LevelChoicePreview() = DesignTheme {
 	val vColors = kLocalDesignColors.current
 	Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding().padding(horizontal = 20.dp)) {
 		Spacer(Modifier.height(40.dp))
@@ -133,7 +133,7 @@ private fun HomeScreen(inResume: Boolean) {
 					Spacer(Modifier.width(14.dp))
 					Column(Modifier.weight(1f)) {
 						Text("Reprendre le problème", style = DesignType.kSection, color = vColors.onPrimary)
-						Text("Coup 2 sur 2 · interrompu il y a 3 min", style = DesignType.kCaption, color = vColors.muted)
+						Text("Coup 2 sur 2 · il y a 3 min", style = DesignType.kCaption, color = vColors.muted)
 					}
 					Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(24.dp))
 				}
@@ -151,12 +151,12 @@ private fun HomeScreen(inResume: Boolean) {
 /** Accueil avec un problème en cours. */
 @DesignPreviews
 @Composable
-private fun HomeResumePreview() = DesignTheme { HomeScreen(inResume = true) }
+fun HomeResumePreview() = DesignTheme { HomeScreen(inResume = true) }
 
 /** Accueil sans problème en cours. */
 @DesignPreviews
 @Composable
-private fun HomePreview() = DesignTheme { HomeScreen(inResume = false) }
+fun HomePreview() = DesignTheme { HomeScreen(inResume = false) }
 
 // ---------------------------------------------------------------------------
 // 4. Entraînement ciblé
@@ -178,7 +178,7 @@ private val kSelectedThemes = setOf("Fourchette", "Clouage", "Mat en 2")
 @OptIn(ExperimentalLayoutApi::class)
 @DesignPreviews
 @Composable
-private fun TargetedTrainingPreview() = DesignTheme {
+fun TargetedTrainingPreview() = DesignTheme {
 	val vColors = kLocalDesignColors.current
 	Column(Modifier.fillMaxSize().statusBarsPadding()) {
 		ScreenTopBar("Entraînement ciblé", inBack = true)
@@ -241,7 +241,7 @@ private fun HistoryRow(inPlacement: String, inThemes: String, inDetail: String, 
 /** Historique : tentatives récentes, filtrables. */
 @DesignPreviews
 @Composable
-private fun HistoryPreview() = DesignTheme {
+fun HistoryPreview() = DesignTheme {
 	val vColors = kLocalDesignColors.current
 	Column(Modifier.fillMaxSize().statusBarsPadding()) {
 		ScreenTopBar("Historique")
@@ -280,7 +280,7 @@ private val kThemeRates = listOf("Fourchette" to 0.78f, "Mat en 2" to 0.71f, "Cl
 /** Statistiques : évolution de la cote et réussite par thème. */
 @DesignPreviews
 @Composable
-private fun StatsPreview() = DesignTheme {
+fun StatsPreview() = DesignTheme {
 	val vColors = kLocalDesignColors.current
 	Column(Modifier.fillMaxSize().statusBarsPadding()) {
 		ScreenTopBar("Statistiques")
@@ -334,7 +334,7 @@ private fun StatsPreview() = DesignTheme {
 /** Réglages : apparence, retours, échiquier, niveau, crédits. */
 @DesignPreviews
 @Composable
-private fun SettingsPreview() = DesignTheme {
+fun SettingsPreview() = DesignTheme {
 	val vColors = kLocalDesignColors.current
 	Column(Modifier.fillMaxSize().statusBarsPadding().verticalScroll(rememberScrollState())) {
 		ScreenTopBar("Réglages", inBack = true)

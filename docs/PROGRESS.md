@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3 validée : direction « Accent pleine largeur » (`docs/design/suggestions/suggestion-10-pleine-largeur.png`) ; étape 4, maquettes `@Preview` de chaque écran écrites (`app/src/main/kotlin/com/chessplus/app/design/preview/`), en attente de relecture par Mathieu.
+**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3 validée : direction « Accent pleine largeur » (`docs/design/suggestions/suggestion-10-pleine-largeur.png`) ; étapes 4 et 5 : maquettes `@Preview` rendues (`docs/design/maquettes/`) et propositions validées par Mathieu ; étape 6, `docs/DESIGN.md` complété, en attente de validation finale avant la phase 5.
 
 ## Fait
 
@@ -111,6 +111,8 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - **Constantes** : les `val` immuables de `companion object` prennent aussi le préfixe `k` (`Square.kAll`, `ThemeSet.kEmpty`).
 
 ### Outils de la phase de design
+
+- Plugin `com.android.compose.screenshot` 0.0.1-alpha16 (validé par Mathieu, développement uniquement) : `./gradlew :app:updateDebugScreenshotTest` rend les `@PreviewTest` de `app/src/screenshotTest` dans `app/src/screenshotTestDebug/reference/`. Il impose `unitTests.isIncludeAndroidResources = true` et des tests unitaires sur la variante release.
 
 - Ressources ajoutées à `:app` pour les maquettes (et réutilisables en phase 5) : police `res/font/inter.ttf` (variable, OFL), pièces cburnett converties en `VectorDrawable` (`res/drawable/piece_*.xml`), icônes Material Symbols Rounded (`res/drawable/ic_*.xml`), générées par un convertisseur SVG jetable.
 
