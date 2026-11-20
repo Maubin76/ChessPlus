@@ -4,61 +4,30 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.chessplus.app.game.GameScreen
+import com.chessplus.app.game.GameViewModel
 import com.chessplus.app.ui.theme.ChessPlusTheme
 
 /**
  * Activité unique de ChessPlus.
  *
- * Version provisoire de la phase 1 : affiche un écran vide. Les écrans réels sont
- * implémentés en phase 5, après validation du design.
+ * Phase 5, premier écran : l'application s'ouvre directement sur l'entraînement. L'accueil et la
+ * navigation arrivent avec les écrans suivants.
  */
 class MainActivity : ComponentActivity() {
 	/**
-	 * Installe le contenu Compose de l'activité.
+	 * Installe l'écran de jeu.
 	 */
 	override fun onCreate(savedInstanceState: Bundle?) {
 		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
+		val vContainer = (application as ChessPlusApplication).container
 		setContent {
 			ChessPlusTheme {
-				PlaceholderScreen()
+				val vViewModel: GameViewModel = viewModel(factory = GameViewModel.factory(vContainer))
+				GameScreen(vViewModel, inOnBack = { finish() })
 			}
 		}
-	}
-}
-
-/**
- * Écran provisoire affiché tant qu'aucun écran n'est implémenté.
- */
-@Composable
-fun PlaceholderScreen() {
-	Scaffold(modifier = Modifier.fillMaxSize()) { inPadding ->
-		Box(
-			modifier = Modifier.fillMaxSize().padding(inPadding),
-			contentAlignment = Alignment.Center,
-		) {
-			Text(text = stringResource(R.string.placeholder_message))
-		}
-	}
-}
-
-/**
- * Aperçu Android Studio de l'écran provisoire.
- */
-@Preview(showBackground = true)
-@Composable
-private fun PlaceholderScreenPreview() {
-	ChessPlusTheme {
-		PlaceholderScreen()
 	}
 }
