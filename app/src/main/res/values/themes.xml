@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+	<!-- Thème de fenêtre minimal ; le thème visuel est défini en Compose. -->
+	<style name="Theme.ChessPlus" parent="android:Theme.Material.Light.NoActionBar" />
+</resources>
