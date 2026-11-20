@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 3 — Données et génération (`:data`, `:puzzle-builder`)** : terminée, en attente de validation par Mathieu (seuils de filtrage définitifs).
+**Phase 4 — Design** : étape 1, questions préalables posées à Mathieu, en attente de ses réponses.
 
 ## Fait
 
@@ -48,7 +48,9 @@
 - `:puzzle-builder` : lecture en flux du `.zst`, en-tête vérifié, seuils de qualité, plafond par tranche de 200 points en deux passes (garde les plus populaires), validation de chaque solution par les règles, insertion Room par lots dans une seule transaction, index supprimés puis recréés à l'identique, `VACUUM`, copie dans `app/src/main/assets/puzzles.db`. Rapport : rejets par motif, répartition par tranche et par thème, durées, taille.
 - Tests : 13 pour `:data` (JVM, base en mémoire, dont l'annulation d'une transaction), 12 pour le builder (options, plafond, génération de bout en bout sur un `.zst` créé par le test, index recréés, thème inconnu, ligne mal formée). 126 tests au total, tous verts.
 
-### Résultat sur le vrai CSV (seuils de départ)
+- Validée par Mathieu le 2026-11-20 : seuils de départ retenus comme définitifs, délai de 24 h validé.
+
+### Résultat sur le vrai CSV (seuils définitifs)
 
 Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess_db_puzzle.csv.zst"`
 
@@ -69,7 +71,7 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 
 ## Reste à faire
 
-- Phase 4 : design.
+- Phase 4 : design (questions préalables, inventaire des écrans, directions visuelles, maquettes `@Preview`, `docs/DESIGN.md`).
 - Phase 5 : écrans.
 - Phase 6 : finitions.
 
@@ -133,8 +135,6 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 
 ## Questions ouvertes
 
-- Seuils de filtrage définitifs (Mathieu, après lancement du builder).
-- Versionner `app/src/main/assets/puzzles.db` (36,8 Mo) dans git, via Git LFS, ou le laisser hors du dépôt et le régénérer ?
-- Délai avant de reproposer un problème échoué : 24 h provisoirement.
+- `app/src/main/assets/puzzles.db` reste hors de git (à régénérer avec le builder) tant que Mathieu n'a pas demandé autre chose.
 - Phase de design : Glicko-2 ou Elo, et paramètres associés ; les problèmes rejoués depuis l'historique modifient-ils la cote (`rated`) ?
 - La copie depuis les assets (`createFromAsset` avec le driver SQLite intégré) n'est pas encore vérifiée sur appareil : premier test en phase 5.
