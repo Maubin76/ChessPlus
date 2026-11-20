@@ -1,5 +1,11 @@
 package com.chessplus.app.training
 
+import com.chessplus.core.model.ThemeSet
+import com.chessplus.app.ui.components.rememberPressFeedback
+import com.chessplus.app.ui.components.pressClickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -113,6 +119,11 @@ class TargetedViewModel(private val container: AppContainer) : ViewModel() {
 	fun clearThemes() = change { it.copy(themes = com.chessplus.core.model.ThemeSet.kEmpty) }
 
 	/**
+	 * Sélectionne toute une famille de thèmes, ou la désélectionne si elle l'est déjà entièrement.
+	 */
+	fun toggleFamily(inFamily: ThemeFamily) = change { it.copy(themes = it.themes.toggledFamily(inFamily)) }
+
+	/**
 	 * Choisit la difficulté.
 	 */
 	fun setDifficulty(inDifficulty: Difficulty) = change { it.copy(difficulty = inDifficulty) }
@@ -160,7 +171,7 @@ class TargetedViewModel(private val container: AppContainer) : ViewModel() {
 @Composable
 fun TargetedScreen(inViewModel: TargetedViewModel, inOnBack: () -> Unit, inOnStart: (TrainingCriteria) -> Unit) {
 	val vState by inViewModel.state.collectAsStateWithLifecycle()
-	TargetedContent(vState, inViewModel::setDifficulty, inViewModel::setRange, inViewModel::toggleTheme, inViewModel::clearThemes, inOnBack, inOnStart)
+	TargetedContent(vState, inViewModel::setDifficulty, inViewModel::setRange, inViewModel::toggleTheme, inViewModel::toggleFamily, inViewModel::clearThemes, inOnBack, inOnStart)
 }
 
 /**
@@ -173,6 +184,7 @@ fun TargetedContent(
 	inOnDifficulty: (Difficulty) -> Unit,
 	inOnRange: (IntRange) -> Unit,
 	inOnTheme: (Theme) -> Unit,
+	inOnFamily: (ThemeFamily) -> Unit,
 	inOnClearThemes: () -> Unit,
 	inOnBack: () -> Unit,
 	inOnStart: (TrainingCriteria) -> Unit,
@@ -218,10 +230,27 @@ fun TargetedContent(
 			SelectChip(stringResource(R.string.targeted_all_themes), vCriteria.themes.isEmpty, inOnClearThemes)
 			for (vFamily in ThemeFamily.entries) {
 				Spacer(Modifier.height(14.dp))
-				Text(stringResource(vFamily.label).uppercase(), style = ChessType.kCaption, color = vColors.muted)
+				val vFamilyThemes = familyThemes(vFamily)
+				val vAllSelected = vFamilyThemes.all { it in vCriteria.themes }
+				val vPress = rememberPressFeedback()
+				Row(verticalAlignment = Alignment.CenterVertically) {
+					Text(stringResource(vFamily.label).uppercase(), style = ChessType.kCaption, color = vColors.muted, modifier = Modifier.weight(1f))
+					Text(
+						stringResource(if (vAllSelected) R.string.targeted_family_none else R.string.targeted_family_all),
+						style = ChessType.kCaption,
+						color = vColors.text,
+						maxLines = 1,
+						modifier = Modifier
+							.then(vPress.scale)
+							.clip(RoundedCornerShape(14.dp))
+							.background(vColors.track)
+							.pressClickable(vPress) { inOnFamily(vFamily) }
+							.padding(horizontal = 12.dp, vertical = 6.dp),
+					)
+				}
 				Spacer(Modifier.height(8.dp))
 				FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-					for (vTheme in Theme.entries.filter { themeFamily(it) == vFamily }) {
+					for (vTheme in vFamilyThemes) {
 						SelectChip(stringResource(themeLabel(vTheme)), vTheme in vCriteria.themes) { inOnTheme(vTheme) }
 					}
 				}
@@ -240,4 +269,23 @@ fun TargetedContent(
 			PrimaryButton(stringResource(R.string.targeted_start), { inOnStart(vCriteria) }, inIcon = R.drawable.ic_bolt_fill1, inEnabled = vCount != 0)
 		}
 	}
+}
+
+/**
+ * Retourne les thèmes d'une famille, dans l'ordre de l'énumération.
+ */
+fun familyThemes(inFamily: ThemeFamily): List<Theme> = Theme.entries.filter { themeFamily(it) == inFamily }
+
+/**
+ * Ajoute tous les thèmes d'une famille, ou les retire tous si la famille est déjà entièrement choisie.
+ */
+fun ThemeSet.toggledFamily(inFamily: ThemeFamily): ThemeSet {
+	val vFamily = familyThemes(inFamily)
+	val vSelected = toMutableSet()
+	if (vFamily.all { it in vSelected }) {
+		vSelected.removeAll(vFamily.toSet())
+	} else {
+		vSelected.addAll(vFamily)
+	}
+	return ThemeSet.of(vSelected)
 }

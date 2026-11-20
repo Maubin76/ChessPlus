@@ -54,6 +54,8 @@
 	<string name="targeted_range_value">De %1$s à %2$s</string>
 	<string name="targeted_themes">Thèmes</string>
 	<string name="targeted_all_themes">Tous les thèmes</string>
+	<string name="targeted_family_all">Tout sélectionner</string>
+	<string name="targeted_family_none">Tout désélectionner</string>
 	<string name="targeted_counting">Calcul…</string>
 	<plurals name="targeted_count">
 		<item quantity="one">%1$s problème correspond</item>

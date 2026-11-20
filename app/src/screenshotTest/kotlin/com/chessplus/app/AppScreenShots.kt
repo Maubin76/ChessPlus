@@ -68,7 +68,7 @@ fun RealHomeShot() = ChessPlusTheme {
 @DesignPreviews
 @Composable
 fun RealTargetedShot() = ChessPlusTheme {
-	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {})
+	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2) + Theme.PawnEndgame + Theme.RookEndgame + Theme.BishopEndgame + Theme.KnightEndgame + Theme.QueenEndgame + Theme.QueenRookEndgame), 1520, 3869), {}, {}, {}, {}, {}, {}, {})
 }
 
 /** Historique. */
@@ -128,5 +128,5 @@ fun RealHomeLargeFontShot() = ChessPlusTheme(inDarkTheme = true) {
 @Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
 @Composable
 fun RealTargetedLargeFontShot() = ChessPlusTheme(inDarkTheme = false) {
-	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {})
+	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {}, {})
 }
