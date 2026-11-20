@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3 validée : direction « Accent pleine largeur » (`docs/design/suggestions/suggestion-10-pleine-largeur.png`) ; étape 4, maquettes `@Preview` de chaque écran, en cours.
+**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3 validée : direction « Accent pleine largeur » (`docs/design/suggestions/suggestion-10-pleine-largeur.png`) ; étape 4, maquettes `@Preview` de chaque écran écrites (`app/src/main/kotlin/com/chessplus/app/design/preview/`), en attente de relecture par Mathieu.
 
 ## Fait
 
@@ -111,6 +111,8 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - **Constantes** : les `val` immuables de `companion object` prennent aussi le préfixe `k` (`Square.kAll`, `ThemeSet.kEmpty`).
 
 ### Outils de la phase de design
+
+- Ressources ajoutées à `:app` pour les maquettes (et réutilisables en phase 5) : police `res/font/inter.ttf` (variable, OFL), pièces cburnett converties en `VectorDrawable` (`res/drawable/piece_*.xml`), icônes Material Symbols Rounded (`res/drawable/ic_*.xml`), générées par un convertisseur SVG jetable.
 
 - Les planches `docs/design/direction-*.png` sont générées par un script Python jetable (Pillow, hors dépôt) : rendu des SVG des pièces Lichess, polices OFL (Playfair Display, Inter, DM Serif Display, DM Sans, Manrope), icônes Material Symbols (Apache 2.0). Les maquettes définitives seront des `@Preview` Compose (étape 4).
 
