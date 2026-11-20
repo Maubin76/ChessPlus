@@ -5,7 +5,7 @@ Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contien
 ## Contexte d'usage (validé le 2026-11-20)
 
 - Usage à **une main**, au pouce, dans les transports : commandes en bas de l'écran, échiquier juste au-dessus.
-- Appareil de référence : **Samsung Galaxy S24** (écran 6,2 pouces, 1080 × 2340, environ 360 × 780 dp).
+- Appareil de référence : **Samsung Galaxy S24** (écran 6,2 pouces, 1080 × 2340 px, densité 2,8125, soit 384 × 832 dp).
 - **Portrait uniquement**, téléphone uniquement en v1 (ni paysage, ni tablette).
 - Application **personnelle** (pas de publication) : les licences des ressources reprises doivent permettre l'usage personnel ; on cite les auteurs dans l'application.
 - Interface en **français uniquement** ; textes dans les ressources Android.
@@ -33,7 +33,25 @@ Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contien
 - **Vibration courte activée** par défaut, **sons désactivés** par défaut ; les deux réglables.
 - Après un problème terminé : **bouton « Suivant »**, pas d'enchaînement automatique.
 
-## Écrans (validé le 2026-11-20)
+## Écrans et navigation (validé le 2026-11-20)
+
+| # | Écran | Contenu |
+| --- | --- | --- |
+| 1 | Choix du niveau | Premier lancement : Débutant 800, Intermédiaire 1200, Confirmé 1600, Avancé 2000, ou « Je connais ma cote » (saisie libre) ; modifiable dans les réglages |
+| 2 | Accueil | Tableau de bord : nombre de problèmes résolus ; carte « Reprendre le problème » si un problème est en cours ; bouton « S'entraîner » ; accès à l'entraînement ciblé ; icône des réglages |
+| 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = solution coup par coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
+| 4 | Entraînement ciblé | Thèmes par familles ; difficulté relative (plus facile, à mon niveau, plus difficile) **ou** tranche précise ; bouton « Commencer » |
+| 5 | Historique | Onglets Tous, Réussis, Échoués ; une ligne relance le problème, sans effet sur la cote |
+| 6 | Statistiques | Courbe de la cote, taux de réussite par thème (écran séparé, l'accueil reste sobre) |
+| 7 | Réglages | Thème, vibration, sons, coordonnées, niveau, crédits |
+
+- **Barre de navigation en bas** à trois onglets : Accueil, Historique, Statistiques. Elle est masquée sur l'écran Problème (plein écran), le choix du niveau et les réglages.
+- Réglages et entraînement ciblé s'ouvrent depuis l'accueil.
+- L'écran Problème est commun à l'entraînement continu, à l'entraînement ciblé (filtres rappelés en haut) et au rejeu depuis l'historique ; « Suivant » reste dans le même mode.
+- Retour depuis un problème : retour à l'accueil, le problème est conservé (carte « Reprendre »).
+- Reprise : après une fermeture par le système, retour direct sur le problème au coup près ; après un relancement volontaire, accueil avec « Reprendre ».
+
+### Détails
 
 - Écran d'accueil : **tableau de bord** destiné à accueillir des statistiques plus tard ; en v1, il affiche seulement le **nombre de problèmes résolus**.
 - Premier lancement : l'utilisateur **choisit son niveau** de départ.

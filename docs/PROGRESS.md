@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 4 — Design** : étape 1 terminée (réponses consignées dans `docs/DESIGN.md`) ; étape 2, inventaire des écrans et navigation, proposé et en attente de validation.
+**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3, trois directions visuelles (`docs/design/direction-*.png`), en attente du choix de Mathieu.
 
 ## Fait
 
@@ -109,6 +109,10 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - **Spécification** : le prompt d'origine a été déplacé dans `docs/SPEC.md`, référencé depuis `CLAUDE.md`.
 - **Paramètres des `override`** : ils gardent le nom du supertype (validé) ; le préfixe `in` s'applique à toutes les autres fonctions.
 - **Constantes** : les `val` immuables de `companion object` prennent aussi le préfixe `k` (`Square.kAll`, `ThemeSet.kEmpty`).
+
+### Outils de la phase de design
+
+- Les planches `docs/design/direction-*.png` sont générées par un script Python jetable (Pillow, hors dépôt) : rendu des SVG des pièces Lichess, polices OFL (Playfair Display, Inter, DM Serif Display, DM Sans, Manrope), icônes Material Symbols (Apache 2.0). Les maquettes définitives seront des `@Preview` Compose (étape 4).
 
 ### Choix techniques de la phase 3
 
