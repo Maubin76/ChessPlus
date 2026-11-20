@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 2 — Cœur (`:core`)** : terminée, en attente de validation par Mathieu.
+**Phase 3 — Données et génération (`:data`, `:puzzle-builder`)** : terminée, en attente de validation par Mathieu (seuils de filtrage définitifs).
 
 ## Fait
 
@@ -35,6 +35,31 @@
 	- règles : position initiale, export FEN, roque (et ses interdictions), prise en passant (jouée, depuis la FEN, expirée), promotions et sous-promotion, échec, mat, pat, clouage, annulation, copie ;
 	- sessions : déroulement complet des 4 problèmes, mat final de 00sHx, mat alternatif sur un problème réel (00Mgf : d8h8# au lieu de d8g8#), erreur puis nouvel essai, coup illégal, promotion, solution coup par coup, recommencer, ordre des tours, reprise depuis l'état ;
 	- cote : exemple de l'article de Glickman, sens des mises à jour, bornes de l'écart de cote, formule Elo.
+- Validée par Mathieu le 2026-11-20.
+
+### Phase 3
+
+- `:data`, deux bases Room séparées (liées seulement par l'identifiant Lichess) :
+	- `PuzzleDatabase` (`puzzles.db`, embarquée dans les assets, lecture seule) : table `puzzle` (id, fen, moves BLOB, rating, themesLow, themesHigh) et index de sélection couvrant `(rating, themesLow, themesHigh, id)` ;
+	- `UserDatabase` (`user.db`) : `attempt` (historique, avec cote et thèmes du problème recopiés pour les statistiques), `puzzle_state` (bilan par problème), `player` (cote), `active_session` (problème en cours, pour la reprise) ;
+	- `ProgressRepository.recordResult` : tentative, bilan et cote dans une seule transaction ;
+	- `PuzzleSelector` : comptage dans une tranche de cote puis tirage d'un rang aléatoire (pas d'`ORDER BY RANDOM()`), tranche élargie de ±100 à ±600 si besoin, problèmes réussis exclus, échoués reproposés après 24 h ;
+	- fabriques `createPuzzleDatabase` / `createUserDatabase` pour Android (copie depuis les assets, recopie si la version change) et pour la JVM.
+- `:puzzle-builder` : lecture en flux du `.zst`, en-tête vérifié, seuils de qualité, plafond par tranche de 200 points en deux passes (garde les plus populaires), validation de chaque solution par les règles, insertion Room par lots dans une seule transaction, index supprimés puis recréés à l'identique, `VACUUM`, copie dans `app/src/main/assets/puzzles.db`. Rapport : rejets par motif, répartition par tranche et par thème, durées, taille.
+- Tests : 13 pour `:data` (JVM, base en mémoire, dont l'annulation d'une transaction), 12 pour le builder (options, plafond, génération de bout en bout sur un `.zst` créé par le test, index recréés, thème inconnu, ligne mal formée). 126 tests au total, tous verts.
+
+### Résultat sur le vrai CSV (seuils de départ)
+
+Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess_db_puzzle.csv.zst"`
+
+- Seuils : RD ≤ 80, popularité ≥ 90, parties ≥ 250, plafond 30 000 par tranche.
+- 6 193 530 lignes lues → **292 090 problèmes retenus** ; rejets : RD 2 600 916, popularité 1 421 356, parties 221 531, plafond 1 657 637, solution invalide 0.
+- Répartition : 30 000 par tranche de 600 à 2399 ; 1 314 en 400-599 ; 20 214 en 2400-2599 ; 562 en 2600-2799.
+- Les 73 thèmes sont présents ; les plus rares : balestraMate 28, underPromotion 58, vukovicMate 67, superGM 71, castling 88.
+- **Durée : 27 à 37 s** selon la charge de la machine (passe 1 ≈ 7 s, passe 2 ≈ 19 à 27 s).
+- **Fichier : 36,8 Mo** ; compressé à 20,3 Mo dans l'APK release (25,3 Mo au total).
+- Effet des index sur la passe 2 : avec l'index simple sur `rating`, négligeable (< 1 s) ; avec l'index couvrant, 30,2 s en le gardant contre 18,9 s en le supprimant puis recréant (0,3 s) → suppression par défaut, `--keep-indexes` pour l'autre mode.
+- Sélection mesurée sur PC (Python/SQLite) dans la tranche 1400-1600 : 2 ms sans filtre, 4 ms avec un filtre de thème (200 ms avec l'index simple, d'où l'index couvrant, +4,4 Mo).
 
 ### Statistiques du CSV Lichess (fichier du 2026-11-20)
 
@@ -44,7 +69,6 @@
 
 ## Reste à faire
 
-- Phase 3 : données et génération (`:data`, `:puzzle-builder`).
 - Phase 4 : design.
 - Phase 5 : écrans.
 - Phase 6 : finitions.
@@ -84,6 +108,16 @@
 - **Paramètres des `override`** : ils gardent le nom du supertype (validé) ; le préfixe `in` s'applique à toutes les autres fonctions.
 - **Constantes** : les `val` immuables de `companion object` prennent aussi le préfixe `k` (`Square.kAll`, `ThemeSet.kEmpty`).
 
+### Choix techniques de la phase 3
+
+- **Deux fichiers de base** plutôt que deux groupes de tables dans un même fichier : la base des problèmes est remplacée en bloc depuis les assets (incrémenter `PuzzleDatabase.kVersion`), la base utilisateur n'est jamais touchée.
+- **Plafond par tranche** : ajouté parce que les seuils seuls donnent soit des millions de problèmes, soit une répartition très déséquilibrée.
+- **Validation par les règles** dans le builder : chaque solution retenue est rejouée avec chesslib (aucun rejet sur le CSV actuel).
+- **Thèmes inconnus** : vérifiés sur toutes les lignes, y compris celles rejetées par les seuils.
+- **Journal SQLite** en mode `TRUNCATE` pour le builder : fichier autonome, sans `-wal`.
+- `puzzles.db` est exclu de git en attendant la décision de Mathieu.
+- `-Xexpect-actual-classes` activé dans `:data` (constructeurs Room en `expect object`).
+
 ### Choix techniques de la phase 2
 
 - **Thèmes** : chaque thème a un bit fixe déclaré explicitement (pas l'ordinal) ; on n'en change jamais, on en ajoute.
@@ -99,4 +133,8 @@
 
 ## Questions ouvertes
 
-- Phase de design : Glicko-2 ou Elo, et paramètres associés.
+- Seuils de filtrage définitifs (Mathieu, après lancement du builder).
+- Versionner `app/src/main/assets/puzzles.db` (36,8 Mo) dans git, via Git LFS, ou le laisser hors du dépôt et le régénérer ?
+- Délai avant de reproposer un problème échoué : 24 h provisoirement.
+- Phase de design : Glicko-2 ou Elo, et paramètres associés ; les problèmes rejoués depuis l'historique modifient-ils la cote (`rated`) ?
+- La copie depuis les assets (`createFromAsset` avec le driver SQLite intégré) n'est pas encore vérifiée sur appareil : premier test en phase 5.
