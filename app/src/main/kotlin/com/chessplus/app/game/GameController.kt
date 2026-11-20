@@ -534,7 +534,6 @@ class GameController(
 				rated = rated,
 				puzzleRating = vSession.puzzle.rating,
 				themes = vSession.puzzle.themes,
-				lichessUrl = vSession.puzzle.lichessUrl,
 			)
 		} else {
 			null

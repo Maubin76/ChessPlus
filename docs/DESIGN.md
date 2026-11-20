@@ -82,7 +82,7 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 | Promotion | inchangé | voile sombre et carte centrée « Promotion — Choisissez la nouvelle pièce » : dame, tour, fou, cavalier | — |
 | Terminé | ✓ « Mat ! » ou « Problème terminé » | position finale | Suivant actif (tuile noire) |
 
-- Bilan (modifié par Mathieu le 2026-11-20 : il ne doit pas cacher l'échiquier) : le résultat remplace le message au-dessus de l'échiquier (« Problème réussi » en vert ou « Problème échoué » en rouge, avec la phrase de détail) ; sous l'échiquier, deux encadrés « Ma cote » (valeur et variation colorée, ou « inchangée ») et « Cote du problème », les thèmes en puces sur une ligne défilante, le lien « Voir sur Lichess (si le réseau est disponible) » ; en bas, tuile « Recommencer » et gros bouton noir « Suivant ».
+- Bilan (modifié par Mathieu le 2026-11-20 : il ne doit pas cacher l'échiquier) : le résultat remplace le message au-dessus de l'échiquier (« Problème réussi » en vert ou « Problème échoué » en rouge, avec la phrase de détail) ; sous l'échiquier, deux encadrés « Ma cote » (valeur et variation colorée, ou « inchangée ») et « Cote du problème », les thèmes en puces sur une ligne défilante ; pas de lien Lichess (retiré par Mathieu le 2026-11-20, alors que la spécification le prévoyait) ; en bas, tuile « Recommencer » et gros bouton noir « Suivant ».
 - Animations des pièces (demandées par Mathieu le 2026-11-20) : 300 ms, accélération puis ralentissement ; toutes les pièces qui changent de case glissent (coups du joueur et de l'adversaire, indice, roque, promotion, recommencer, annulation d'un mauvais coup) ; une pièce prise s'efface en fondu ; pas d'animation après un glisser-déposer (la pièce est déjà sous le doigt).
 
 ### Autres écrans

@@ -74,7 +74,7 @@ fun RealGameSummaryShot() = Shot(
 		badge = Square.fromAlgebraic("f8") to BadgeKind.Success,
 		rating = 1532,
 		nextEnabled = true,
-		summary = GameSummary(PuzzleResult.Success, 0, 0, 1520.0, 1532.0, true, 1760, ThemeSet.parse("mate mateIn2 middlegame short"), "https://lichess.org/training/00sHx"),
+		summary = GameSummary(PuzzleResult.Success, 0, 0, 1520.0, 1532.0, true, 1760, ThemeSet.parse("mate mateIn2 middlegame short")),
 	)
 )
 

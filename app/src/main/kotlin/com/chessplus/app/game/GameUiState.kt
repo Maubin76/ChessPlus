@@ -61,7 +61,6 @@ data class PendingPromotion(val from: Square, val to: Square, val color: Color)
  * @property rated vrai si le problème a modifié la cote.
  * @property puzzleRating cote du problème.
  * @property themes thèmes du problème.
- * @property lichessUrl adresse du problème sur Lichess.
  */
 data class GameSummary(
 	val result: PuzzleResult,
@@ -72,7 +71,6 @@ data class GameSummary(
 	val rated: Boolean,
 	val puzzleRating: Int,
 	val themes: ThemeSet,
-	val lichessUrl: String,
 )
 
 /**

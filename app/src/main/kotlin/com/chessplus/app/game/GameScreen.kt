@@ -33,7 +33,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -347,13 +346,12 @@ private fun PromotionDialog(inColor: Color, inOnChoose: (PieceType) -> Unit, inO
 }
 
 /**
- * Bilan sous l'échiquier, qui laisse la position finale visible : cotes, thèmes, lien Lichess.
+ * Bilan sous l'échiquier, qui laisse la position finale visible : cotes et thèmes.
  */
 @Composable
 private fun SummaryPanel(inSummary: GameSummary, inModifier: Modifier) {
 	val vColors = kLocalChessColors.current
 	val vSuccess = inSummary.result == PuzzleResult.Success
-	val vUriHandler = LocalUriHandler.current
 	Column(
 		inModifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
 		verticalArrangement = Arrangement.spacedBy(10.dp),
@@ -386,16 +384,6 @@ private fun SummaryPanel(inSummary: GameSummary, inModifier: Modifier) {
 					Text(stringResource(themeLabel(vTheme)), style = ChessType.kCaption, color = vColors.text)
 				}
 			}
-		}
-		Row(
-			Modifier.clip(RoundedCornerShape(12.dp)).clickable { vUriHandler.openUri(inSummary.lichessUrl) }.padding(vertical = 6.dp, horizontal = 4.dp),
-			verticalAlignment = Alignment.CenterVertically,
-		) {
-			Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, tint = vColors.text, modifier = Modifier.size(18.dp))
-			Spacer(Modifier.width(8.dp))
-			Text(stringResource(R.string.summary_lichess), style = ChessType.kBodyStrong, color = vColors.text)
-			Spacer(Modifier.width(6.dp))
-			Text(stringResource(R.string.summary_lichess_note), style = ChessType.kCaption, color = vColors.muted)
 		}
 	}
 }

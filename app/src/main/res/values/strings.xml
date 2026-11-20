@@ -153,6 +153,4 @@
 	<string name="summary_my_rating">Ma cote</string>
 	<string name="summary_puzzle_rating">Cote du problème</string>
 	<string name="summary_themes">Thèmes</string>
-	<string name="summary_lichess">Voir sur Lichess</string>
-	<string name="summary_lichess_note">(si le réseau est disponible)</string>
 </resources>

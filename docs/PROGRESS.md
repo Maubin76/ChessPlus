@@ -97,6 +97,7 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - Animations : toutes les pièces déplacées glissent (calcul de la différence entre deux positions), prises en fondu, 300 ms.
 - Mauvais coup : montré sur l'échiquier avec la pastille d'erreur, puis annulé en glissant (0,9 s) ; le joueur ne peut pas jouer pendant ce temps.
 - Bilan : plus de volet par-dessus l'échiquier ; résultat dans le message du haut, détail sous l'échiquier, Recommencer + Suivant en bas.
+- Lien « Voir sur Lichess » retiré du bilan à la demande de Mathieu : écart assumé avec la spécification (fonctionnalité « lien pour ouvrir le problème sur Lichess »).
 
 ## Reste à faire
 
