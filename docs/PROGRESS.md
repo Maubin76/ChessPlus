@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 5 — Écrans** : écran de jeu implémenté, en attente du test de Mathieu sur son téléphone.
+**Phase 5 — Écrans** : tous les écrans implémentés (jeu, accueil, navigation, choix du niveau, entraînement ciblé, historique, statistiques, réglages), en attente du test de Mathieu sur son téléphone.
 
 ## Fait
 
@@ -80,7 +80,17 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - `AppContainer` : injection manuelle ; la base des problèmes est copiée explicitement depuis les assets au premier lancement (`installPuzzleDatabase`, version mémorisée dans `puzzles.db.version`) au lieu de `createFromAsset`.
 - Thème de production (`ui/theme`), noms des 73 thèmes en ressources (`res/values/theme_names.xml`, `ui/ThemeNames.kt`, générés).
 - Tests : 9 tests de `GameController` ; captures de l'écran réel (`app/src/screenshotTest/.../GameScreenShots.kt`). 177 tests au total, tous verts.
-- Provisoire : l'application s'ouvre directement sur l'entraînement (pas encore d'accueil ni de navigation), cote de départ 1500 tant que l'écran de choix du niveau n'existe pas, le bouton retour ferme l'application.
+
+### Phase 5 — autres écrans (à la demande de Mathieu, tous d'un coup)
+
+- Navigation maison (`navigation/Navigation.kt`) : pile d'écrans dans un ViewModel d'activité, sauvegardée dans `SavedStateHandle` (reprise après la mort du processus), un `ViewModelStore` par écran libéré au retour ; barre du bas Accueil / Historique / Statistiques (le retour depuis un onglet ramène à l'accueil). Pas de bibliothèque de navigation (aurait demandé une validation).
+- Modes de l'écran de jeu (`GameMode`) : continu (reprend le problème en cours), ciblé (thèmes, plus facile / mon niveau / plus difficile ou tranche précise), rejeu d'un problème de l'historique puis des autres problèmes non réussis (jamais noté).
+- Écrans : choix du niveau (premier lancement, ou depuis les réglages), accueil (problèmes résolus, cote, carte « Reprendre »), entraînement ciblé (nombre de problèmes correspondants), historique (par jour, onglets, rejeu), statistiques (courbe par période, réussite par thème, au moins 3 tentatives), réglages (thème, vibration, coordonnées, niveau, crédits ; sons affichés « bientôt disponible »).
+- Réglages stockés dans les `SharedPreferences` (`settings/SettingsStore.kt`), sans DataStore.
+- Durées écoulées formatées en français quelle que soit la langue du système.
+- Chaque écran a un contenu sans état (`HomeContent`, `HistoryContent`…) capturé dans `app/src/screenshotTest/.../AppScreenShots.kt`.
+- Tests : 12 tests de `GameController`, 4 tests de navigation ; 203 tests au total, tous verts.
+- Non fait : sons (aucun fichier audio), animations de transition entre écrans.
 
 ## Reste à faire
 
