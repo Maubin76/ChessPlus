@@ -66,6 +66,18 @@ interface UserDao {
 	suspend fun clearActiveSession()
 
 	/**
+	 * Retourne la dernière tentative sur un problème, ou null.
+	 */
+	@Query("SELECT * FROM attempt WHERE puzzleId = :inPuzzleId ORDER BY playedAt DESC, id DESC LIMIT 1")
+	suspend fun getLatestAttempt(inPuzzleId: String): AttemptEntity?
+
+	/**
+	 * Compte les problèmes réussis au moins une fois.
+	 */
+	@Query("SELECT COUNT(*) FROM puzzle_state WHERE solved = 1")
+	fun observeSolvedCount(): Flow<Int>
+
+	/**
 	 * Observe les dernières tentatives, de la plus récente à la plus ancienne.
 	 */
 	@Query("SELECT * FROM attempt ORDER BY playedAt DESC, id DESC LIMIT :inLimit")
