@@ -132,6 +132,8 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | 7 | Réglages | Thème, vibration, sons, coordonnées, niveau, crédits |
 
 - **Barre de navigation en bas** à trois onglets : Accueil, Historique, Statistiques. Elle est masquée sur l'écran Problème (plein écran), le choix du niveau et les réglages.
+- Forme de la navigation (modifiée par Mathieu le 2026-11-20, d'après PatrimoinePlus) : pilule flottante centrée, 12 dp au-dessus de la barre système, hauteur 64 dp, 6 dp de marge interne, 8 dp entre onglets ; au repos, icône seule en gris ; l'onglet actif devient une capsule à l'encre qui s'élargit pour afficher son nom ; ombre douce en clair, liseré de 1 dp en sombre.
+- Accueil : boutons « Entraînement ciblé » et « S'entraîner » côte à côte, hauteur 48 dp (réduits à la demande de Mathieu le 2026-11-20).
 - Réglages et entraînement ciblé s'ouvrent depuis l'accueil.
 - L'écran Problème est commun à l'entraînement continu, à l'entraînement ciblé (filtres rappelés en haut) et au rejeu depuis l'historique ; « Suivant » reste dans le même mode.
 - Retour depuis un problème : retour à l'accueil, le problème est conservé (carte « Reprendre »).

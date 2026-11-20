@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 5 — Écrans** : tous les écrans implémentés (jeu, accueil, navigation, choix du niveau, entraînement ciblé, historique, statistiques, réglages), en attente du test de Mathieu sur son téléphone.
+**Phase 6 — Finitions** : configuration de la release faite, en attente du test complet de Mathieu sur son téléphone, hors connexion.
 
 ## Fait
 
@@ -99,10 +99,23 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - Bilan : plus de volet par-dessus l'échiquier ; résultat dans le message du haut, détail sous l'échiquier, Recommencer + Suivant en bas.
 - Lien « Voir sur Lichess » retiré du bilan à la demande de Mathieu : écart assumé avec la spécification (fonctionnalité « lien pour ouvrir le problème sur Lichess »).
 
+### Phase 5 — validée par Mathieu le 2026-11-20
+
+- Derniers retours appliqués : boutons de l'accueil plus petits (côte à côte, 48 dp), navigation en pilule flottante comme PatrimoinePlus.
+
+### Phase 6 — finitions
+
+- Release : R8 (`isMinifyEnabled`, `isShrinkResources`), signature lue dans `chessplus.keystore` / `chessplus.keyAlias` / `chessplus.keyPassword` (gradle.properties de l'utilisateur ou local.properties), à défaut clé de debug ; bibliothèques natives limitées à `arm64-v8a`.
+- Taille : APK release 23,4 Mo (dont la base de problèmes, 38,6 Mo compressés à ~20 Mo) ; APK debug 57 Mo.
+- Hors connexion : aucune permission réseau dans le manifeste final (seule `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`, interne à AndroidX).
+- R8 : constructeurs Room passés explicitement (pas de réflexion) ; chesslib sans réflexion, mais ses énumérations sont gardées (`Square.valueOf` à la lecture des FEN).
+- Performance : l'échiquier ne se recompose plus à chaque image pendant une animation ou un glisser (lecture de l'avancement au placement et au dessin).
+- Activité verrouillée en portrait (décision de design, oubliée jusque-là).
+
 ## Reste à faire
 
-- Phase 5 : entraînement continu (accueil, navigation, choix du niveau), filtres, historique, statistiques, réglages.
-- Phase 6 : finitions.
+- Phase 6 : test complet de Mathieu sur son téléphone en mode avion (reprise après interruption et mort du processus, fluidité, release) ; clé de signature personnelle si souhaitée.
+- Plus tard (à rappeler à Mathieu) : icône de l'application, sons, famille de thèmes « Évaluation et origine », paramètres Glicko-2, `puzzles.db` hors de git.
 
 ## Décisions prises
 
