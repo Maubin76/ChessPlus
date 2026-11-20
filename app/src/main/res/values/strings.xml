@@ -1,5 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Textes de ChessPlus (docs/DESIGN.md). -->
 <resources>
 	<string name="app_name">ChessPlus</string>
-	<string name="placeholder_message">ChessPlus — mise en place du projet</string>
+
+	<!-- Écran de jeu : barre -->
+	<string name="game_title">Entraînement</string>
+	<string name="action_back">Retour</string>
+
+	<!-- Écran de jeu : messages -->
+	<string name="game_loading">Préparation…</string>
+	<string name="game_loading_detail">Chargement des problèmes</string>
+	<string name="game_white_to_move">Les blancs jouent</string>
+	<string name="game_black_to_move">Les noirs jouent</string>
+	<string name="game_find_best">Trouvez le meilleur coup</string>
+	<string name="game_find_next">Continuez : trouvez le coup suivant</string>
+	<string name="game_correct">Bon coup !</string>
+	<string name="game_white_thinking">Les blancs réfléchissent…</string>
+	<string name="game_black_thinking">Les noirs réfléchissent…</string>
+	<string name="game_wrong">Pas ce coup-là</string>
+	<string name="game_wrong_detail">Réessayez, ou demandez un indice</string>
+	<string name="game_wrong_note">Le problème compte comme échoué, mais vous pouvez le terminer</string>
+	<string name="game_hint">Indice</string>
+	<string name="game_hint_detail">Coup joué : %1$s → %2$s</string>
+	<string name="game_mate">Mat !</string>
+	<string name="game_finished">Problème terminé</string>
+	<string name="game_solution_shown">Solution affichée</string>
+	<string name="game_touch_help">Touchez une pièce puis sa case, ou faites-la glisser</string>
+	<string name="game_no_puzzle">Aucun problème disponible</string>
+	<string name="game_no_puzzle_detail">Tous les problèmes de votre niveau ont été résolus</string>
+
+	<!-- Écran de jeu : commandes -->
+	<string name="action_restart">Recommencer</string>
+	<string name="action_hint">Indice</string>
+	<string name="action_next">Suivant</string>
+
+	<!-- Promotion -->
+	<string name="promotion_title">Promotion</string>
+	<string name="promotion_detail">Choisissez la nouvelle pièce</string>
+
+	<!-- Bilan -->
+	<string name="summary_success">Problème réussi</string>
+	<string name="summary_failure">Problème échoué</string>
+	<string name="summary_clean">Trouvé du premier coup, sans indice</string>
+	<plurals name="summary_mistakes">
+		<item quantity="one">%d erreur</item>
+		<item quantity="other">%d erreurs</item>
+	</plurals>
+	<plurals name="summary_hints">
+		<item quantity="one">%d indice</item>
+		<item quantity="other">%d indices</item>
+	</plurals>
+	<string name="summary_unrated">Déjà joué : sans effet sur la cote</string>
+	<string name="summary_my_rating">Ma cote</string>
+	<string name="summary_puzzle_rating">Cote du problème</string>
+	<string name="summary_themes">Thèmes</string>
+	<string name="summary_lichess">Voir sur Lichess</string>
+	<string name="summary_lichess_note">(si le réseau est disponible)</string>
 </resources>

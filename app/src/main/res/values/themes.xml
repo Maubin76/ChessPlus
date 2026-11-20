@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-	<!-- Thème de fenêtre minimal ; le thème visuel est défini en Compose. -->
-	<style name="Theme.ChessPlus" parent="android:Theme.Material.Light.NoActionBar" />
+	<!-- Thème de fenêtre (clair) : même fond que l'interface Compose, pour éviter un flash au lancement. -->
+	<style name="Theme.ChessPlus" parent="android:Theme.Material.Light.NoActionBar">
+		<item name="android:windowBackground">@color/window_background</item>
+	</style>
 </resources>

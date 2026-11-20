@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Noms français des thèmes Lichess et de leurs familles (docs/DESIGN.md). -->
+<resources>
+	<string name="theme_family_tactics">Motifs tactiques</string>
+	<string name="theme_family_mates">Mats</string>
+	<string name="theme_family_endgames">Finales</string>
+	<string name="theme_family_phase">Phase de jeu</string>
+	<string name="theme_family_length">Longueur</string>
+	<string name="theme_family_evaluation">Évaluation et origine</string>
+	<!-- Motifs tactiques -->
+	<string name="theme_fork">Fourchette</string>
+	<string name="theme_pin">Clouage</string>
+	<string name="theme_skewer">Enfilade</string>
+	<string name="theme_discovered_attack">Attaque à la découverte</string>
+	<string name="theme_discovered_check">Échec à la découverte</string>
+	<string name="theme_double_check">Échec double</string>
+	<string name="theme_deflection">Déviation</string>
+	<string name="theme_attraction">Attraction</string>
+	<string name="theme_sacrifice">Sacrifice</string>
+	<string name="theme_hanging_piece">Pièce en prise</string>
+	<string name="theme_intermezzo">Coup intermédiaire</string>
+	<string name="theme_capturing_defender">Élimination du défenseur</string>
+	<string name="theme_clearance">Dégagement</string>
+	<string name="theme_interference">Interception</string>
+	<string name="theme_x_ray_attack">Attaque en rayons X</string>
+	<string name="theme_trapped_piece">Pièce piégée</string>
+	<string name="theme_quiet_move">Coup tranquille</string>
+	<string name="theme_defensive_move">Coup défensif</string>
+	<string name="theme_zugzwang">Zugzwang</string>
+	<string name="theme_exposed_king">Roi exposé</string>
+	<string name="theme_kingside_attack">Attaque à l’aile roi</string>
+	<string name="theme_queenside_attack">Attaque à l’aile dame</string>
+	<string name="theme_attacking_f2_f7">Attaque sur f2/f7</string>
+	<string name="theme_advanced_pawn">Pion avancé</string>
+	<string name="theme_promotion">Promotion</string>
+	<string name="theme_under_promotion">Sous-promotion</string>
+	<string name="theme_castling">Roque</string>
+	<string name="theme_en_passant">Prise en passant</string>
+	<string name="theme_collinear_move">Coup colinéaire</string>
+	<!-- Mats -->
+	<string name="theme_mate">Mat</string>
+	<string name="theme_mate_in1">Mat en 1</string>
+	<string name="theme_mate_in2">Mat en 2</string>
+	<string name="theme_mate_in3">Mat en 3</string>
+	<string name="theme_mate_in4">Mat en 4</string>
+	<string name="theme_mate_in5">Mat en 5 ou plus</string>
+	<string name="theme_back_rank_mate">Mat du couloir</string>
+	<string name="theme_smothered_mate">Mat étouffé</string>
+	<string name="theme_anastasia_mate">Mat d’Anastasia</string>
+	<string name="theme_arabian_mate">Mat arabe</string>
+	<string name="theme_balestra_mate">Mat de Balestra</string>
+	<string name="theme_blind_swine_mate">Mat des cochons aveugles</string>
+	<string name="theme_boden_mate">Mat de Boden</string>
+	<string name="theme_corner_mate">Mat du coin</string>
+	<string name="theme_double_bishop_mate">Mat des deux fous</string>
+	<string name="theme_dovetail_mate">Mat en queue d’aronde</string>
+	<string name="theme_epaulette_mate">Mat de l’épaulette</string>
+	<string name="theme_hook_mate">Mat du crochet</string>
+	<string name="theme_kill_box_mate">Mat de la boîte</string>
+	<string name="theme_morphys_mate">Mat de Morphy</string>
+	<string name="theme_opera_mate">Mat de l’Opéra</string>
+	<string name="theme_pillsburys_mate">Mat de Pillsbury</string>
+	<string name="theme_swallowstail_mate">Mat en queue d’hirondelle</string>
+	<string name="theme_triangle_mate">Mat du triangle</string>
+	<string name="theme_vukovic_mate">Mat de Vuković</string>
+	<!-- Finales -->
+	<string name="theme_pawn_endgame">Finale de pions</string>
+	<string name="theme_rook_endgame">Finale de tours</string>
+	<string name="theme_bishop_endgame">Finale de fous</string>
+	<string name="theme_knight_endgame">Finale de cavaliers</string>
+	<string name="theme_queen_endgame">Finale de dames</string>
+	<string name="theme_queen_rook_endgame">Finale dame et tour</string>
+	<!-- Phase de jeu -->
+	<string name="theme_opening">Ouverture</string>
+	<string name="theme_middlegame">Milieu de partie</string>
+	<string name="theme_endgame">Finale</string>
+	<!-- Longueur -->
+	<string name="theme_one_move">Un coup</string>
+	<string name="theme_short">Court</string>
+	<string name="theme_long">Long</string>
+	<string name="theme_very_long">Très long</string>
+	<!-- Évaluation et origine -->
+	<string name="theme_advantage">Avantage</string>
+	<string name="theme_crushing">Gain décisif</string>
+	<string name="theme_equality">Égalisation</string>
+	<string name="theme_master">Partie de maître</string>
+	<string name="theme_master_vs_master">Maître contre maître</string>
+	<string name="theme_super_gm">Super grand maître</string>
+</resources>
