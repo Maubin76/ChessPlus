@@ -15,9 +15,9 @@ interface PuzzleProvider {
 	suspend fun byId(inId: String): Puzzle?
 
 	/**
-	 * Retourne le prochain problème adapté à la cote, ou null si aucun ne convient.
+	 * Retourne le prochain problème du mode donné, ou null si aucun ne convient.
 	 */
-	suspend fun next(inRating: Double, inExcludeId: String?): Puzzle?
+	suspend fun next(inRating: Double, inExcludeId: String?, inMode: GameMode): Puzzle?
 
 	/**
 	 * Indique si le problème n'a jamais été joué (seul un premier essai modifie la cote).

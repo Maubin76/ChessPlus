@@ -42,6 +42,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chessplus.app.R
 import com.chessplus.app.ui.board.ChessBoard
 import com.chessplus.app.ui.board.pieceDrawable
+import com.chessplus.app.ui.components.formatDelta
+import com.chessplus.app.ui.components.formatRating
 import com.chessplus.app.ui.theme.ChessType
 import com.chessplus.app.ui.theme.kLocalChessColors
 import com.chessplus.app.ui.themeLabel
@@ -49,8 +51,6 @@ import com.chessplus.core.model.Color
 import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
 import com.chessplus.core.puzzle.PuzzleResult
-import java.text.NumberFormat
-import java.util.Locale
 import kotlin.math.roundToInt
 
 /**
@@ -66,15 +66,19 @@ private enum class Tone {
  * Écran de jeu : problème en cours, échiquier pleine largeur, commandes sous le pouce.
  */
 @Composable
-fun GameScreen(inViewModel: GameViewModel, inOnBack: () -> Unit) {
+fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean, inCoordinates: Boolean, inOnBack: () -> Unit) {
 	val vState by inViewModel.state.collectAsStateWithLifecycle()
 	val vController = inViewModel.controller
 	val vHaptics = LocalHapticFeedback.current
 	LaunchedEffect(vState.haptic?.id) {
-		vState.haptic?.let { vHaptics.performHapticFeedback(if (it.success) HapticFeedbackType.Confirm else HapticFeedbackType.Reject) }
+		if (inVibration) {
+			vState.haptic?.let { vHaptics.performHapticFeedback(if (it.success) HapticFeedbackType.Confirm else HapticFeedbackType.Reject) }
+		}
 	}
 	GameContent(
 		inState = vState,
+		inTitle = inTitle,
+		inCoordinates = inCoordinates,
 		inOnBack = inOnBack,
 		inOnTap = vController::onSquareTap,
 		inOnDragStart = vController::onDragStart,
@@ -94,6 +98,8 @@ fun GameScreen(inViewModel: GameViewModel, inOnBack: () -> Unit) {
 @Composable
 fun GameContent(
 	inState: GameUiState,
+	inTitle: String,
+	inCoordinates: Boolean,
 	inOnBack: () -> Unit,
 	inOnTap: (com.chessplus.core.model.Square) -> Unit,
 	inOnDragStart: (com.chessplus.core.model.Square) -> Unit,
@@ -108,7 +114,7 @@ fun GameContent(
 	val vColors = kLocalChessColors.current
 	Box(Modifier.fillMaxSize().background(vColors.background)) {
 		Column(Modifier.fillMaxSize().statusBarsPadding()) {
-			TopBar(inState.rating, inOnBack)
+			TopBar(inTitle, inState.rating, inOnBack)
 			Header(inState.header)
 			ChessBoard(
 				inPieces = inState.pieces,
@@ -119,7 +125,7 @@ fun GameContent(
 				inSelected = inState.selected,
 				inTargets = inState.targets,
 				inBadge = inState.badge,
-				inCoordinates = true,
+				inCoordinates = inCoordinates,
 				inInteractive = inState.interactive,
 				inOnTap = inOnTap,
 				inOnDragStart = inOnDragStart,
@@ -142,13 +148,13 @@ fun GameContent(
  * Barre du haut : retour, titre, cote du joueur.
  */
 @Composable
-private fun TopBar(inRating: Int, inOnBack: () -> Unit) {
+private fun TopBar(inTitle: String, inRating: Int, inOnBack: () -> Unit) {
 	val vColors = kLocalChessColors.current
 	Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)) {
 		Box(Modifier.align(Alignment.CenterStart).size(48.dp).clip(CircleShape).clickable(onClick = inOnBack), contentAlignment = Alignment.Center) {
 			Icon(painterResource(R.drawable.ic_arrow_back_ios_new), contentDescription = stringResource(R.string.action_back), tint = vColors.text, modifier = Modifier.size(20.dp))
 		}
-		Text(stringResource(R.string.game_title), style = ChessType.kBarTitle, color = vColors.text, modifier = Modifier.align(Alignment.Center))
+		Text(inTitle, style = ChessType.kBarTitle, color = vColors.text, modifier = Modifier.align(Alignment.Center))
 		if (inRating > 0) {
 			Text(formatRating(inRating), style = ChessType.kRating, color = vColors.text, modifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp))
 		}
@@ -433,18 +439,4 @@ private fun summaryDetail(inSummary: GameSummary): String {
 		vParts.add(pluralStringResource(R.plurals.summary_hints, inSummary.revealed, inSummary.revealed))
 	}
 	return vParts.joinToString(", ")
-}
-
-/**
- * Formate une cote avec une espace entre les milliers (« 1 520 »).
- */
-private fun formatRating(inRating: Int): String = NumberFormat.getIntegerInstance(Locale.FRANCE).format(inRating)
-
-/**
- * Formate une variation de cote avec son signe (« +12 », « −9 »).
- */
-private fun formatDelta(inDelta: Int): String = when {
-	inDelta > 0 -> "+$inDelta"
-	inDelta < 0 -> "−${-inDelta}"
-	else -> "±0"
 }

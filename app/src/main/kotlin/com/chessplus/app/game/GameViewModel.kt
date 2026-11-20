@@ -14,10 +14,11 @@ import kotlinx.coroutines.flow.StateFlow
  * L'état survit aux changements de configuration ; après la mort du processus, le contrôleur
  * reprend le problème sauvegardé dans la base utilisateur.
  */
-class GameViewModel(inContainer: AppContainer) : ViewModel() {
+class GameViewModel(inContainer: AppContainer, inMode: GameMode) : ViewModel() {
 	/** Logique de l'écran. */
 	val controller = GameController(
 		scope = viewModelScope,
+		mode = inMode,
 		rules = inContainer.rules,
 		puzzles = inContainer.puzzleProvider,
 		progress = inContainer.progressStore,
@@ -36,8 +37,8 @@ class GameViewModel(inContainer: AppContainer) : ViewModel() {
 		/**
 		 * Retourne la fabrique du ViewModel à partir des dépendances de l'application.
 		 */
-		fun factory(inContainer: AppContainer): ViewModelProvider.Factory = viewModelFactory {
-			initializer { GameViewModel(inContainer) }
+		fun factory(inContainer: AppContainer, inMode: GameMode): ViewModelProvider.Factory = viewModelFactory {
+			initializer { GameViewModel(inContainer, inMode) }
 		}
 	}
 }

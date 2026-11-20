@@ -46,8 +46,14 @@ class GameControllerTest {
 		/** Recherche par identifiant. */
 		override suspend fun byId(inId: String): Puzzle? = list.firstOrNull { it.id == inId }
 
+		/** Modes demandés, dans l'ordre. */
+		val modes = mutableListOf<GameMode>()
+
 		/** Premier problème différent de l'exclu. */
-		override suspend fun next(inRating: Double, inExcludeId: String?): Puzzle? = list.firstOrNull { it.id != inExcludeId }
+		override suspend fun next(inRating: Double, inExcludeId: String?, inMode: GameMode): Puzzle? {
+			modes.add(inMode)
+			return list.firstOrNull { it.id != inExcludeId }
+		}
 
 		/** Nouveau si jamais joué. */
 		override suspend fun isNew(inId: String): Boolean = inId !in played
@@ -104,8 +110,12 @@ class GameControllerTest {
 	/**
 	 * Crée un contrôleur sans pauses, dans la portée du test.
 	 */
-	private fun CoroutineScope.controller(inPuzzles: PuzzleProvider, inProgress: ProgressStore = FakeProgress(), inSessions: SessionStore = FakeSessions()) =
-		GameController(this, defaultChessRules(), inPuzzles, inProgress, inSessions, clock = { 42L }, opponentDelayMs = 0, startDelayMs = 0)
+	private fun CoroutineScope.controller(
+		inPuzzles: PuzzleProvider,
+		inProgress: ProgressStore = FakeProgress(),
+		inSessions: SessionStore = FakeSessions(),
+		inMode: GameMode = GameMode.Continuous,
+	) = GameController(this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, clock = { 42L }, opponentDelayMs = 0, startDelayMs = 0)
 
 	/**
 	 * Raccourci : case à partir de son nom.
@@ -281,5 +291,41 @@ class GameControllerTest {
 		assertEquals(Move.fromUci("e8d7"), vController.state.value.lastMove)
 		assertNotNull(vController.state.value.pieces[sq("a2")])
 		assertTrue(vController.state.value.interactive)
+	}
+
+	/** Vérifie qu'un entraînement ciblé ignore le problème sauvegardé et transmet ses critères. */
+	@Test
+	fun targetedModeStartsFresh() = runBlocking<Unit> {
+		val vCriteria = TrainingCriteria(ThemeSet.parse("fork"), Difficulty.Harder)
+		val vPuzzles = FakePuzzles(listOf(kShort, kMateIn2))
+		val vSessions = FakeSessions(SavedSession(PuzzleSnapshot("00sHx", 1, null, 0, 0), rated = true, resultRecorded = false, startedAt = 1L))
+		val vController = controller(vPuzzles, inSessions = vSessions, inMode = GameMode.Targeted(vCriteria))
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(Move.fromUci("b8c7"), vController.state.value.lastMove)
+		assertEquals(listOf<GameMode>(GameMode.Targeted(vCriteria)), vPuzzles.modes)
+	}
+
+	/** Vérifie que le rejeu charge le problème demandé, sans effet sur la cote. */
+	@Test
+	fun replayModeIsUnrated() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vController = controller(FakePuzzles(listOf(kShort, kMateIn2)), vProgress, inMode = GameMode.Replay("00sHx"))
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(Move.fromUci("e8d7"), vController.state.value.lastMove)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(Triple("00sHx", PuzzleResult.Success, false), vProgress.records.single())
+		assertEquals(1500.0, vProgress.rating.rating)
+	}
+
+	/** Vérifie les tranches de cote des difficultés relatives. */
+	@Test
+	fun difficultyRanges() {
+		assertEquals(1100..1400, TrainingCriteria(difficulty = Difficulty.Easier).ratingRange(1500))
+		assertNull(TrainingCriteria(difficulty = Difficulty.Level).ratingRange(1500))
+		assertEquals(1600..1900, TrainingCriteria(difficulty = Difficulty.Harder).ratingRange(1500))
+		assertEquals(800..1000, TrainingCriteria(difficulty = Difficulty.Range, range = 800..1000).ratingRange(1500))
 	}
 }

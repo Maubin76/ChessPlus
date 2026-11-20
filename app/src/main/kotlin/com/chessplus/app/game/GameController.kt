@@ -28,6 +28,7 @@ import kotlinx.coroutines.sync.withLock
  * Toutes les méthodes publiques sont appelées depuis le fil principal.
  *
  * @property scope portée des tâches (celle du ViewModel).
+ * @property mode mode de l'écran (continu, ciblé, rejeu).
  * @property rules règles des échecs.
  * @property puzzles source des problèmes.
  * @property progress enregistrement des résultats et cote.
@@ -38,6 +39,7 @@ import kotlinx.coroutines.sync.withLock
  */
 class GameController(
 	private val scope: CoroutineScope,
+	private val mode: GameMode,
 	private val rules: ChessRules,
 	private val puzzles: PuzzleProvider,
 	private val progress: ProgressStore,
@@ -107,14 +109,21 @@ class GameController(
 	private val persistMutex = Mutex()
 
 	/**
-	 * Démarre l'écran : reprend le problème sauvegardé, ou en choisit un nouveau.
+	 * Démarre l'écran : en entraînement continu, reprend le problème sauvegardé s'il existe ;
+	 * sinon (ou dans les autres modes) charge un nouveau problème.
 	 */
 	fun start() {
 		busy = true
 		pending = scope.launch {
 			rating = progress.currentRating().rating
-			if (!restore()) {
-				loadNext(null)
+			val vRestored = mode == GameMode.Continuous && restore()
+			if (!vRestored) {
+				val vFirst = (mode as? GameMode.Replay)?.let { puzzles.byId(it.puzzleId) }
+				if (vFirst != null) {
+					load(vFirst)
+				} else {
+					loadNext(null)
+				}
 			}
 		}
 	}
@@ -309,20 +318,30 @@ class GameController(
 	}
 
 	/**
-	 * Charge un nouveau problème et programme le premier coup de l'adversaire.
+	 * Charge le prochain problème du mode et programme le premier coup de l'adversaire.
 	 */
 	private suspend fun loadNext(inExcludeId: String?) {
 		sessions.clear()
-		val vPuzzle: Puzzle? = puzzles.next(rating, inExcludeId)
-		busy = false
+		val vPuzzle: Puzzle? = puzzles.next(rating, inExcludeId, mode)
 		if (vPuzzle == null) {
+			busy = false
 			session = null
 			header = GameHeader.NoPuzzle
 			publish()
 			return
 		}
+		load(vPuzzle)
+	}
+
+	/**
+	 * Démarre un problème donné et programme le premier coup de l'adversaire.
+	 */
+	private suspend fun load(inPuzzle: Puzzle) {
+		sessions.clear()
+		val vPuzzle = inPuzzle
+		busy = false
 		session = PuzzleSession.start(vPuzzle, rules)
-		rated = puzzles.isNew(vPuzzle.id)
+		rated = mode !is GameMode.Replay && puzzles.isNew(vPuzzle.id)
 		resultRecorded = false
 		recorded = null
 		startedAt = clock()
