@@ -10,6 +10,6 @@ class DataInfoTest {
 	/** Vérifie que :data voit :core. */
 	@Test
 	fun dataSeesCore() {
-		assertEquals("core", DataInfo.coreModuleName())
+		assertEquals(73, DataInfo.coreThemeCount())
 	}
 }

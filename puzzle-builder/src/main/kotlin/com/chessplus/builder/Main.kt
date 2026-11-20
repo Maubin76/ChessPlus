@@ -17,6 +17,6 @@ fun main(inArgs: Array<String>) {
 		System.err.println("Usage : puzzle-builder <chemin du .csv.zst> [options]")
 		exitProcess(kExitUsage)
 	}
-	println("puzzle-builder : modules ${DataInfo.coreModuleName()} et ${DataInfo.kModuleName} disponibles.")
+	println("puzzle-builder : module ${DataInfo.kModuleName} disponible, ${DataInfo.coreThemeCount()} thèmes connus.")
 	println("Fichier source : ${inArgs[0]} (génération non implémentée en phase 1)")
 }

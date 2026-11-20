@@ -12,6 +12,6 @@ class BuilderSetupTest {
 	@Test
 	fun builderSeesDataAndCore() {
 		assertEquals("data", DataInfo.kModuleName)
-		assertEquals("core", DataInfo.coreModuleName())
+		assertEquals(73, DataInfo.coreThemeCount())
 	}
 }

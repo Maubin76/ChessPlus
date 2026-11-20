@@ -26,8 +26,8 @@ class MainActivity : ComponentActivity() {
 	/**
 	 * Installe le contenu Compose de l'activité.
 	 */
-	override fun onCreate(inSavedInstanceState: Bundle?) {
-		super.onCreate(inSavedInstanceState)
+	override fun onCreate(savedInstanceState: Bundle?) {
+		super.onCreate(savedInstanceState)
 		enableEdgeToEdge()
 		setContent {
 			ChessPlusTheme {

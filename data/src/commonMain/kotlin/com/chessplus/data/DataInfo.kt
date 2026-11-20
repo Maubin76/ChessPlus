@@ -1,6 +1,6 @@
 package com.chessplus.data
 
-import com.chessplus.core.CoreInfo
+import com.chessplus.core.model.Theme
 
 /**
  * Informations générales sur le module :data.
@@ -12,7 +12,7 @@ object DataInfo {
 	const val kModuleName = "data"
 
 	/**
-	 * Retourne le nom du module dont :data dépend, pour vérifier le câblage vers :core.
+	 * Retourne le nombre de thèmes connus de :core, pour vérifier le câblage vers :core.
 	 */
-	fun coreModuleName(): String = CoreInfo.kModuleName
+	fun coreThemeCount(): Int = Theme.entries.size
 }
