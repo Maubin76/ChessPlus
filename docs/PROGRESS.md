@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 4 — Design** : étape 1, questions préalables posées à Mathieu, en attente de ses réponses.
+**Phase 4 — Design** : étape 1 terminée (réponses consignées dans `docs/DESIGN.md`) ; étape 2, inventaire des écrans et navigation, proposé et en attente de validation.
 
 ## Fait
 
@@ -136,5 +136,5 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 ## Questions ouvertes
 
 - `app/src/main/assets/puzzles.db` reste hors de git (à régénérer avec le builder) tant que Mathieu n'a pas demandé autre chose.
-- Phase de design : Glicko-2 ou Elo, et paramètres associés ; les problèmes rejoués depuis l'historique modifient-ils la cote (`rated`) ?
+- Paramètres Glicko-2 (tau 0,75, écart des problèmes 75, écart du joueur entre 45 et 350) : à confirmer.
 - La copie depuis les assets (`createFromAsset` avec le driver SQLite intégré) n'est pas encore vérifiée sur appareil : premier test en phase 5.
