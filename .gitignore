@@ -1,0 +1,15 @@
+# Fichiers générés et locaux
+.gradle/
+.kotlin/
+build/
+local.properties
+.idea/
+*.iml
+.DS_Store
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Le CSV source de Lichess ne doit jamais entrer dans le dépôt
+*.csv
+*.csv.zst
