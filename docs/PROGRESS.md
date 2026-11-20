@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 1 — Mise en place du projet** : terminée, en attente de validation par Mathieu.
+**Phase 2 — Cœur (`:core`)** : terminée, en attente de validation par Mathieu.
 
 ## Fait
 
@@ -17,10 +17,33 @@
 	- `:app` : Android, Compose Material 3, écran provisoire, thème clair/sombre suivant le système.
 - Un test de câblage par module ; le test `jvmShared` (chesslib) tourne à la fois sur la JVM et en test hôte Android.
 - `./gradlew build` réussit : tests, lint, APK debug et APK release minifié par R8.
+- Validée par Mathieu le 2026-11-20.
+
+### Phase 2
+
+- `model` : `Color`, `PieceType`, `Piece`, `Square` (index 0 = a1 à 63 = h8), `Move` (lecture/écriture UCI), `Theme` (73 thèmes à bit fixe), `ThemeSet` (masque sur deux `Long` : `low` bits 0-63, `high` bits 64-127).
+- `codec.MoveCodec` : 2 octets gros-boutistes par coup (départ 6 bits, arrivée 6 bits, promotion 3 bits).
+- `puzzle.LichessCsv` : découpage strict (11 champs, champs vides finaux conservés, nombre pair de coups) ; `LichessCsvRow.toPuzzle()` échoue sur un thème inconnu.
+- `puzzle.Puzzle` : camp du joueur = inverse du trait de la FEN, URL Lichess.
+- `rules` : interfaces `ChessRules`, `PositionView`, `ChessPosition` (types du projet uniquement), `defaultChessRules()` en `expect`/`actual` ; implémentation chesslib dans `jvmShared`.
+- `puzzle.PuzzleSession` : déroulement d'un problème (voir décisions), état sérialisable `PuzzleSnapshot` pour la reprise.
+- `rating` : interface `RatingSystem`, implémentations `Glicko2RatingSystem` et `EloRatingSystem` (choix en phase de design).
+- Tests (`commonTest`, exécutés sur JVM et en test hôte Android) : 50 tests par cible ; 104 tests au total sur le projet, tous verts.
+	- codec : encodages connus, aller-retour des 4 problèmes de l'extrait et de toutes les combinaisons case/case/promotion, données invalides ;
+	- thèmes : correspondance exacte avec les 73 thèmes du CSV réel, bits uniques, mots haut et bas ;
+	- CSV : 4 lignes de l'extrait, champs vides finaux, 10/12 champs, coups impairs, nombres et thèmes invalides ;
+	- règles : position initiale, export FEN, roque (et ses interdictions), prise en passant (jouée, depuis la FEN, expirée), promotions et sous-promotion, échec, mat, pat, clouage, annulation, copie ;
+	- sessions : déroulement complet des 4 problèmes, mat final de 00sHx, mat alternatif sur un problème réel (00Mgf : d8h8# au lieu de d8g8#), erreur puis nouvel essai, coup illégal, promotion, solution coup par coup, recommencer, ordre des tours, reprise depuis l'état ;
+	- cote : exemple de l'article de Glickman, sens des mises à jour, bornes de l'écart de cote, formule Elo.
+
+### Statistiques du CSV Lichess (fichier du 2026-11-20)
+
+- 6 193 530 problèmes, aucune ligne mal formée, aucun nombre de coups impair.
+- Cotes de 399 à 3330 ; solutions de 2 à 34 demi-coups (2 : 921 479, 4 : 3 132 447, 6 : 1 628 493, 8 : 364 028, au-delà : < 150 000).
+- 73 thèmes : masque sur deux colonnes `INTEGER`.
 
 ## Reste à faire
 
-- Phase 2 : cœur (`:core`).
 - Phase 3 : données et génération (`:data`, `:puzzle-builder`).
 - Phase 4 : design.
 - Phase 5 : écrans.
@@ -56,10 +79,24 @@
 - **SDK** : application pour Android 16 uniquement (décision de Mathieu) : `minSdk` 36, `targetSdk` 36. `compileSdk` 37, exigé par core-ktx 1.19 et Compose 1.12 (sans effet sur les appareils visés).
 - **JVM** : toolchain 21, bytecode cible 17.
 - **Console du builder** : la tâche `run` force `stdout.encoding`/`stderr.encoding` en UTF-8, sinon les accents sont corrompus sous Windows.
-- **Package** : `com.chessplus` (`.core`, `.data`, `.builder`, `.app`) — à confirmer.
+- **Package** : `com.chessplus` (`.core`, `.data`, `.builder`, `.app`), identifiant `com.chessplus.app` (validé).
 - **Spécification** : le prompt d'origine a été déplacé dans `docs/SPEC.md`, référencé depuis `CLAUDE.md`.
+- **Paramètres des `override`** : ils gardent le nom du supertype (validé) ; le préfixe `in` s'applique à toutes les autres fonctions.
+- **Constantes** : les `val` immuables de `companion object` prennent aussi le préfixe `k` (`Square.kAll`, `ThemeSet.kEmpty`).
+
+### Choix techniques de la phase 2
+
+- **Thèmes** : chaque thème a un bit fixe déclaré explicitement (pas l'ordinal) ; on n'en change jamais, on en ajoute.
+- **Session de problème** :
+	- la session ne joue jamais le coup de l'adversaire d'elle-même : l'interface appelle `playOpponentMove()` quand le statut vaut `OpponentToMove`, après son animation ;
+	- un mauvais coup légal n'est pas joué sur l'échiquier (l'interface peut l'animer puis le retirer) ; le joueur réessaie depuis la même position ;
+	- un coup illégal est refusé sans compter d'erreur ;
+	- un autre coup légal qui donne mat termine le problème avec succès ;
+	- `result` passe à `Failure` dès la première erreur ou aide et n'en change plus ; `Success` seulement si le problème est terminé sans erreur ni aide ;
+	- « recommencer » revient à la FEN de départ en gardant l'échec ;
+	- la reprise rejoue les coups à partir de `PuzzleSnapshot` (id, coups joués, mat alternatif, compteurs).
+- **Glicko-2** : chaque problème est une période de notation d'une partie ; écart de cote des problèmes fixé à 75 (non stocké en base), tau 0,75, écart du joueur borné entre 45 et 350. L'écart se stabilise vers 60 en pratique. Valeurs provisoires, à confirmer en phase de design avec le choix de l'algorithme.
 
 ## Questions ouvertes
 
-- Confirmer l'identifiant `com.chessplus.app`.
-- Paramètres des fonctions redéfinies (`onCreate(inSavedInstanceState)`) : le préfixe `in` provoque un avertissement Kotlin (nom différent du supertype). Garder le préfixe ou conserver le nom d'origine pour les `override` ?
+- Phase de design : Glicko-2 ou Elo, et paramètres associés.
