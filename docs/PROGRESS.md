@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3, trois directions visuelles (`docs/design/direction-*.png`) puis dix suggestions supplémentaires à sa demande (`docs/design/suggestions/`), en attente du choix de Mathieu.
+**Phase 4 — Design** : étapes 1 et 2 validées (`docs/DESIGN.md`) ; étape 3 validée : direction « Accent pleine largeur » (`docs/design/suggestions/suggestion-10-pleine-largeur.png`) ; étape 4, maquettes `@Preview` de chaque écran, en cours.
 
 ## Fait
 

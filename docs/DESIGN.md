@@ -21,6 +21,52 @@ Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contien
 - Applications appréciées : **Chess.com**.
 - Thème clair ou sombre : **suit le système** par défaut.
 
+## Direction visuelle retenue : « Accent pleine largeur » (validé le 2026-11-20)
+
+Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
+
+- Monochrome, avec **une seule exception** : un vert pour la réussite et un rouge pour l'erreur, réservés au retour visuel (inspiration Chess.com).
+- **Échiquier bord à bord** : toute la largeur de l'écran (384 dp sur le S24, cases de 48 dp), sans carte ni coins arrondis.
+- Police unique : **Inter** (SIL OFL), graisses 400 à 800.
+- Pièces : **cburnett** (Colin M.L. Burnett, GPLv2+), auteur cité dans les crédits.
+- Icônes : **Material Symbols Rounded** (Apache 2.0).
+
+### Palette
+
+| Rôle | Clair | Sombre |
+| --- | --- | --- |
+| Fond | `#F4F5F6` | `#0F1011` |
+| Surface (cartes, tuiles) | `#FFFFFF` | `#1C1D1F` |
+| Texte | `#111111` | `#F2F3F4` |
+| Texte secondaire | `#8A8E95` | `#8A8E95` |
+| Bouton principal | `#111111`, icône `#F4F5F6` | `#F2F3F4`, icône `#0F1011` |
+| Réussite (accent) | `#3E8E5A` | `#5DB37C` |
+| Erreur | `#C2483D` | `#E0675C` |
+| Case claire | `#EEF0F1` | `#A3A8AE` |
+| Case foncée | `#B5BAC0` | `#696E75` |
+| Dernier coup | accent à 24 % d'opacité | accent à 31 % |
+| Pièce sélectionnée | `#111111` à 24 % | `#FFFFFF` à 31 % |
+| Coups légaux (points) | `#111111` à 27 % | `#111111` à 31 % |
+| Coordonnées | sur case claire `#111111` à 27 %, sur case foncée `#FFFFFF` à 59 % | `#111111` à 31 % / `#FFFFFF` à 43 % |
+
+### Typographie (Inter)
+
+| Usage | Taille | Graisse |
+| --- | --- | --- |
+| Message de retour (« Bon coup ! ») | 26 sp | 800 |
+| Titre de barre | 16 sp | 600 |
+| Corps, consigne | 14 sp | 400 |
+| Cote du joueur | 14 sp | 700 |
+| Libellés de commandes | 11 sp | 500 à 600 |
+| Coordonnées | 9 sp | 600 |
+
+### Écran de jeu
+
+- Haut : retour, titre « Entraînement », cote du joueur.
+- Message d'état : consigne (« Les blancs jouent »), puis retour visuel en grand (« Bon coup ! » en vert avec icône, erreur en rouge).
+- Échiquier pleine largeur ; bon coup signalé par une **pastille ✓ verte** sur la case d'arrivée et le dernier coup surligné en vert.
+- Bas : tuile « Recommencer », gros bouton rond « Indice », tuile « Suivant » (grisée tant que le problème n'est pas terminé).
+
 ## Échiquier et pièces (validé le 2026-11-20)
 
 - Pièces de style **classique Staunton**.
