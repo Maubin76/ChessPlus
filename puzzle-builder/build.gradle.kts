@@ -34,4 +34,7 @@ dependencies {
 tasks.named<JavaExec>("run") {
 	// Les chemins relatifs passés en argument sont résolus depuis la racine du dépôt.
 	workingDir = rootProject.projectDir
+	// Gradle relit la sortie du processus en UTF-8 : sans ces options, Java écrit en Cp1252 sous Windows
+	// et les accents arrivent corrompus dans la console.
+	jvmArgs("-Dstdout.encoding=UTF-8", "-Dstderr.encoding=UTF-8")
 }

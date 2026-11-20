@@ -53,12 +53,13 @@
 - **Source set `jvmShared`** : créé par le template de hiérarchie Kotlin, avec un filtre sur les compilations JVM et Android (`withAndroidTarget()` ne reconnaît pas la cible du nouveau plugin). Tests associés dans `jvmSharedTest`.
 - **Kotlin dans `:app`** : AGP 9 intègre Kotlin, le plugin `org.jetbrains.kotlin.android` n'est pas appliqué.
 - **JitPack** : déclaré dans `settings.gradle.kts` en `exclusiveContent`, limité au groupe `com.github.bhlangonijr`.
-- **SDK** : `compileSdk` 37 (exigé par core-ktx 1.19 et Compose 1.12), `targetSdk` 36, `minSdk` 26 — à confirmer.
+- **SDK** : application pour Android 16 uniquement (décision de Mathieu) : `minSdk` 36, `targetSdk` 36. `compileSdk` 37, exigé par core-ktx 1.19 et Compose 1.12 (sans effet sur les appareils visés).
 - **JVM** : toolchain 21, bytecode cible 17.
+- **Console du builder** : la tâche `run` force `stdout.encoding`/`stderr.encoding` en UTF-8, sinon les accents sont corrompus sous Windows.
 - **Package** : `com.chessplus` (`.core`, `.data`, `.builder`, `.app`) — à confirmer.
 - **Spécification** : le prompt d'origine a été déplacé dans `docs/SPEC.md`, référencé depuis `CLAUDE.md`.
 
 ## Questions ouvertes
 
-- Confirmer `minSdk` 26, `targetSdk` 36 et l'identifiant `com.chessplus.app`.
+- Confirmer l'identifiant `com.chessplus.app`.
 - Paramètres des fonctions redéfinies (`onCreate(inSavedInstanceState)`) : le préfixe `in` provoque un avertissement Kotlin (nom différent du supertype). Garder le préfixe ou conserver le nom d'origine pour les `override` ?
