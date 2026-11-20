@@ -1,4 +1,5 @@
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import java.util.Properties
 
 // Module :app : application Android (écrans, navigation, ViewModels).
 // AGP 9 intègre le support Kotlin : le plugin org.jetbrains.kotlin.android n'est pas appliqué.
@@ -7,6 +8,13 @@ plugins {
 	alias(libs.plugins.kotlin.compose)
 	alias(libs.plugins.compose.screenshot)
 }
+
+// Clé de signature de la version release : lue dans le gradle.properties de l'utilisateur ou dans
+// local.properties (jamais versionnés), comme pour PatrimoinePlus. Absente : la release est signée
+// avec la clé de debug, ce qui suffit pour l'installer sur son téléphone.
+val kLocal = Properties().apply { rootProject.file("local.properties").takeIf { it.exists() }?.reader()?.use { load(it) } }
+val kSigning = { inName: String -> (findProperty("chessplus.$inName") ?: kLocal.getProperty("chessplus.$inName"))?.toString() }
+val kKeystore = kSigning("keystore")?.let { file(it) }?.takeIf { it.exists() }
 
 android {
 	namespace = "com.chessplus.app"
@@ -20,11 +28,26 @@ android {
 		versionName = "0.1.0"
 	}
 
+	signingConfigs {
+		if (kKeystore != null) {
+			create("publication") {
+				storeFile = kKeystore
+				storePassword = kSigning("keyPassword")
+				keyAlias = kSigning("keyAlias")
+				keyPassword = kSigning("keyPassword")
+			}
+		}
+	}
+
 	buildTypes {
 		release {
 			isMinifyEnabled = true
 			isShrinkResources = true
+			signingConfig = signingConfigs.findByName("publication") ?: signingConfigs.getByName("debug")
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+			// Bibliothèques natives (SQLite intégré, Compose) pour les téléphones 64 bits ARM seulement :
+			// tous les téléphones récents, dont le Galaxy S24 ; les autres architectures servent aux émulateurs.
+			ndk { abiFilters += "arm64-v8a" }
 		}
 	}
 

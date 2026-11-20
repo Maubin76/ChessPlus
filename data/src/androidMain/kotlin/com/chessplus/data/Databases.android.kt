@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import com.chessplus.data.puzzle.PuzzleDatabase
+import com.chessplus.data.puzzle.PuzzleDatabaseConstructor
 import com.chessplus.data.user.UserDatabase
+import com.chessplus.data.user.UserDatabaseConstructor
 import kotlinx.coroutines.Dispatchers
 import java.io.File
 
@@ -38,11 +40,12 @@ fun installPuzzleDatabase(inContext: Context) {
 }
 
 /**
- * Ouvre la base des problèmes installée par [installPuzzleDatabase].
+ * Ouvre la base des problèmes installée par [installPuzzleDatabase]. Le constructeur généré est
+ * passé explicitement, pour ne pas dépendre de la réflexion (version release optimisée par R8).
  */
 fun createPuzzleDatabase(inContext: Context): PuzzleDatabase {
 	val vContext = inContext.applicationContext
-	return Room.databaseBuilder<PuzzleDatabase>(vContext, vContext.getDatabasePath(PuzzleDatabase.kFileName).absolutePath)
+	return Room.databaseBuilder<PuzzleDatabase>(vContext, vContext.getDatabasePath(PuzzleDatabase.kFileName).absolutePath, factory = { PuzzleDatabaseConstructor.initialize() })
 		.setDriver(BundledSQLiteDriver())
 		.setQueryCoroutineContext(Dispatchers.IO)
 		.build()
@@ -53,7 +56,7 @@ fun createPuzzleDatabase(inContext: Context): PuzzleDatabase {
  */
 fun createUserDatabase(inContext: Context): UserDatabase {
 	val vContext = inContext.applicationContext
-	return Room.databaseBuilder<UserDatabase>(vContext, vContext.getDatabasePath(UserDatabase.kFileName).absolutePath)
+	return Room.databaseBuilder<UserDatabase>(vContext, vContext.getDatabasePath(UserDatabase.kFileName).absolutePath, factory = { UserDatabaseConstructor.initialize() })
 		.setDriver(BundledSQLiteDriver())
 		.setQueryCoroutineContext(Dispatchers.IO)
 		.build()

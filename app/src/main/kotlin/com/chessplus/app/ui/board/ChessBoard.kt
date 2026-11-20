@@ -27,10 +27,10 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
@@ -272,37 +272,35 @@ fun ChessBoard(
 		}
 
 		// Pièces : prises qui s'effacent, pièces déplacées qui glissent, sauf celle tenue sous le doigt.
-		val vProgressValue = vProgress.value
-		if (vProgressValue < 1f) {
-			for ((vSquare, vPiece) in vPlan.fading) {
-				val vPosition = vGeometry.topLeft(vSquare)
-				Image(
-					painterResource(pieceDrawable(vPiece)),
-					contentDescription = null,
-					modifier = Modifier
-						.size(vSquareDp)
-						.offset { IntOffset(vPosition.x.roundToInt(), vPosition.y.roundToInt()) }
-						.alpha(1f - vProgressValue),
-				)
-			}
-		}
-		for ((vSquare, vPiece) in inPieces) {
-			if (vSquare == vDragFrom) {
-				continue
-			}
-			var vPosition = vGeometry.topLeft(vSquare)
-			val vFrom = vPlan.motions[vSquare]
-			if (vFrom != null && vProgressValue < 1f) {
-				val vStart = vGeometry.topLeft(vFrom)
-				vPosition = vStart + (vPosition - vStart) * vProgressValue
-			}
+		// L'avancement de l'animation n'est lu qu'au placement et au dessin, pour ne pas recomposer
+		// l'échiquier à chaque image.
+		for ((vSquare, vPiece) in vPlan.fading) {
+			val vPosition = vGeometry.topLeft(vSquare)
 			Image(
 				painterResource(pieceDrawable(vPiece)),
 				contentDescription = null,
 				modifier = Modifier
 					.size(vSquareDp)
 					.offset { IntOffset(vPosition.x.roundToInt(), vPosition.y.roundToInt()) }
-					.zIndex(if (vFrom != null) 1f else 0f),
+					.graphicsLayer { alpha = 1f - vProgress.value },
+			)
+		}
+		for ((vSquare, vPiece) in inPieces) {
+			if (vSquare == vDragFrom) {
+				continue
+			}
+			val vTarget = vGeometry.topLeft(vSquare)
+			val vStart = vPlan.motions[vSquare]?.let { vGeometry.topLeft(it) }
+			Image(
+				painterResource(pieceDrawable(vPiece)),
+				contentDescription = null,
+				modifier = Modifier
+					.size(vSquareDp)
+					.offset {
+						val vPosition = if (vStart != null) vStart + (vTarget - vStart) * vProgress.value else vTarget
+						IntOffset(vPosition.x.roundToInt(), vPosition.y.roundToInt())
+					}
+					.zIndex(if (vStart != null) 1f else 0f),
 			)
 		}
 
@@ -344,13 +342,11 @@ fun ChessBoard(
 
 		vDragFrom?.let { inFrom ->
 			inPieces[inFrom]?.let { inPiece ->
-				val vX = vDragPosition.x - vSquarePx / 2
-				val vY = vDragPosition.y - vSquarePx * 0.8f
 				Image(
 					painterResource(pieceDrawable(inPiece)),
 					contentDescription = null,
 					modifier = Modifier
-						.offset { IntOffset(vX.roundToInt(), vY.roundToInt()) }
+						.offset { IntOffset((vDragPosition.x - vSquarePx / 2).roundToInt(), (vDragPosition.y - vSquarePx * 0.8f).roundToInt()) }
 						.zIndex(3f)
 						.size(vSquareDp)
 						.scale(kDragScale),
