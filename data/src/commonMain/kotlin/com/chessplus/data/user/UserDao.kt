@@ -90,6 +90,12 @@ interface UserDao {
 	fun observeUnsolved(inLimit: Int): Flow<List<PuzzleStateEntity>>
 
 	/**
+	 * Retourne les identifiants des problèmes jamais réussis, du plus récent au plus ancien.
+	 */
+	@Query("SELECT puzzleId FROM puzzle_state WHERE solved = 0 ORDER BY lastPlayedAt DESC LIMIT :inLimit")
+	suspend fun getUnsolvedIds(inLimit: Int): List<String>
+
+	/**
 	 * Observe l'évolution de la cote, dans l'ordre chronologique.
 	 */
 	@Query("SELECT playedAt, playerRatingAfter AS rating FROM attempt WHERE rated = 1 ORDER BY playedAt, id")
