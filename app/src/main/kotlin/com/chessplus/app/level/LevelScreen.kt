@@ -1,5 +1,7 @@
 package com.chessplus.app.level
 
+import com.chessplus.app.ui.components.pressClickable
+import com.chessplus.app.ui.components.rememberPressFeedback
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -144,13 +146,15 @@ fun LevelScreen(inFirstLaunch: Boolean, inOnBack: () -> Unit, inOnChoose: (Int) 
 @Composable
 private fun LevelCard(inTitle: String, inDescription: String, inRating: String, inSelected: Boolean, inOnClick: () -> Unit) {
 	val vColors = kLocalChessColors.current
+	val vPress = rememberPressFeedback()
 	Row(
 		Modifier
+			.then(vPress.scale)
 			.fillMaxWidth()
 			.clip(RoundedCornerShape(22.dp))
 			.background(vColors.surface)
 			.border(2.dp, if (inSelected) vColors.primary else vColors.surface, RoundedCornerShape(22.dp))
-			.clickable(onClick = inOnClick)
+			.pressClickable(vPress, inOnClick = inOnClick)
 			.padding(18.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {

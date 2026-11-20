@@ -1,6 +1,9 @@
 package com.chessplus.app
 
+import android.content.res.Configuration
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import com.chessplus.app.design.preview.kDevice
 import com.android.tools.screenshot.PreviewTest
 import com.chessplus.app.design.preview.DesignPreviews
 import com.chessplus.app.history.HistoryContent
@@ -104,3 +107,26 @@ fun RealStatsShot() = ChessPlusTheme {
 @DesignPreviews
 @Composable
 fun RealSettingsShot() = ChessPlusTheme { SettingsContent(Settings(), {}, "0.1.0", {}, {}) }
+
+/** Accueil avec une police agrandie de 30 % (réglage d'accessibilité du téléphone). */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
+@Composable
+fun RealHomeLargeFontShot() = ChessPlusTheme(inDarkTheme = true) {
+	HomeContent(
+		HomeUiState(
+			solvedCount = 1,
+			rating = 1431,
+			resume = ResumeInfo(piecesOf("q5nr/1ppknQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 1"), Color.White, 2, 2, true, kNow - 60 * 60_000),
+		),
+		kNow, {}, {}, {}, {},
+	)
+}
+
+/** Entraînement ciblé avec une police agrandie de 30 %. */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
+@Composable
+fun RealTargetedLargeFontShot() = ChessPlusTheme(inDarkTheme = false) {
+	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {})
+}

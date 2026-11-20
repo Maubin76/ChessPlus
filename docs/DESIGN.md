@@ -133,7 +133,10 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 
 - **Barre de navigation en bas** à trois onglets : Accueil, Historique, Statistiques. Elle est masquée sur l'écran Problème (plein écran), le choix du niveau et les réglages.
 - Forme de la navigation (modifiée par Mathieu le 2026-11-20, d'après PatrimoinePlus) : pilule flottante centrée, 12 dp au-dessus de la barre système, hauteur 64 dp, 6 dp de marge interne, 8 dp entre onglets ; au repos, icône seule en gris ; l'onglet actif devient une capsule à l'encre qui s'élargit pour afficher son nom ; ombre douce en clair, liseré de 1 dp en sombre.
-- Accueil : boutons « Entraînement ciblé » et « S'entraîner » côte à côte, hauteur 48 dp (réduits à la demande de Mathieu le 2026-11-20).
+- Accueil : boutons « Ciblé » et « S'entraîner » côte à côte, hauteur 48 dp, texte en 14 sp sur une ligne, le bouton principal plus large ; carte « Reprendre » (titre court) avec la progression dessous (modifiés par Mathieu le 2026-11-20 : libellés trop longs avec la police agrandie du téléphone).
+- Textes : tous les libellés de boutons et de commandes tiennent sur une ligne, vérifiés avec une police agrandie de 30 %.
+- Transitions (demandées par Mathieu le 2026-11-20) : entre onglets, fondu ; sinon glissement d'un quart de largeur et fondu (280 ms), vers la gauche en avançant, vers la droite en revenant.
+- Clics : onde et léger enfoncement animé (échelle 0,95, ressort) sur les boutons, tuiles, cartes, puces et onglets.
 - Réglages et entraînement ciblé s'ouvrent depuis l'accueil.
 - L'écran Problème est commun à l'entraînement continu, à l'entraînement ciblé (filtres rappelés en haut) et au rejeu depuis l'historique ; « Suivant » reste dans le même mode.
 - Retour depuis un problème : retour à l'accueil, le problème est conservé (carte « Reprendre »).

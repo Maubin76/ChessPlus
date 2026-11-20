@@ -111,6 +111,7 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - R8 : constructeurs Room passés explicitement (pas de réflexion) ; chesslib sans réflexion, mais ses énumérations sont gardées (`Square.valueOf` à la lecture des FEN).
 - Performance : l'échiquier ne se recompose plus à chaque image pendant une animation ou un glisser (lecture de l'avancement au placement et au dessin).
 - Activité verrouillée en portrait (décision de design, oubliée jusque-là).
+- Retours après le premier test sur le S24 (police agrandie) : libellés raccourcis et sur une ligne (« Ciblé », « Reprendre »), captures en police agrandie de 30 % ajoutées ; transitions entre écrans (`AnimatedContent`, ViewModels des écrans quittés libérés après l'animation) ; enfoncement animé au clic (`ui/components/Press.kt`).
 
 ## Reste à faire
 

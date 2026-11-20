@@ -21,10 +21,10 @@
 	<!-- Accueil -->
 	<string name="home_solved">Problèmes résolus</string>
 	<string name="home_rating">Votre cote : %1$s</string>
-	<string name="home_resume">Reprendre le problème</string>
+	<string name="home_resume">Reprendre</string>
 	<string name="home_resume_move">Coup %1$d sur %2$d</string>
 	<string name="home_resume_finished">Terminé</string>
-	<string name="home_targeted">Entraînement ciblé</string>
+	<string name="home_targeted">Ciblé</string>
 	<string name="home_train">S’entraîner</string>
 
 	<!-- Choix du niveau -->

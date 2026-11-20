@@ -40,6 +40,7 @@ import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.chessplus.app.R
 import com.chessplus.app.ui.board.pieceDrawable
@@ -60,7 +61,8 @@ fun ScreenTopBar(inTitle: String, inOnBack: (() -> Unit)? = null, inActionIcon: 
 	val vColors = kLocalChessColors.current
 	Row(Modifier.fillMaxWidth().height(64.dp).padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
 		if (inOnBack != null) {
-			Box(Modifier.size(44.dp).clip(CircleShape).clickable(onClick = inOnBack), contentAlignment = Alignment.Center) {
+			val vPress = rememberPressFeedback()
+			Box(Modifier.then(vPress.scale).size(44.dp).clip(CircleShape).pressClickable(vPress, inOnClick = inOnBack), contentAlignment = Alignment.Center) {
 				Icon(painterResource(R.drawable.ic_arrow_back_ios_new), contentDescription = stringResource(R.string.action_back), tint = vColors.text, modifier = Modifier.size(20.dp))
 			}
 			Spacer(Modifier.width(4.dp))
@@ -69,7 +71,8 @@ fun ScreenTopBar(inTitle: String, inOnBack: (() -> Unit)? = null, inActionIcon: 
 		}
 		Text(inTitle, style = ChessType.kScreenTitle, color = vColors.text, modifier = Modifier.weight(1f))
 		inActionIcon?.let {
-			Box(Modifier.size(44.dp).clip(CircleShape).background(vColors.surface).clickable(onClick = inOnAction), contentAlignment = Alignment.Center) {
+			val vPress = rememberPressFeedback()
+			Box(Modifier.then(vPress.scale).size(44.dp).clip(CircleShape).background(vColors.surface).pressClickable(vPress, inOnClick = inOnAction), contentAlignment = Alignment.Center) {
 				Icon(painterResource(it), contentDescription = null, tint = vColors.text, modifier = Modifier.size(22.dp))
 			}
 		}
@@ -82,19 +85,24 @@ fun ScreenTopBar(inTitle: String, inOnBack: (() -> Unit)? = null, inActionIcon: 
 @Composable
 fun PrimaryButton(inText: String, inOnClick: () -> Unit, inModifier: Modifier = Modifier, inIcon: Int? = null, inEnabled: Boolean = true, inHeight: Int = 60) {
 	val vColors = kLocalChessColors.current
+	val vPress = rememberPressFeedback()
 	Row(
-		inModifier.fillMaxWidth().height(inHeight.dp).clip(RoundedCornerShape(30.dp)).background(if (inEnabled) vColors.primary else vColors.track).clickable(enabled = inEnabled, onClick = inOnClick),
+		inModifier.then(vPress.scale).fillMaxWidth().height(inHeight.dp).clip(RoundedCornerShape(30.dp)).background(if (inEnabled) vColors.primary else vColors.track)
+			.pressClickable(vPress, inEnabled, inOnClick).padding(horizontal = 16.dp),
 		horizontalArrangement = Arrangement.Center,
 		verticalAlignment = Alignment.CenterVertically,
 	) {
 		val vInk = if (inEnabled) vColors.onPrimary else vColors.muted
 		inIcon?.let {
-			Icon(painterResource(it), contentDescription = null, tint = vInk, modifier = Modifier.size(22.dp))
-			Spacer(Modifier.width(10.dp))
+			Icon(painterResource(it), contentDescription = null, tint = vInk, modifier = Modifier.size(if (inHeight < kFullButtonHeight) 20.dp else 22.dp))
+			Spacer(Modifier.width(8.dp))
 		}
-		Text(inText, style = ChessType.kBarTitle, color = vInk)
+		Text(inText, style = if (inHeight < kFullButtonHeight) ChessType.kBodyStrong else ChessType.kBarTitle, color = vInk, maxLines = 1, overflow = TextOverflow.Ellipsis)
 	}
 }
+
+/** Hauteur à partir de laquelle un bouton principal prend le grand style de texte. */
+private const val kFullButtonHeight = 56
 
 /**
  * Bouton secondaire pleine largeur, en pastille claire.
@@ -102,8 +110,10 @@ fun PrimaryButton(inText: String, inOnClick: () -> Unit, inModifier: Modifier = 
 @Composable
 fun SecondaryButton(inText: String, inOnClick: () -> Unit, inIcon: Int? = null, inModifier: Modifier = Modifier, inHeight: Int = 56) {
 	val vColors = kLocalChessColors.current
+	val vPress = rememberPressFeedback()
 	Row(
-		inModifier.fillMaxWidth().height(inHeight.dp).clip(RoundedCornerShape(28.dp)).background(vColors.surface).clickable(onClick = inOnClick),
+		inModifier.then(vPress.scale).fillMaxWidth().height(inHeight.dp).clip(RoundedCornerShape(28.dp)).background(vColors.surface)
+			.pressClickable(vPress, inOnClick = inOnClick).padding(horizontal = 16.dp),
 		horizontalArrangement = Arrangement.Center,
 		verticalAlignment = Alignment.CenterVertically,
 	) {
@@ -111,7 +121,7 @@ fun SecondaryButton(inText: String, inOnClick: () -> Unit, inIcon: Int? = null, 
 			Icon(painterResource(it), contentDescription = null, tint = vColors.text, modifier = Modifier.size(20.dp))
 			Spacer(Modifier.width(10.dp))
 		}
-		Text(inText, style = ChessType.kBodyStrong, color = vColors.text)
+		Text(inText, style = ChessType.kBodyStrong, color = vColors.text, maxLines = 1, overflow = TextOverflow.Ellipsis)
 	}
 }
 
@@ -130,12 +140,14 @@ fun SurfaceCard(inModifier: Modifier = Modifier, inContent: @Composable ColumnSc
 @Composable
 fun SelectChip(inText: String, inSelected: Boolean, inOnClick: () -> Unit) {
 	val vColors = kLocalChessColors.current
+	val vPress = rememberPressFeedback()
 	Box(
 		Modifier
+			.then(vPress.scale)
 			.clip(RoundedCornerShape(18.dp))
 			.background(if (inSelected) vColors.primary else vColors.surface)
 			.border(1.dp, if (inSelected) vColors.primary else vColors.track, RoundedCornerShape(18.dp))
-			.clickable(onClick = inOnClick)
+			.pressClickable(vPress, inOnClick = inOnClick)
 			.padding(horizontal = 14.dp, vertical = 8.dp),
 	) {
 		Text(inText, style = ChessType.kCaption, color = if (inSelected) vColors.onPrimary else vColors.text)
@@ -244,12 +256,14 @@ fun BottomNavBar(inSelected: NavTab, inOnSelect: (NavTab) -> Unit) {
 				val vBackground by animateColorAsState(if (vActive) vColors.primary else vColors.surface, label = "fondOnglet")
 				val vInk by animateColorAsState(if (vActive) vColors.onPrimary else vColors.muted, label = "encreOnglet")
 				val vName = stringResource(vLabel)
+				val vPress = rememberPressFeedback()
 				Row(
 					Modifier
+						.then(vPress.scale)
 						.fillMaxHeight()
 						.clip(CircleShape)
 						.background(vBackground)
-						.clickable(onClickLabel = vName) { inOnSelect(vTab) }
+						.pressClickable(vPress) { inOnSelect(vTab) }
 						.animateContentSize()
 						.padding(horizontal = if (vActive) 18.dp else 14.dp),
 					verticalAlignment = Alignment.CenterVertically,

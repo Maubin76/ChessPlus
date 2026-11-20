@@ -126,6 +126,9 @@ class NavigationViewModel(private val savedState: SavedStateHandle) : ViewModel(
 	/** Pile des écrans ; le dernier est affiché. */
 	val backStack: SnapshotStateList<BackStackEntry> = mutableStateListOf()
 
+	/** Écrans retirés de la pile, encore affichés pendant leur animation de sortie. */
+	private val retired = mutableListOf<BackStackEntry>()
+
 	/** Vrai quand la pile a été initialisée (reprise ou premier écran choisi). */
 	val isInitialized: Boolean
 		get() = backStack.isNotEmpty()
@@ -156,7 +159,7 @@ class NavigationViewModel(private val savedState: SavedStateHandle) : ViewModel(
 	 * Remplace l'écran courant.
 	 */
 	fun replace(inDestination: Destination) {
-		backStack.removeLastOrNull()?.viewModelStore?.clear()
+		backStack.removeLastOrNull()?.let { retired.add(it) }
 		navigate(inDestination)
 	}
 
@@ -167,7 +170,7 @@ class NavigationViewModel(private val savedState: SavedStateHandle) : ViewModel(
 		if (backStack.size <= 1) {
 			return false
 		}
-		backStack.removeAt(backStack.lastIndex).viewModelStore.clear()
+		retired.add(backStack.removeAt(backStack.lastIndex))
 		save()
 		return true
 	}
@@ -186,10 +189,10 @@ class NavigationViewModel(private val savedState: SavedStateHandle) : ViewModel(
 			return
 		}
 		while (backStack.size > 1) {
-			backStack.removeAt(backStack.lastIndex).viewModelStore.clear()
+			retired.add(backStack.removeAt(backStack.lastIndex))
 		}
 		if (backStack.firstOrNull()?.destination != Destination.Home) {
-			backStack.removeLastOrNull()?.viewModelStore?.clear()
+			backStack.removeLastOrNull()?.let { retired.add(it) }
 			backStack.add(newEntry(Destination.Home))
 		}
 		if (vTarget != Destination.Home) {
@@ -199,9 +202,18 @@ class NavigationViewModel(private val savedState: SavedStateHandle) : ViewModel(
 	}
 
 	/**
+	 * Libère les ViewModels des écrans retirés, une fois leur animation de sortie terminée.
+	 */
+	fun clearRetired() {
+		retired.forEach { it.viewModelStore.clear() }
+		retired.clear()
+	}
+
+	/**
 	 * Libère les ViewModels de tous les écrans.
 	 */
 	override fun onCleared() {
+		clearRetired()
 		backStack.forEach { it.viewModelStore.clear() }
 	}
 

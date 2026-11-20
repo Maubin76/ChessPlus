@@ -1,7 +1,8 @@
 package com.chessplus.app.history
 
+import com.chessplus.app.ui.components.pressClickable
+import com.chessplus.app.ui.components.rememberPressFeedback
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -222,8 +223,9 @@ private fun HistoryRowView(inRow: HistoryRow, inNow: Long, inOnClick: () -> Unit
 	val vColors = kLocalChessColors.current
 	val vThemes = inRow.themes.filter { it != com.chessplus.core.model.Theme.Mate || inRow.themes.count() == 1 }.take(2).map { stringResource(themeLabel(it)) }.joinToString(" · ")
 	val vWhen = formatElapsed(inRow.playedAt, inNow)
+	val vPress = rememberPressFeedback()
 	Row(
-		Modifier.fillMaxWidth().padding(vertical = 3.dp).clip(RoundedCornerShape(18.dp)).background(vColors.surface).clickable(onClick = inOnClick).padding(10.dp),
+		Modifier.padding(vertical = 3.dp).then(vPress.scale).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(vColors.surface).pressClickable(vPress, inOnClick = inOnClick).padding(10.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
 		Box(Modifier.size(52.dp).clip(RoundedCornerShape(10.dp))) {

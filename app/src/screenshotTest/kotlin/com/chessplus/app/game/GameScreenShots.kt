@@ -1,6 +1,8 @@
 package com.chessplus.app.game
 
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.tooling.preview.Preview
+import com.chessplus.app.design.preview.kDevice
 import com.android.tools.screenshot.PreviewTest
 import com.chessplus.app.design.preview.DesignPreviews
 import com.chessplus.app.ui.theme.ChessPlusTheme
@@ -89,5 +91,35 @@ fun RealGameWrongShot() = Shot(
 		lastMove = Move.fromUci("e8d7"),
 		badge = Square.fromAlgebraic("b3") to BadgeKind.Error,
 		rating = 1520,
+	)
+)
+
+/** Joueur au trait avec une police agrandie de 30 %. */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
+@Composable
+fun RealGameLargeFontShot() = Shot(
+	GameUiState(
+		header = GameHeader.ToMove(Color.White, afterCorrect = false),
+		pieces = piecesOf("q5nr/1ppknQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 w - - 1 18"),
+		lastMove = Move.fromUci("e8d7"),
+		interactive = true,
+		rating = 1431,
+		hintEnabled = true,
+	)
+)
+
+/** Bilan avec une police agrandie de 30 %. */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
+@Composable
+fun RealSummaryLargeFontShot() = Shot(
+	GameUiState(
+		header = GameHeader.Finished(success = false, mate = true, solutionShown = true),
+		pieces = piecesOf("q2k1Qnr/1pp1n1pp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 3 19"),
+		lastMove = Move.fromUci("f7f8"),
+		rating = 1431,
+		nextEnabled = true,
+		summary = GameSummary(PuzzleResult.Failure, 1, 1, 1440.0, 1431.0, true, 1760, ThemeSet.parse("mate mateIn2 middlegame short")),
 	)
 )

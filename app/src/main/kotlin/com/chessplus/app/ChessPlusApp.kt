@@ -1,6 +1,16 @@
 package com.chessplus.app
 
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.updateTransition
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,8 +35,10 @@ import com.chessplus.app.history.HistoryViewModel
 import com.chessplus.app.home.HomeScreen
 import com.chessplus.app.home.HomeViewModel
 import com.chessplus.app.level.LevelScreen
+import com.chessplus.app.navigation.BackStackEntry
 import com.chessplus.app.navigation.Destination
 import com.chessplus.app.navigation.NavigationViewModel
+import com.chessplus.app.navigation.tab
 import com.chessplus.app.settings.SettingsScreen
 import com.chessplus.app.stats.StatsScreen
 import com.chessplus.app.stats.StatsViewModel
@@ -59,52 +71,79 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 	}
 	BackHandler(enabled = vNavigation.backStack.size > 1) { vNavigation.back() }
 	val vBack: () -> Unit = { if (!vNavigation.back()) inOnExit() }
-	CompositionLocalProvider(LocalViewModelStoreOwner provides vEntry) {
-		key(vEntry.id) {
-			when (val vDestination = vEntry.destination) {
-				is Destination.Level -> LevelScreen(
-					inFirstLaunch = vDestination.firstLaunch,
-					inOnBack = vBack,
-					inOnChoose = { inRating ->
-						vScope.launch {
-							inContainer.setLevel(inRating)
-							if (vDestination.firstLaunch) vNavigation.replace(Destination.Home) else vNavigation.back()
-						}
-					},
-				)
-				Destination.Home -> HomeScreen(
-					inViewModel = viewModel(factory = HomeViewModel.factory(inContainer)),
-					inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
-					inOnTargeted = { vNavigation.navigate(Destination.Targeted) },
-					inOnSettings = { vNavigation.navigate(Destination.Settings) },
-					inOnTab = vNavigation::selectTab,
-				)
-				Destination.History -> HistoryScreen(
-					inViewModel = viewModel(factory = HistoryViewModel.factory(inContainer)),
-					inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
-					inOnTab = vNavigation::selectTab,
-				)
-				Destination.Stats -> StatsScreen(viewModel(factory = StatsViewModel.factory(inContainer)), vNavigation::selectTab)
-				Destination.Settings -> SettingsScreen(inContainer.settingsStore, inVersion, vBack) { vNavigation.navigate(Destination.Level(firstLaunch = false)) }
-				Destination.Targeted -> TargetedScreen(
-					inViewModel = viewModel(factory = TargetedViewModel.factory(inContainer)),
-					inOnBack = vBack,
-					inOnStart = { vNavigation.navigate(Destination.Game(GameMode.Targeted(it))) },
-				)
-				is Destination.Game -> GameScreen(
-					inViewModel = viewModel(factory = GameViewModel.factory(inContainer, vDestination.mode)),
-					inTitle = stringResource(
-						when (vDestination.mode) {
-							GameMode.Continuous -> R.string.game_title
-							is GameMode.Targeted -> R.string.game_title_targeted
-							is GameMode.Replay -> R.string.game_title_replay
-						}
-					),
-					inVibration = vSettings.vibration,
-					inCoordinates = vSettings.coordinates,
-					inOnBack = vBack,
-				)
+	val vTransition = updateTransition(vEntry, label = "écran")
+	LaunchedEffect(vTransition.currentState, vTransition.targetState) {
+		if (vTransition.currentState == vTransition.targetState) {
+			vNavigation.clearRetired()
+		}
+	}
+	vTransition.AnimatedContent(
+		transitionSpec = { screenTransition(initialState, targetState) },
+		contentKey = { it.id },
+	) { inEntry ->
+		CompositionLocalProvider(LocalViewModelStoreOwner provides inEntry) {
+			key(inEntry.id) {
+				when (val vDestination = inEntry.destination) {
+					is Destination.Level -> LevelScreen(
+						inFirstLaunch = vDestination.firstLaunch,
+						inOnBack = vBack,
+						inOnChoose = { inRating ->
+							vScope.launch {
+								inContainer.setLevel(inRating)
+								if (vDestination.firstLaunch) vNavigation.replace(Destination.Home) else vNavigation.back()
+							}
+						},
+					)
+					Destination.Home -> HomeScreen(
+						inViewModel = viewModel(factory = HomeViewModel.factory(inContainer)),
+						inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
+						inOnTargeted = { vNavigation.navigate(Destination.Targeted) },
+						inOnSettings = { vNavigation.navigate(Destination.Settings) },
+						inOnTab = vNavigation::selectTab,
+					)
+					Destination.History -> HistoryScreen(
+						inViewModel = viewModel(factory = HistoryViewModel.factory(inContainer)),
+						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
+						inOnTab = vNavigation::selectTab,
+					)
+					Destination.Stats -> StatsScreen(viewModel(factory = StatsViewModel.factory(inContainer)), vNavigation::selectTab)
+					Destination.Settings -> SettingsScreen(inContainer.settingsStore, inVersion, vBack) { vNavigation.navigate(Destination.Level(firstLaunch = false)) }
+					Destination.Targeted -> TargetedScreen(
+						inViewModel = viewModel(factory = TargetedViewModel.factory(inContainer)),
+						inOnBack = vBack,
+						inOnStart = { vNavigation.navigate(Destination.Game(GameMode.Targeted(it))) },
+					)
+					is Destination.Game -> GameScreen(
+						inViewModel = viewModel(factory = GameViewModel.factory(inContainer, vDestination.mode)),
+						inTitle = stringResource(
+							when (vDestination.mode) {
+								GameMode.Continuous -> R.string.game_title
+								is GameMode.Targeted -> R.string.game_title_targeted
+								is GameMode.Replay -> R.string.game_title_replay
+							}
+						),
+						inVibration = vSettings.vibration,
+						inCoordinates = vSettings.coordinates,
+						inOnBack = vBack,
+					)
+				}
 			}
 		}
 	}
+}
+
+/** Durée des transitions entre écrans. */
+private const val kTransitionMs = 280
+
+/**
+ * Transition entre deux écrans : fondu entre onglets ; sinon glissement et fondu, vers la gauche
+ * en avançant, vers la droite en revenant.
+ */
+private fun screenTransition(inFrom: BackStackEntry, inTo: BackStackEntry): ContentTransform {
+	if (inFrom.destination.tab() != null && inTo.destination.tab() != null) {
+		return fadeIn(tween(kTransitionMs)) togetherWith fadeOut(tween(kTransitionMs / 2))
+	}
+	val vDirection = if (inTo.id > inFrom.id) 1 else -1
+	return (slideInHorizontally(tween(kTransitionMs, easing = FastOutSlowInEasing)) { inWidth -> vDirection * inWidth / 4 } + fadeIn(tween(kTransitionMs))) togetherWith
+		(slideOutHorizontally(tween(kTransitionMs, easing = FastOutSlowInEasing)) { inWidth -> -vDirection * inWidth / 8 } + fadeOut(tween(kTransitionMs / 2)))
 }

@@ -1,5 +1,7 @@
 package com.chessplus.app.game
 
+import com.chessplus.app.ui.components.pressClickable
+import com.chessplus.app.ui.components.rememberPressFeedback
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -152,7 +154,8 @@ fun GameContent(
 private fun TopBar(inTitle: String, inRating: Int, inOnBack: () -> Unit) {
 	val vColors = kLocalChessColors.current
 	Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)) {
-		Box(Modifier.align(Alignment.CenterStart).size(48.dp).clip(CircleShape).clickable(onClick = inOnBack), contentAlignment = Alignment.Center) {
+		val vPress = rememberPressFeedback()
+		Box(Modifier.align(Alignment.CenterStart).then(vPress.scale).size(48.dp).clip(CircleShape).pressClickable(vPress, inOnClick = inOnBack), contentAlignment = Alignment.Center) {
 			Icon(painterResource(R.drawable.ic_arrow_back_ios_new), contentDescription = stringResource(R.string.action_back), tint = vColors.text, modifier = Modifier.size(20.dp))
 		}
 		Text(inTitle, style = ChessType.kBarTitle, color = vColors.text, modifier = Modifier.align(Alignment.Center))
@@ -257,7 +260,7 @@ private fun BoardNote(inState: GameUiState) {
 @Composable
 private fun Controls(inState: GameUiState, inOnRestart: () -> Unit, inOnHint: () -> Unit, inOnNext: () -> Unit) {
 	Row(
-		Modifier.fillMaxWidth().padding(horizontal = 42.dp).navigationBarsPadding().padding(bottom = 28.dp),
+		Modifier.fillMaxWidth().padding(horizontal = 28.dp).navigationBarsPadding().padding(bottom = 28.dp),
 		horizontalArrangement = Arrangement.SpaceBetween,
 		verticalAlignment = Alignment.Top,
 	) {
@@ -273,19 +276,21 @@ private fun Controls(inState: GameUiState, inOnRestart: () -> Unit, inOnHint: ()
 @Composable
 private fun ControlTile(inIcon: Int, inLabel: String, inEnabled: Boolean, inHighlighted: Boolean, inOnClick: () -> Unit) {
 	val vColors = kLocalChessColors.current
-	Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(84.dp).padding(top = 8.dp)) {
+	val vPress = rememberPressFeedback()
+	Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(100.dp).padding(top = 8.dp)) {
 		Box(
 			Modifier
+				.then(vPress.scale)
 				.size(60.dp)
 				.clip(RoundedCornerShape(20.dp))
 				.background(if (inHighlighted) vColors.primary else vColors.surface)
-				.clickable(enabled = inEnabled, onClick = inOnClick),
+				.pressClickable(vPress, inEnabled, inOnClick),
 			contentAlignment = Alignment.Center,
 		) {
 			Icon(painterResource(inIcon), contentDescription = inLabel, tint = if (inHighlighted) vColors.onPrimary else if (inEnabled) vColors.text else vColors.muted, modifier = Modifier.size(26.dp))
 		}
 		Spacer(Modifier.height(8.dp))
-		Text(inLabel, style = ChessType.kLabel, color = if (inEnabled) vColors.text else vColors.muted)
+		Text(inLabel, style = ChessType.kLabel, color = if (inEnabled) vColors.text else vColors.muted, maxLines = 1, softWrap = false)
 	}
 }
 
@@ -295,9 +300,10 @@ private fun ControlTile(inIcon: Int, inLabel: String, inEnabled: Boolean, inHigh
 @Composable
 private fun PrimaryRoundButton(inIcon: Int, inLabel: String, inEnabled: Boolean, inOnClick: () -> Unit) {
 	val vColors = kLocalChessColors.current
+	val vPress = rememberPressFeedback()
 	Column(horizontalAlignment = Alignment.CenterHorizontally) {
 		Box(
-			Modifier.size(76.dp).clip(CircleShape).background(if (inEnabled) vColors.primary else vColors.track).clickable(enabled = inEnabled, onClick = inOnClick),
+			Modifier.then(vPress.scale).size(76.dp).clip(CircleShape).background(if (inEnabled) vColors.primary else vColors.track).pressClickable(vPress, inEnabled, inOnClick),
 			contentAlignment = Alignment.Center,
 		) {
 			Icon(painterResource(inIcon), contentDescription = inLabel, tint = if (inEnabled) vColors.onPrimary else vColors.muted, modifier = Modifier.size(30.dp))
@@ -333,8 +339,9 @@ private fun PromotionDialog(inColor: Color, inOnChoose: (PieceType) -> Unit, inO
 			Spacer(Modifier.height(16.dp))
 			Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 				for (vType in listOf(PieceType.Queen, PieceType.Rook, PieceType.Bishop, PieceType.Knight)) {
+					val vPress = rememberPressFeedback()
 					Box(
-						Modifier.size(70.dp).clip(RoundedCornerShape(18.dp)).background(vColors.squareLight).clickable { inOnChoose(vType) },
+						Modifier.then(vPress.scale).size(70.dp).clip(RoundedCornerShape(18.dp)).background(vColors.squareLight).pressClickable(vPress) { inOnChoose(vType) },
 						contentAlignment = Alignment.Center,
 					) {
 						Image(painterResource(pieceDrawable(Piece(inColor, vType))), contentDescription = null, modifier = Modifier.size(60.dp))
@@ -398,15 +405,17 @@ private fun FinishedControls(inOnRestart: () -> Unit, inOnNext: () -> Unit) {
 		Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 20.dp),
 		verticalAlignment = Alignment.CenterVertically,
 	) {
+		val vRestartPress = rememberPressFeedback()
 		Box(
-			Modifier.size(60.dp).clip(RoundedCornerShape(20.dp)).background(vColors.surface).clickable(onClick = inOnRestart),
+			Modifier.then(vRestartPress.scale).size(60.dp).clip(RoundedCornerShape(20.dp)).background(vColors.surface).pressClickable(vRestartPress, inOnClick = inOnRestart),
 			contentAlignment = Alignment.Center,
 		) {
 			Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.action_restart), tint = vColors.text, modifier = Modifier.size(26.dp))
 		}
 		Spacer(Modifier.width(12.dp))
+		val vNextPress = rememberPressFeedback()
 		Row(
-			Modifier.weight(1f).height(60.dp).clip(RoundedCornerShape(30.dp)).background(vColors.primary).clickable(onClick = inOnNext),
+			Modifier.weight(1f).then(vNextPress.scale).height(60.dp).clip(RoundedCornerShape(30.dp)).background(vColors.primary).pressClickable(vNextPress, inOnClick = inOnNext),
 			horizontalArrangement = Arrangement.Center,
 			verticalAlignment = Alignment.CenterVertically,
 		) {

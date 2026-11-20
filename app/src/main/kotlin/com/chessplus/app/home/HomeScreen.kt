@@ -1,7 +1,8 @@
 package com.chessplus.app.home
 
+import com.chessplus.app.ui.components.pressClickable
+import com.chessplus.app.ui.components.rememberPressFeedback
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -193,8 +195,9 @@ fun HomeContent(
 			}
 			vState.resume?.let { inResume ->
 				Spacer(Modifier.height(12.dp))
+				val vPress = rememberPressFeedback()
 				Row(
-					Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(vColors.primary).clickable(onClick = inOnTrain).padding(16.dp),
+					Modifier.then(vPress.scale).fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(vColors.primary).pressClickable(vPress, inOnClick = inOnTrain).padding(16.dp),
 					verticalAlignment = Alignment.CenterVertically,
 				) {
 					Box(Modifier.size(64.dp).clip(RoundedCornerShape(10.dp))) {
@@ -202,10 +205,10 @@ fun HomeContent(
 					}
 					Spacer(Modifier.width(14.dp))
 					Column(Modifier.weight(1f)) {
-						Text(stringResource(R.string.home_resume), style = ChessType.kSection, color = vColors.onPrimary)
+						Text(stringResource(R.string.home_resume), style = ChessType.kSection, color = vColors.onPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
 						val vWhen = formatElapsed(inResume.startedAt, inNow)
 						val vProgress = if (inResume.finished) stringResource(R.string.home_resume_finished) else stringResource(R.string.home_resume_move, inResume.move, inResume.total)
-						Text("$vProgress · $vWhen", style = ChessType.kCaption, color = vColors.muted)
+						Text("$vProgress · $vWhen", style = ChessType.kCaption, color = vColors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
 					}
 					Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(24.dp))
 				}
@@ -213,7 +216,7 @@ fun HomeContent(
 			Spacer(Modifier.weight(1f))
 			Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
 				SecondaryButton(stringResource(R.string.home_targeted), inOnTargeted, R.drawable.ic_tune, Modifier.weight(1f), inHeight = kHomeButtonHeight)
-				PrimaryButton(stringResource(R.string.home_train), inOnTrain, Modifier.weight(1f), inIcon = R.drawable.ic_bolt_fill1, inHeight = kHomeButtonHeight)
+				PrimaryButton(stringResource(R.string.home_train), inOnTrain, Modifier.weight(1.4f), inIcon = R.drawable.ic_bolt_fill1, inHeight = kHomeButtonHeight)
 			}
 			Spacer(Modifier.height(8.dp))
 		}
