@@ -13,3 +13,6 @@ captures/
 # Le CSV source de Lichess ne doit jamais entrer dans le dépôt
 *.csv
 *.csv.zst
+
+# Base générée par :puzzle-builder (décision en attente : versionner ou non)
+app/src/main/assets/puzzles.db

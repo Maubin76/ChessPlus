@@ -10,6 +10,8 @@ plugins {
 
 kotlin {
 	jvmToolchain(21)
+	// Room KMP déclare ses constructeurs de base en expect object.
+	compilerOptions { freeCompilerArgs.add("-Xexpect-actual-classes") }
 
 	android {
 		namespace = "com.chessplus.data"

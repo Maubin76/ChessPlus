@@ -1,17 +1,18 @@
 package com.chessplus.app
 
-import com.chessplus.data.DataInfo
+import com.chessplus.core.model.Theme
+import com.chessplus.data.puzzle.PuzzleDatabase
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Test de mise en place du module :app (phase 1).
+ * Test de câblage du module :app vers :data et :core.
  */
 class AppSetupTest {
 	/** Vérifie que l'application voit :data et :core. */
 	@Test
 	fun appSeesDataAndCore() {
-		assertEquals("data", DataInfo.kModuleName)
-		assertEquals(73, DataInfo.coreThemeCount())
+		assertEquals("puzzles.db", PuzzleDatabase.kFileName)
+		assertEquals(73, Theme.entries.size)
 	}
 }
