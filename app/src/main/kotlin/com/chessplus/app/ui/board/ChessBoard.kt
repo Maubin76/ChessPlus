@@ -1,6 +1,7 @@
 package com.chessplus.app.ui.board
 
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
@@ -18,14 +19,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -47,10 +49,11 @@ import com.chessplus.core.model.Move
 import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
 import com.chessplus.core.model.Square
+import kotlin.math.abs
 import kotlin.math.roundToInt
 
 /** Durée de l'animation d'un coup. */
-private const val kMoveAnimationMs = 220
+private const val kMoveAnimationMs = 300
 
 /** Agrandissement de la pièce tenue sous le doigt. */
 private const val kDragScale = 1.3f
@@ -102,6 +105,59 @@ private class BoardGeometry(val squarePx: Float, val orientation: Color) {
 }
 
 /**
+ * Animation d'un changement de position : pièces qui glissent (arrivée vers départ) et pièces qui
+ * s'effacent (prises).
+ *
+ * @property motions départ de chaque pièce animée, indexé par sa case d'arrivée.
+ * @property fading pièces qui disparaissent, par case.
+ */
+private data class MovePlan(val motions: Map<Square, Square>, val fading: Map<Square, Piece>) {
+	/** Vrai s'il n'y a rien à animer. */
+	val isEmpty: Boolean
+		get() = motions.isEmpty() && fading.isEmpty()
+
+	companion object {
+		/** Aucune animation. */
+		val kNone = MovePlan(emptyMap(), emptyMap())
+	}
+}
+
+/**
+ * Calcule l'animation entre deux positions : chaque pièce apparue est reliée à la pièce identique
+ * disparue la plus proche (ou au pion de sa couleur pour une promotion) ; les pièces disparues sans
+ * correspondance sont des prises. Couvre les coups simples, les prises, le roque et la promotion.
+ */
+private fun planMoves(inOld: Map<Square, Piece>, inNew: Map<Square, Piece>): MovePlan {
+	val vAppeared = inNew.filter { inOld[it.key] != it.value }
+	val vDisappeared = inOld.filter { inNew[it.key] != it.value }.toMutableMap()
+	val vMotions = mutableMapOf<Square, Square>()
+	for ((vTo, vPiece) in vAppeared) {
+		var vFrom = vDisappeared.filter { it.value == vPiece }.keys.minByOrNull { distance(it, vTo) }
+		if (vFrom == null && vPiece.type != PieceType.Pawn && vPiece.type != PieceType.King) {
+			vFrom = vDisappeared.filter { it.value == Piece(vPiece.color, PieceType.Pawn) }.keys.minByOrNull { distance(it, vTo) }
+		}
+		if (vFrom != null) {
+			vMotions[vTo] = vFrom
+			vDisappeared.remove(vFrom)
+		}
+	}
+	return MovePlan(vMotions, vDisappeared)
+}
+
+/**
+ * Distance de Manhattan entre deux cases.
+ */
+private fun distance(inFirst: Square, inSecond: Square): Int = abs(inFirst.file - inSecond.file) + abs(inFirst.rank - inSecond.rank)
+
+/**
+ * Dernière position affichée, pour calculer l'animation de la suivante.
+ *
+ * @property pieces pièces affichées.
+ * @property moveId identifiant du coup affiché.
+ */
+private class BoardMemory(var pieces: Map<Square, Piece>, var moveId: Int)
+
+/**
  * Échiquier interactif, carré, qui occupe toute la largeur disponible.
  *
  * Le joueur peut toucher une pièce puis sa case d'arrivée, ou la faire glisser. L'échiquier
@@ -126,8 +182,15 @@ fun ChessBoard(
 ) {
 	val vColors = kLocalChessColors.current
 	val vTextMeasurer = rememberTextMeasurer()
-	val vProgress = remember { Animatable(1f) }
-	var vAnimatedMoveId by remember { mutableIntStateOf(inMoveId) }
+	val vMemory = remember { BoardMemory(inPieces, inMoveId) }
+	val vPlan = remember(inMoveId) {
+		if (inAnimateMove && inMoveId != vMemory.moveId) planMoves(vMemory.pieces, inPieces) else MovePlan.kNone
+	}
+	SideEffect {
+		vMemory.pieces = inPieces
+		vMemory.moveId = inMoveId
+	}
+	val vProgress = remember(inMoveId) { Animatable(if (vPlan.isEmpty) 1f else 0f) }
 	var vDragFrom by remember { mutableStateOf<Square?>(null) }
 	var vDragPosition by remember { mutableStateOf(Offset.Zero) }
 	val vPieces by rememberUpdatedState(inPieces)
@@ -137,13 +200,8 @@ fun ChessBoard(
 	val vOnDrop by rememberUpdatedState(inOnDrop)
 
 	LaunchedEffect(inMoveId) {
-		if (inAnimateMove && inLastMove != null && inMoveId != vAnimatedMoveId) {
-			vProgress.snapTo(0f)
-			vAnimatedMoveId = inMoveId
-			vProgress.animateTo(1f, tween(kMoveAnimationMs))
-		} else {
-			vAnimatedMoveId = inMoveId
-			vProgress.snapTo(1f)
+		if (!vPlan.isEmpty) {
+			vProgress.animateTo(1f, tween(kMoveAnimationMs, easing = FastOutSlowInEasing))
 		}
 	}
 
@@ -213,17 +271,30 @@ fun ChessBoard(
 			}
 		}
 
-		// Pièces, avec animation du dernier coup et pièce tenue sous le doigt.
-		val vMoving = inLastMove?.to
-		val vProgressValue = if (inAnimateMove && inMoveId != vAnimatedMoveId) 0f else vProgress.value
+		// Pièces : prises qui s'effacent, pièces déplacées qui glissent, sauf celle tenue sous le doigt.
+		val vProgressValue = vProgress.value
+		if (vProgressValue < 1f) {
+			for ((vSquare, vPiece) in vPlan.fading) {
+				val vPosition = vGeometry.topLeft(vSquare)
+				Image(
+					painterResource(pieceDrawable(vPiece)),
+					contentDescription = null,
+					modifier = Modifier
+						.size(vSquareDp)
+						.offset { IntOffset(vPosition.x.roundToInt(), vPosition.y.roundToInt()) }
+						.alpha(1f - vProgressValue),
+				)
+			}
+		}
 		for ((vSquare, vPiece) in inPieces) {
 			if (vSquare == vDragFrom) {
 				continue
 			}
 			var vPosition = vGeometry.topLeft(vSquare)
-			if (vSquare == vMoving && vProgressValue < 1f) {
-				val vFrom = vGeometry.topLeft(inLastMove.from)
-				vPosition = vFrom + (vPosition - vFrom) * vProgressValue
+			val vFrom = vPlan.motions[vSquare]
+			if (vFrom != null && vProgressValue < 1f) {
+				val vStart = vGeometry.topLeft(vFrom)
+				vPosition = vStart + (vPosition - vStart) * vProgressValue
 			}
 			Image(
 				painterResource(pieceDrawable(vPiece)),
@@ -231,7 +302,7 @@ fun ChessBoard(
 				modifier = Modifier
 					.size(vSquareDp)
 					.offset { IntOffset(vPosition.x.roundToInt(), vPosition.y.roundToInt()) }
-					.zIndex(if (vSquare == vMoving) 1f else 0f),
+					.zIndex(if (vFrom != null) 1f else 0f),
 			)
 		}
 
