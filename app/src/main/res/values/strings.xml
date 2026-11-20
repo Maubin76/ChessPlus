@@ -3,9 +3,107 @@
 <resources>
 	<string name="app_name">ChessPlus</string>
 
+	<string name="loading">Préparation…</string>
+
+	<!-- Durées écoulées -->
+	<string name="elapsed_now">à l’instant</string>
+	<string name="elapsed_minutes">il y a %1$d min</string>
+	<string name="elapsed_hours">il y a %1$d h</string>
+	<string name="elapsed_yesterday">hier</string>
+	<string name="elapsed_days">il y a %1$d jours</string>
+
+	<!-- Navigation -->
+	<string name="nav_home">Accueil</string>
+	<string name="nav_history">Historique</string>
+	<string name="nav_stats">Statistiques</string>
+	<string name="action_back">Retour</string>
+
+	<!-- Accueil -->
+	<string name="home_solved">Problèmes résolus</string>
+	<string name="home_rating">Votre cote : %1$s</string>
+	<string name="home_resume">Reprendre le problème</string>
+	<string name="home_resume_move">Coup %1$d sur %2$d</string>
+	<string name="home_resume_finished">Terminé</string>
+	<string name="home_targeted">Entraînement ciblé</string>
+	<string name="home_train">S’entraîner</string>
+
+	<!-- Choix du niveau -->
+	<string name="level_welcome">BIENVENUE</string>
+	<string name="level_title">Quel est votre niveau ?</string>
+	<string name="level_detail">Votre cote de départ s’ajustera ensuite après chaque problème.</string>
+	<string name="level_beginner">Débutant</string>
+	<string name="level_beginner_detail">Je connais les règles</string>
+	<string name="level_intermediate">Intermédiaire</string>
+	<string name="level_intermediate_detail">Je joue de temps en temps</string>
+	<string name="level_confirmed">Confirmé</string>
+	<string name="level_confirmed_detail">Je joue régulièrement</string>
+	<string name="level_advanced">Avancé</string>
+	<string name="level_advanced_detail">Je joue en club ou en ligne</string>
+	<string name="level_custom">Je connais ma cote</string>
+	<string name="level_custom_hint">ex. 1 650</string>
+	<string name="level_custom_invalid">La cote doit être comprise entre %1$d et %2$d</string>
+	<string name="level_start">Commencer</string>
+
+	<!-- Entraînement ciblé -->
+	<string name="targeted_title">Entraînement ciblé</string>
+	<string name="targeted_difficulty">Difficulté</string>
+	<string name="targeted_easier">Plus facile</string>
+	<string name="targeted_level">Mon niveau</string>
+	<string name="targeted_harder">Plus difficile</string>
+	<string name="targeted_range">Tranche précise</string>
+	<string name="targeted_range_value">De %1$s à %2$s</string>
+	<string name="targeted_themes">Thèmes</string>
+	<string name="targeted_all_themes">Tous les thèmes</string>
+	<string name="targeted_counting">Calcul…</string>
+	<plurals name="targeted_count">
+		<item quantity="one">%1$s problème correspond</item>
+		<item quantity="other">%1$s problèmes correspondent</item>
+	</plurals>
+	<string name="targeted_start">Commencer</string>
+
+	<!-- Historique -->
+	<string name="history_all">Tous</string>
+	<string name="history_solved">Réussis</string>
+	<string name="history_failed">Échoués</string>
+	<string name="history_today">Aujourd’hui</string>
+	<string name="history_yesterday">Hier</string>
+	<string name="history_empty">Aucun problème joué pour l’instant</string>
+	<string name="history_replay_note">Touchez un problème pour le rejouer (sans effet sur la cote)</string>
+
+	<!-- Statistiques -->
+	<string name="stats_rating">Ma cote</string>
+	<string name="stats_delta">%1$s %2$s</string>
+	<string name="stats_period_7">en 7 jours</string>
+	<string name="stats_period_30">en 30 jours</string>
+	<string name="stats_period_all">depuis le début</string>
+	<string name="stats_tab_7">7 jours</string>
+	<string name="stats_tab_30">30 jours</string>
+	<string name="stats_tab_all">Tout</string>
+	<string name="stats_themes">Réussite par thème</string>
+	<string name="stats_themes_empty">Jouez quelques problèmes de plus pour voir votre réussite par thème</string>
+	<string name="stats_empty">Résolvez un premier problème pour voir vos statistiques</string>
+
+	<!-- Réglages -->
+	<string name="settings_title">Réglages</string>
+	<string name="settings_theme">Thème</string>
+	<string name="settings_theme_system">Système</string>
+	<string name="settings_theme_light">Clair</string>
+	<string name="settings_theme_dark">Sombre</string>
+	<string name="settings_vibration">Vibration</string>
+	<string name="settings_vibration_detail">Courte vibration à chaque coup</string>
+	<string name="settings_sounds">Sons</string>
+	<string name="settings_sounds_detail">Bientôt disponible</string>
+	<string name="settings_coordinates">Coordonnées</string>
+	<string name="settings_coordinates_detail">Lettres et chiffres dans les cases</string>
+	<string name="settings_level">Changer de niveau</string>
+	<string name="settings_credits">Crédits</string>
+	<string name="settings_credits_detail">Problèmes : base Lichess (CC0). Pièces : cburnett, Colin M.L. Burnett (GPLv2+). Police : Inter (OFL). Icônes : Material Symbols (Apache 2.0).</string>
+	<string name="settings_version">ChessPlus %1$s</string>
+
 	<!-- Écran de jeu : barre -->
 	<string name="game_title">Entraînement</string>
-	<string name="action_back">Retour</string>
+	<string name="game_title_targeted">Entraînement ciblé</string>
+	<string name="game_title_replay">Rejouer</string>
 
 	<!-- Écran de jeu : messages -->
 	<string name="game_loading">Préparation…</string>

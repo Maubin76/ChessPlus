@@ -1,0 +1,106 @@
+package com.chessplus.app
+
+import androidx.compose.runtime.Composable
+import com.android.tools.screenshot.PreviewTest
+import com.chessplus.app.design.preview.DesignPreviews
+import com.chessplus.app.history.HistoryContent
+import com.chessplus.app.history.HistoryRow
+import com.chessplus.app.home.HomeContent
+import com.chessplus.app.home.HomeUiState
+import com.chessplus.app.home.ResumeInfo
+import com.chessplus.app.level.LevelScreen
+import com.chessplus.app.settings.Settings
+import com.chessplus.app.settings.SettingsContent
+import com.chessplus.app.stats.StatsContent
+import com.chessplus.app.stats.StatsData
+import com.chessplus.app.stats.ThemeRate
+import com.chessplus.app.training.TargetedContent
+import com.chessplus.app.training.TargetedUiState
+import com.chessplus.app.game.TrainingCriteria
+import com.chessplus.app.ui.theme.ChessPlusTheme
+import com.chessplus.core.model.Color
+import com.chessplus.core.model.Square
+import com.chessplus.core.model.Theme
+import com.chessplus.core.model.ThemeSet
+import com.chessplus.core.rules.defaultChessRules
+import com.chessplus.data.user.RatingPoint
+
+/*
+ * Captures des écrans réels (contenus sans état) avec des données factices.
+ */
+
+/** Date de référence des captures (20 novembre 2026, 12 h). */
+private const val kNow = 1_795_172_400_000L
+
+/**
+ * Retourne les pièces d'une position FEN.
+ */
+private fun piecesOf(inFen: String) = defaultChessRules().positionFromFen(inFen).let { inPosition ->
+	Square.kAll.mapNotNull { vSquare -> inPosition.pieceAt(vSquare)?.let { vSquare to it } }.toMap()
+}
+
+/** Premier lancement : choix du niveau. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealLevelShot() = ChessPlusTheme { LevelScreen(inFirstLaunch = true, inOnBack = {}, inOnChoose = {}) }
+
+/** Accueil avec un problème en cours. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHomeShot() = ChessPlusTheme {
+	HomeContent(
+		HomeUiState(
+			solvedCount = 128,
+			rating = 1520,
+			resume = ResumeInfo(piecesOf("q5nr/1ppknQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 1"), Color.White, 2, 2, false, kNow - 3 * 60_000),
+		),
+		kNow, {}, {}, {}, {},
+	)
+}
+
+/** Entraînement ciblé avec deux thèmes choisis. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealTargetedShot() = ChessPlusTheme {
+	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {})
+}
+
+/** Historique. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHistoryShot() = ChessPlusTheme {
+	val vPieces = piecesOf("q5nr/1ppknQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 w - - 0 1")
+	HistoryContent(
+		listOf(
+			HistoryRow(3, "00sHx", vPieces, Color.White, ThemeSet.parse("mate mateIn2 middlegame"), 1760, kNow - 5 * 60_000, true, 12),
+			HistoryRow(2, "00sJ9", vPieces, Color.White, ThemeSet.parse("fork sacrifice"), 2671, kNow - 12 * 60_000, false, -9),
+			HistoryRow(1, "00sO1", vPieces, Color.White, ThemeSet.parse("discoveredAttack"), 998, kNow - 26 * 60 * 60_000, true, null),
+		),
+		kNow, {}, {},
+	)
+}
+
+/** Statistiques. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealStatsShot() = ChessPlusTheme {
+	val vDay = 24L * 60 * 60_000
+	val vHistory = listOf(1484, 1490, 1478, 1495, 1502, 1497, 1510, 1505, 1499, 1512, 1520, 1514, 1526, 1519, 1532)
+		.mapIndexed { inIndex, inRating -> RatingPoint(kNow - (15 - inIndex) * vDay, inRating.toDouble()) }
+	StatsContent(
+		StatsData(vHistory, listOf(ThemeRate(Theme.Fork, 18, 0.78f), ThemeRate(Theme.MateIn2, 14, 0.71f), ThemeRate(Theme.Pin, 11, 0.64f), ThemeRate(Theme.RookEndgame, 9, 0.52f))),
+		kNow,
+		{},
+	)
+}
+
+/** Réglages. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealSettingsShot() = ChessPlusTheme { SettingsContent(Settings(), {}, "0.1.0", {}, {}) }

@@ -27,7 +27,7 @@ private fun piecesOf(inFen: String) = defaultChessRules().positionFromFen(inFen)
  */
 @Composable
 private fun Shot(inState: GameUiState) = ChessPlusTheme {
-	GameContent(inState, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {})
+	GameContent(inState, "Entraînement", true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {})
 }
 
 /** Joueur au trait, fou a2 sélectionné. */
