@@ -1,22 +1,34 @@
 package com.chessplus.builder
 
-import com.chessplus.data.DataInfo
+import com.chessplus.core.rules.defaultChessRules
+import kotlinx.coroutines.runBlocking
 import kotlin.system.exitProcess
 
 /** Code de sortie en cas d'arguments invalides. */
 private const val kExitUsage = 2
 
+/** Code de sortie en cas d'échec de la génération. */
+private const val kExitFailure = 1
+
 /**
- * Point d'entrée du générateur de base de problèmes.
+ * Point d'entrée du générateur de la base des problèmes.
  *
- * Version provisoire de la phase 1 : vérifie les arguments et le câblage des modules.
- * La lecture du CSV et l'écriture de la base arrivent en phase 3.
+ * Usage : `./gradlew :puzzle-builder:run --args="<chemin du .csv.zst> [options]"`.
  */
 fun main(inArgs: Array<String>) {
-	if (inArgs.isEmpty()) {
-		System.err.println("Usage : puzzle-builder <chemin du .csv.zst> [options]")
+	val vOptions = try {
+		BuilderOptions.parse(inArgs)
+	} catch (vError: IllegalArgumentException) {
+		System.err.println("Erreur : ${vError.message}")
+		System.err.println(BuilderOptions.kUsage)
 		exitProcess(kExitUsage)
 	}
-	println("puzzle-builder : module ${DataInfo.kModuleName} disponible, ${DataInfo.coreThemeCount()} thèmes connus.")
-	println("Fichier source : ${inArgs[0]} (génération non implémentée en phase 1)")
+	try {
+		val vReport = runBlocking { PuzzleImporter(vOptions, defaultChessRules()) { println(it) }.run() }
+		println()
+		println(vReport.format(vOptions))
+	} catch (vError: Exception) {
+		System.err.println("Échec de la génération : ${vError.message}")
+		exitProcess(kExitFailure)
+	}
 }
