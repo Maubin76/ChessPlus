@@ -149,6 +149,7 @@
 		<item quantity="other">%d indices</item>
 	</plurals>
 	<string name="summary_unrated">Déjà joué : sans effet sur la cote</string>
+	<string name="summary_unrated_short">inchangée</string>
 	<string name="summary_my_rating">Ma cote</string>
 	<string name="summary_puzzle_rating">Cote du problème</string>
 	<string name="summary_themes">Thèmes</string>

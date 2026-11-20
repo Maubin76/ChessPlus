@@ -27,7 +27,7 @@ private fun piecesOf(inFen: String) = defaultChessRules().positionFromFen(inFen)
  */
 @Composable
 private fun Shot(inState: GameUiState) = ChessPlusTheme {
-	GameContent(inState, "Entraînement", true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {})
+	GameContent(inState, "Entraînement", true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {})
 }
 
 /** Joueur au trait, fou a2 sélectionné. */
@@ -75,6 +75,19 @@ fun RealGameSummaryShot() = Shot(
 		rating = 1532,
 		nextEnabled = true,
 		summary = GameSummary(PuzzleResult.Success, 0, 0, 1520.0, 1532.0, true, 1760, ThemeSet.parse("mate mateIn2 middlegame short"), "https://lichess.org/training/00sHx"),
-		summaryVisible = true,
+	)
+)
+
+/** Mauvais coup montré : le fou est allé en b3, pastille d'erreur, avant de revenir en a2. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameWrongShot() = Shot(
+	GameUiState(
+		header = GameHeader.Wrong,
+		pieces = piecesOf("q5nr/1ppknQpp/3p4/1P2p3/4P3/BBPP1b2/6PP/5K2 w - - 1 18"),
+		lastMove = Move.fromUci("e8d7"),
+		badge = Square.fromAlgebraic("b3") to BadgeKind.Error,
+		rating = 1520,
 	)
 )

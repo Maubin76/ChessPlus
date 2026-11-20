@@ -92,6 +92,12 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - Tests : 12 tests de `GameController`, 4 tests de navigation ; 203 tests au total, tous verts.
 - Non fait : sons (aucun fichier audio), animations de transition entre écrans.
 
+### Phase 5 — retours de Mathieu après le premier essai (2026-11-20)
+
+- Animations : toutes les pièces déplacées glissent (calcul de la différence entre deux positions), prises en fondu, 300 ms.
+- Mauvais coup : montré sur l'échiquier avec la pastille d'erreur, puis annulé en glissant (0,9 s) ; le joueur ne peut pas jouer pendant ce temps.
+- Bilan : plus de volet par-dessus l'échiquier ; résultat dans le message du haut, détail sous l'échiquier, Recommencer + Suivant en bas.
+
 ## Reste à faire
 
 - Phase 5 : entraînement continu (accueil, navigation, choix du niveau), filtres, historique, statistiques, réglages.

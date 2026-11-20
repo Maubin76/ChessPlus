@@ -78,11 +78,12 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 | --- | --- | --- | --- |
 | Au trait | « Les blancs jouent » (ou noirs) / « Trouvez le meilleur coup », en couleur de texte | dernier coup surligné, pièce sélectionnée, points sur les cases possibles ; aide discrète sous l'échiquier : « Touchez une pièce puis sa case, ou faites-la glisser » | Suivant grisé |
 | Bon coup | ✓ « Bon coup ! » en vert / « Les noirs réfléchissent… » | pastille ✓ verte sur la case d'arrivée, coup surligné en vert | Suivant grisé |
-| Mauvais coup | ✕ « Pas ce coup-là » en rouge / « Réessayez, ou demandez un indice » | pièce revenue, pastille ✕ rouge sur la case visée ; mention : « Le problème compte comme échoué, mais vous pouvez le terminer » | Suivant grisé |
+| Mauvais coup | ✕ « Pas ce coup-là » en rouge / « Réessayez, ou demandez un indice » | la pièce va sur la case visée avec une pastille ✕ rouge, puis revient en glissant après 0,9 s (modifié par Mathieu le 2026-11-20) ; mention : « Le problème compte comme échoué, mais vous pouvez le terminer » | Suivant grisé |
 | Promotion | inchangé | voile sombre et carte centrée « Promotion — Choisissez la nouvelle pièce » : dame, tour, fou, cavalier | — |
 | Terminé | ✓ « Mat ! » ou « Problème terminé » | position finale | Suivant actif (tuile noire) |
 
-- Bilan (volet bas, sur voile léger) : « Problème réussi » (vert) ou « Problème échoué » (rouge) avec une phrase de détail ; deux encadrés « Ma cote » (valeur et variation colorée) et « Cote du problème » ; thèmes révélés en puces ; lien « Voir sur Lichess (si le réseau est disponible) » ; bouton noir « Suivant ».
+- Bilan (modifié par Mathieu le 2026-11-20 : il ne doit pas cacher l'échiquier) : le résultat remplace le message au-dessus de l'échiquier (« Problème réussi » en vert ou « Problème échoué » en rouge, avec la phrase de détail) ; sous l'échiquier, deux encadrés « Ma cote » (valeur et variation colorée, ou « inchangée ») et « Cote du problème », les thèmes en puces sur une ligne défilante, le lien « Voir sur Lichess (si le réseau est disponible) » ; en bas, tuile « Recommencer » et gros bouton noir « Suivant ».
+- Animations des pièces (demandées par Mathieu le 2026-11-20) : 300 ms, accélération puis ralentissement ; toutes les pièces qui changent de case glissent (coups du joueur et de l'adversaire, indice, roque, promotion, recommencer, annulation d'un mauvais coup) ; une pièce prise s'efface en fondu ; pas d'animation après un glisser-déposer (la pièce est déjà sous le doigt).
 
 ### Autres écrans
 
