@@ -100,8 +100,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property hintEnabled vrai si « Indice » est disponible.
  * @property nextEnabled vrai si « Suivant » est disponible.
  * @property promotion promotion en attente.
- * @property summary bilan de fin de problème.
- * @property summaryVisible vrai si le volet de bilan est déplié.
+ * @property summary bilan de fin de problème, affiché sous l'échiquier.
  * @property haptic dernier retour haptique demandé.
  */
 data class GameUiState(
@@ -120,6 +119,5 @@ data class GameUiState(
 	val nextEnabled: Boolean = false,
 	val promotion: PendingPromotion? = null,
 	val summary: GameSummary? = null,
-	val summaryVisible: Boolean = false,
 	val haptic: HapticEvent? = null,
 )

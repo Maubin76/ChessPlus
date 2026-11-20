@@ -3,12 +3,11 @@ package com.chessplus.app.game
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -20,7 +19,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,7 +89,6 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		inOnNext = vController::onNext,
 		inOnPromotion = vController::onPromotionChosen,
 		inOnPromotionDismiss = vController::onPromotionDismissed,
-		inOnSummaryVisible = vController::onSummaryVisible,
 	)
 }
 
@@ -109,13 +109,12 @@ fun GameContent(
 	inOnNext: () -> Unit,
 	inOnPromotion: (PieceType) -> Unit,
 	inOnPromotionDismiss: () -> Unit,
-	inOnSummaryVisible: (Boolean) -> Unit,
 ) {
 	val vColors = kLocalChessColors.current
 	Box(Modifier.fillMaxSize().background(vColors.background)) {
 		Column(Modifier.fillMaxSize().statusBarsPadding()) {
 			TopBar(inTitle, inState.rating, inOnBack)
-			Header(inState.header)
+			Header(inState.header, inState.summary)
 			ChessBoard(
 				inPieces = inState.pieces,
 				inOrientation = inState.orientation,
@@ -132,15 +131,18 @@ fun GameContent(
 				inOnDrop = inOnDrop,
 				inModifier = Modifier.fillMaxWidth(),
 			)
-			Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
-				BoardNote(inState, inOnSummaryVisible)
+			val vSummary = inState.summary
+			if (vSummary != null) {
+				SummaryPanel(vSummary, Modifier.weight(1f))
+				FinishedControls(inOnRestart, inOnNext)
+			} else {
+				Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
+					BoardNote(inState)
+				}
+				Controls(inState, inOnRestart, inOnHint, inOnNext)
 			}
-			Controls(inState, inOnRestart, inOnHint, inOnNext)
 		}
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
-		if (inState.summaryVisible) {
-			inState.summary?.let { SummaryOverlay(it, inOnNext, { inOnSummaryVisible(false) }) }
-		}
 	}
 }
 
@@ -162,12 +164,12 @@ private fun TopBar(inTitle: String, inRating: Int, inOnBack: () -> Unit) {
 }
 
 /**
- * Message au-dessus de l'échiquier.
+ * Message au-dessus de l'échiquier ; à la fin du problème, résultat du bilan.
  */
 @Composable
-private fun Header(inHeader: GameHeader) {
+private fun Header(inHeader: GameHeader, inSummary: GameSummary?) {
 	val vColors = kLocalChessColors.current
-	val (vTitle, vSubtitle, vTone) = headerTexts(inHeader)
+	val (vTitle, vSubtitle, vTone) = if (inSummary != null) summaryTexts(inSummary) else headerTexts(inHeader)
 	val vColor = when (vTone) {
 		Tone.Neutral -> vColors.text
 		Tone.Success -> vColors.success
@@ -187,6 +189,19 @@ private fun Header(inHeader: GameHeader) {
 			Text(vSubtitle, style = ChessType.kBody, color = vColors.muted)
 		}
 	}
+}
+
+/**
+ * Retourne le titre, le sous-titre et le ton du message de fin de problème.
+ */
+@Composable
+private fun summaryTexts(inSummary: GameSummary): Triple<String, String, Tone> {
+	val vSuccess = inSummary.result == PuzzleResult.Success
+	return Triple(
+		stringResource(if (vSuccess) R.string.summary_success else R.string.summary_failure),
+		summaryDetail(inSummary),
+		if (vSuccess) Tone.Success else Tone.Error,
+	)
 }
 
 /**
@@ -224,18 +239,12 @@ private fun headerTexts(inHeader: GameHeader): Triple<String, String, Tone> = wh
 }
 
 /**
- * Mention discrète sous l'échiquier : aide, rappel après une erreur, ou accès au bilan replié.
+ * Mention discrète sous l'échiquier : aide, ou rappel après une erreur.
  */
 @Composable
-private fun BoardNote(inState: GameUiState, inOnSummaryVisible: (Boolean) -> Unit) {
+private fun BoardNote(inState: GameUiState) {
 	val vColors = kLocalChessColors.current
 	when {
-		inState.summary != null && !inState.summaryVisible -> Text(
-			stringResource(R.string.summary_success).takeIf { inState.summary.result == PuzzleResult.Success } ?: stringResource(R.string.summary_failure),
-			style = ChessType.kBodyStrong,
-			color = vColors.text,
-			modifier = Modifier.clip(RoundedCornerShape(16.dp)).clickable { inOnSummaryVisible(true) }.background(vColors.surface).padding(horizontal = 16.dp, vertical = 10.dp),
-		)
 		inState.header is GameHeader.Wrong -> Text(stringResource(R.string.game_wrong_note), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
 		inState.header is GameHeader.ToMove && !inState.header.afterCorrect && inState.interactive ->
 			Text(stringResource(R.string.game_touch_help), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
@@ -338,87 +347,84 @@ private fun PromotionDialog(inColor: Color, inOnChoose: (PieceType) -> Unit, inO
 }
 
 /**
- * Volet de bilan en bas de l'écran, sur un voile qui le replie quand on le touche.
+ * Bilan sous l'échiquier, qui laisse la position finale visible : cotes, thèmes, lien Lichess.
  */
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun SummaryOverlay(inSummary: GameSummary, inOnNext: () -> Unit, inOnHide: () -> Unit) {
+private fun SummaryPanel(inSummary: GameSummary, inModifier: Modifier) {
 	val vColors = kLocalChessColors.current
 	val vSuccess = inSummary.result == PuzzleResult.Success
-	val vColor = if (vSuccess) vColors.success else vColors.error
 	val vUriHandler = LocalUriHandler.current
-	Box(Modifier.fillMaxSize()) {
-		Box(Modifier.fillMaxSize().background(vColors.scrim.copy(alpha = 0.2f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = inOnHide))
-		Column(
-			Modifier
-				.align(Alignment.BottomCenter)
-				.fillMaxWidth()
-				.clip(RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp))
-				.background(vColors.surface)
-				.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-				.navigationBarsPadding()
-				.padding(horizontal = 24.dp, vertical = 12.dp),
+	Column(
+		inModifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
+		verticalArrangement = Arrangement.spacedBy(10.dp),
+	) {
+		Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+			Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(vColors.surface).padding(horizontal = 14.dp, vertical = 10.dp)) {
+				Text(stringResource(R.string.summary_my_rating), style = ChessType.kCaption, color = vColors.muted)
+				Row(verticalAlignment = Alignment.Bottom) {
+					Text(formatRating(inSummary.ratingAfter.roundToInt()), style = ChessType.kSection, color = vColors.text)
+					Spacer(Modifier.width(6.dp))
+					if (inSummary.rated) {
+						Text(
+							formatDelta(inSummary.ratingAfter.roundToInt() - inSummary.ratingBefore.roundToInt()),
+							style = ChessType.kBodyStrong,
+							color = if (vSuccess) vColors.success else vColors.error,
+						)
+					} else {
+						Text(stringResource(R.string.summary_unrated_short), style = ChessType.kCaption, color = vColors.muted)
+					}
+				}
+			}
+			Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(vColors.surface).padding(horizontal = 14.dp, vertical = 10.dp)) {
+				Text(stringResource(R.string.summary_puzzle_rating), style = ChessType.kCaption, color = vColors.muted)
+				Text(formatRating(inSummary.puzzleRating), style = ChessType.kSection, color = vColors.text)
+			}
+		}
+		Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+			for (vTheme in inSummary.themes) {
+				Box(Modifier.clip(RoundedCornerShape(16.dp)).background(vColors.surface).padding(horizontal = 12.dp, vertical = 7.dp)) {
+					Text(stringResource(themeLabel(vTheme)), style = ChessType.kCaption, color = vColors.text)
+				}
+			}
+		}
+		Row(
+			Modifier.clip(RoundedCornerShape(12.dp)).clickable { vUriHandler.openUri(inSummary.lichessUrl) }.padding(vertical = 6.dp, horizontal = 4.dp),
+			verticalAlignment = Alignment.CenterVertically,
 		) {
-			Box(Modifier.align(Alignment.CenterHorizontally).width(40.dp).height(4.dp).background(vColors.track, RoundedCornerShape(2.dp)).clickable(onClick = inOnHide))
-			Spacer(Modifier.height(18.dp))
-			Row(verticalAlignment = Alignment.CenterVertically) {
-				Icon(painterResource(if (vSuccess) R.drawable.ic_check_circle_fill1 else R.drawable.ic_cancel_fill1), contentDescription = null, tint = vColor, modifier = Modifier.size(28.dp))
-				Spacer(Modifier.width(8.dp))
-				Text(stringResource(if (vSuccess) R.string.summary_success else R.string.summary_failure), style = ChessType.kFeedback, color = vColor)
-			}
-			Text(summaryDetail(inSummary), style = ChessType.kBody, color = vColors.muted, modifier = Modifier.padding(top = 4.dp))
-			if (!inSummary.rated) {
-				Text(stringResource(R.string.summary_unrated), style = ChessType.kCaption, color = vColors.muted, modifier = Modifier.padding(top = 2.dp))
-			}
-			Spacer(Modifier.height(18.dp))
-			Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-				Column(Modifier.weight(1f).background(vColors.background, RoundedCornerShape(18.dp)).padding(14.dp)) {
-					Text(stringResource(R.string.summary_my_rating), style = ChessType.kCaption, color = vColors.muted)
-					Row(verticalAlignment = Alignment.Bottom) {
-						Text(formatRating(inSummary.ratingAfter.roundToInt()), style = ChessType.kSection, color = vColors.text)
-						if (inSummary.rated) {
-							Spacer(Modifier.width(6.dp))
-							Text(formatDelta(inSummary.ratingAfter.roundToInt() - inSummary.ratingBefore.roundToInt()), style = ChessType.kBodyStrong, color = vColor)
-						}
-					}
-				}
-				Column(Modifier.weight(1f).background(vColors.background, RoundedCornerShape(18.dp)).padding(14.dp)) {
-					Text(stringResource(R.string.summary_puzzle_rating), style = ChessType.kCaption, color = vColors.muted)
-					Text(formatRating(inSummary.puzzleRating), style = ChessType.kSection, color = vColors.text)
-				}
-			}
-			Spacer(Modifier.height(14.dp))
-			Text(stringResource(R.string.summary_themes), style = ChessType.kCaption, color = vColors.muted)
-			Spacer(Modifier.height(8.dp))
-			FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-				for (vTheme in inSummary.themes) {
-					Box(Modifier.clip(RoundedCornerShape(18.dp)).background(vColors.background).padding(horizontal = 14.dp, vertical = 8.dp)) {
-						Text(stringResource(themeLabel(vTheme)), style = ChessType.kCaption, color = vColors.text)
-					}
-				}
-			}
-			Spacer(Modifier.height(10.dp))
-			Row(
-				Modifier.clip(RoundedCornerShape(12.dp)).clickable { vUriHandler.openUri(inSummary.lichessUrl) }.padding(vertical = 10.dp, horizontal = 4.dp),
-				verticalAlignment = Alignment.CenterVertically,
-			) {
-				Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, tint = vColors.text, modifier = Modifier.size(18.dp))
-				Spacer(Modifier.width(8.dp))
-				Text(stringResource(R.string.summary_lichess), style = ChessType.kBodyStrong, color = vColors.text)
-				Spacer(Modifier.width(6.dp))
-				Text(stringResource(R.string.summary_lichess_note), style = ChessType.kCaption, color = vColors.muted)
-			}
-			Spacer(Modifier.height(10.dp))
-			Row(
-				Modifier.fillMaxWidth().height(60.dp).clip(RoundedCornerShape(30.dp)).background(vColors.primary).clickable(onClick = inOnNext),
-				horizontalArrangement = Arrangement.Center,
-				verticalAlignment = Alignment.CenterVertically,
-			) {
-				Icon(painterResource(R.drawable.ic_skip_next), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(22.dp))
-				Spacer(Modifier.width(10.dp))
-				Text(stringResource(R.string.action_next), style = ChessType.kBarTitle, color = vColors.onPrimary)
-			}
-			Spacer(Modifier.height(12.dp))
+			Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = null, tint = vColors.text, modifier = Modifier.size(18.dp))
+			Spacer(Modifier.width(8.dp))
+			Text(stringResource(R.string.summary_lichess), style = ChessType.kBodyStrong, color = vColors.text)
+			Spacer(Modifier.width(6.dp))
+			Text(stringResource(R.string.summary_lichess_note), style = ChessType.kCaption, color = vColors.muted)
+		}
+	}
+}
+
+/**
+ * Commandes de fin de problème : Recommencer, et gros bouton « Suivant » sous le pouce.
+ */
+@Composable
+private fun FinishedControls(inOnRestart: () -> Unit, inOnNext: () -> Unit) {
+	val vColors = kLocalChessColors.current
+	Row(
+		Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 20.dp),
+		verticalAlignment = Alignment.CenterVertically,
+	) {
+		Box(
+			Modifier.size(60.dp).clip(RoundedCornerShape(20.dp)).background(vColors.surface).clickable(onClick = inOnRestart),
+			contentAlignment = Alignment.Center,
+		) {
+			Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.action_restart), tint = vColors.text, modifier = Modifier.size(26.dp))
+		}
+		Spacer(Modifier.width(12.dp))
+		Row(
+			Modifier.weight(1f).height(60.dp).clip(RoundedCornerShape(30.dp)).background(vColors.primary).clickable(onClick = inOnNext),
+			horizontalArrangement = Arrangement.Center,
+			verticalAlignment = Alignment.CenterVertically,
+		) {
+			Icon(painterResource(R.drawable.ic_skip_next), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(22.dp))
+			Spacer(Modifier.width(10.dp))
+			Text(stringResource(R.string.action_next), style = ChessType.kBarTitle, color = vColors.onPrimary)
 		}
 	}
 }

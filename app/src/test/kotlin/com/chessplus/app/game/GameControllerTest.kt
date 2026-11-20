@@ -115,7 +115,7 @@ class GameControllerTest {
 		inProgress: ProgressStore = FakeProgress(),
 		inSessions: SessionStore = FakeSessions(),
 		inMode: GameMode = GameMode.Continuous,
-	) = GameController(this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, clock = { 42L }, opponentDelayMs = 0, startDelayMs = 0)
+	) = GameController(this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, clock = { 42L }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
 
 	/**
 	 * Raccourci : case à partir de son nom.
@@ -185,7 +185,6 @@ class GameControllerTest {
 		val vSummary = assertNotNull(vState.summary)
 		assertEquals(PuzzleResult.Success, vSummary.result)
 		assertTrue(vSummary.ratingAfter > vSummary.ratingBefore)
-		assertTrue(vState.summaryVisible)
 		assertEquals(listOf(Triple("00sHx", PuzzleResult.Success, true)), vProgress.records)
 		assertEquals(vSummary.ratingAfter.toInt(), vState.rating)
 	}
@@ -197,9 +196,21 @@ class GameControllerTest {
 		val vController = controller(FakePuzzles(listOf(kMateIn2)), vProgress)
 		vController.start()
 		vController.awaitIdle()
-		vController.tapMove("a2", "b3")
+		vController.onSquareTap(sq("a2"))
+		vController.onSquareTap(sq("b3"))
+		// Le mauvais coup est d'abord montré (pièce sur la case visée, pastille d'erreur)…
 		assertEquals(GameHeader.Wrong, vController.state.value.header)
 		assertEquals(sq("b3") to BadgeKind.Error, vController.state.value.badge)
+		assertNotNull(vController.state.value.pieces[sq("b3")])
+		assertNull(vController.state.value.pieces[sq("a2")])
+		assertFalse(vController.state.value.interactive)
+		vController.awaitIdle()
+		// … puis annulé : la pièce revient, le joueur peut réessayer.
+		assertEquals(GameHeader.Wrong, vController.state.value.header)
+		assertNull(vController.state.value.badge)
+		assertNotNull(vController.state.value.pieces[sq("a2")])
+		assertNull(vController.state.value.pieces[sq("b3")])
+		assertTrue(vController.state.value.animateMove)
 		assertEquals(listOf(Triple("00sHx", PuzzleResult.Failure, true)), vProgress.records)
 		assertTrue(vController.state.value.interactive)
 		vController.tapMove("a2", "e6")

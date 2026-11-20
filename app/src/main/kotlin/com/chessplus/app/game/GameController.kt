@@ -1,6 +1,7 @@
 package com.chessplus.app.game
 
 import com.chessplus.core.model.Move
+import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
 import com.chessplus.core.model.Square
 import com.chessplus.core.puzzle.MoveVerdict
@@ -36,6 +37,7 @@ import kotlinx.coroutines.sync.withLock
  * @property clock horloge (millisecondes).
  * @property opponentDelayMs pause avant la réponse de l'adversaire.
  * @property startDelayMs pause avant le premier coup de l'adversaire.
+ * @property wrongMoveDelayMs durée d'affichage d'un mauvais coup avant son annulation.
  */
 class GameController(
 	private val scope: CoroutineScope,
@@ -47,6 +49,7 @@ class GameController(
 	private val clock: () -> Long,
 	private val opponentDelayMs: Long = kOpponentDelayMs,
 	private val startDelayMs: Long = kStartDelayMs,
+	private val wrongMoveDelayMs: Long = kWrongMoveDelayMs,
 ) {
 	/** État publié. */
 	private val mutableState = MutableStateFlow(GameUiState())
@@ -84,8 +87,8 @@ class GameController(
 	/** Promotion en attente. */
 	private var promotion: PendingPromotion? = null
 
-	/** Volet de bilan déplié. */
-	private var summaryVisible = false
+	/** Position affichée à la place de la vraie pendant qu'un mauvais coup est montré, ou null. */
+	private var displayOverride: Map<Square, Piece>? = null
 
 	/** Compteur des coups affichés (déclenche les animations). */
 	private var moveId = 0
@@ -232,12 +235,12 @@ class GameController(
 		}
 		pending?.cancel()
 		busy = false
+		displayOverride = null
 		vSession.restart()
-		showMove(inAnimate = false)
+		showMove(inAnimate = true)
 		selected = null
 		badge = null
 		promotion = null
-		summaryVisible = false
 		header = GameHeader.ToMove(vSession.puzzle.playerColor, afterCorrect = false)
 		publish()
 		persist()
@@ -257,18 +260,9 @@ class GameController(
 		}
 		pending?.cancel()
 		busy = true
+		displayOverride = null
 		publish()
 		pending = scope.launch { loadNext(vSession?.puzzle?.id) }
-	}
-
-	/**
-	 * Déplie ou replie le volet de bilan.
-	 */
-	fun onSummaryVisible(inVisible: Boolean) {
-		if (session?.status == PuzzleStatus.Solved) {
-			summaryVisible = inVisible
-			publish()
-		}
 	}
 
 	/**
@@ -301,7 +295,6 @@ class GameController(
 		when (vSession.status) {
 			PuzzleStatus.Solved -> {
 				header = finishedHeader(vSession)
-				summaryVisible = true
 				publish()
 			}
 			PuzzleStatus.PlayerToMove -> {
@@ -348,7 +341,7 @@ class GameController(
 		selected = null
 		badge = null
 		promotion = null
-		summaryVisible = false
+		displayOverride = null
 		showMove(inAnimate = false)
 		header = GameHeader.ToMove(vPuzzle.playerColor, afterCorrect = false)
 		publish()
@@ -418,15 +411,41 @@ class GameController(
 				requestHaptic(vSession.result == PuzzleResult.Success || vVerdict.alternativeMate)
 				finish()
 			}
-			MoveVerdict.Wrong -> {
-				badge = inMove.to to BadgeKind.Error
-				header = GameHeader.Wrong
-				requestHaptic(false)
-				publish()
-				persist()
-			}
+			MoveVerdict.Wrong -> showWrongMove(inMove, inAnimate)
 		}
 	}
+
+	/**
+	 * Montre un mauvais coup : la pièce va sur la case visée avec une pastille d'erreur, puis
+	 * revient à sa place. Le joueur ne peut pas jouer pendant ce temps.
+	 */
+	private fun showWrongMove(inMove: Move, inAnimate: Boolean) {
+		val vSession = session ?: return
+		val vShown = boardPieces(vSession).toMutableMap()
+		vShown.remove(inMove.from)?.let { inPiece -> vShown[inMove.to] = inMove.promotion?.let { Piece(inPiece.color, it) } ?: inPiece }
+		displayOverride = vShown
+		showMove(inAnimate)
+		badge = inMove.to to BadgeKind.Error
+		header = GameHeader.Wrong
+		requestHaptic(false)
+		busy = true
+		publish()
+		persist()
+		pending = scope.launch {
+			delay(wrongMoveDelayMs)
+			displayOverride = null
+			badge = null
+			showMove(inAnimate = true)
+			busy = false
+			publish()
+		}
+	}
+
+	/**
+	 * Retourne les pièces de la position réelle de la session.
+	 */
+	private fun boardPieces(inSession: PuzzleSession): Map<Square, Piece> =
+		Square.kAll.mapNotNull { vSquare -> inSession.board.pieceAt(vSquare)?.let { vSquare to it } }.toMap()
 
 	/**
 	 * Termine le problème : message final, bilan, enregistrement.
@@ -434,7 +453,6 @@ class GameController(
 	private fun finish() {
 		val vSession = session ?: return
 		header = finishedHeader(vSession)
-		summaryVisible = true
 		publish()
 		persist()
 	}
@@ -523,7 +541,7 @@ class GameController(
 		}
 		mutableState.value = GameUiState(
 			header = header,
-			pieces = vSession?.let { inSession -> Square.kAll.mapNotNull { vSquare -> inSession.board.pieceAt(vSquare)?.let { vSquare to it } }.toMap() } ?: emptyMap(),
+			pieces = displayOverride ?: vSession?.let { boardPieces(it) } ?: emptyMap(),
 			orientation = vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White,
 			lastMove = vSession?.lastMove,
 			moveId = moveId,
@@ -537,7 +555,6 @@ class GameController(
 			nextEnabled = vSession?.status == PuzzleStatus.Solved || header == GameHeader.NoPuzzle,
 			promotion = promotion,
 			summary = vSummary,
-			summaryVisible = summaryVisible && vSummary != null,
 			haptic = haptic,
 		)
 	}
@@ -548,5 +565,8 @@ class GameController(
 
 		/** Pause avant le premier coup de l'adversaire. */
 		const val kStartDelayMs = 700L
+
+		/** Durée d'affichage d'un mauvais coup avant qu'il soit annulé. */
+		const val kWrongMoveDelayMs = 900L
 	}
 }
