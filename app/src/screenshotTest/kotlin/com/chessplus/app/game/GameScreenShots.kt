@@ -8,6 +8,7 @@ import com.chessplus.app.design.preview.DesignPreviews
 import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Move
+import com.chessplus.core.model.PieceType
 import com.chessplus.core.model.Square
 import com.chessplus.core.model.ThemeSet
 import com.chessplus.core.puzzle.PuzzleResult
@@ -49,6 +50,22 @@ fun RealGameSelectionShot() = Shot(
 	)
 )
 
+/** Premier appui sur « Indice » : le fou a2 est en surbrillance. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameHintPieceShot() = Shot(
+	GameUiState(
+		header = GameHeader.HintPiece(PieceType.Bishop),
+		pieces = piecesOf("q5nr/1ppknQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 w - - 1 18"),
+		lastMove = Move.fromUci("e8d7"),
+		hint = Square.fromAlgebraic("a2"),
+		interactive = true,
+		rating = 1520,
+		hintEnabled = true,
+	)
+)
+
 /** Joueur noir (échiquier retourné), bon coup. */
 @PreviewTest
 @DesignPreviews
@@ -70,7 +87,7 @@ fun RealGameBlackCorrectShot() = Shot(
 @Composable
 fun RealGameSummaryShot() = Shot(
 	GameUiState(
-		header = GameHeader.Finished(success = true, mate = true, solutionShown = false),
+		header = GameHeader.Finished(success = true, mate = true, hintsUsed = false),
 		pieces = piecesOf("q2k1Qnr/1pp1n1pp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 3 19"),
 		lastMove = Move.fromUci("f7f8"),
 		badge = Square.fromAlgebraic("f8") to BadgeKind.Success,
@@ -115,7 +132,7 @@ fun RealGameLargeFontShot() = Shot(
 @Composable
 fun RealSummaryLargeFontShot() = Shot(
 	GameUiState(
-		header = GameHeader.Finished(success = false, mate = true, solutionShown = true),
+		header = GameHeader.Finished(success = false, mate = true, hintsUsed = true),
 		pieces = piecesOf("q2k1Qnr/1pp1n1pp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 3 19"),
 		lastMove = Move.fromUci("f7f8"),
 		rating = 1431,

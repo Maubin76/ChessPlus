@@ -115,9 +115,16 @@
 	<string name="game_wrong_note">Le problème compte comme échoué, mais vous pouvez le terminer</string>
 	<string name="game_hint">Indice</string>
 	<string name="game_hint_detail">Coup joué : %1$s → %2$s</string>
+	<string name="game_hint_king">Jouez le roi en surbrillance</string>
+	<string name="game_hint_queen">Jouez la dame en surbrillance</string>
+	<string name="game_hint_rook">Jouez la tour en surbrillance</string>
+	<string name="game_hint_bishop">Jouez le fou en surbrillance</string>
+	<string name="game_hint_knight">Jouez le cavalier en surbrillance</string>
+	<string name="game_hint_pawn">Jouez le pion en surbrillance</string>
+	<string name="game_hint_again">Touchez encore Indice pour voir le coup</string>
 	<string name="game_mate">Mat !</string>
 	<string name="game_finished">Problème terminé</string>
-	<string name="game_solution_shown">Solution affichée</string>
+	<string name="game_hints_used">Terminé avec l’aide des indices</string>
 	<string name="game_touch_help">Touchez une pièce puis sa case, ou faites-la glisser</string>
 	<string name="game_no_puzzle">Aucun problème disponible</string>
 	<string name="game_no_puzzle_detail">Tous les problèmes de votre niveau ont été résolus</string>

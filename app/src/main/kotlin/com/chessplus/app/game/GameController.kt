@@ -210,7 +210,8 @@ class GameController(
 	}
 
 	/**
-	 * Montre le coup suivant de la solution (le problème compte alors comme échoué).
+	 * Indice en deux temps (le problème compte alors comme échoué) : le premier appui met en
+	 * surbrillance la pièce à jouer, le second joue le coup de la solution.
 	 */
 	fun onHint() {
 		val vSession = session ?: return
@@ -218,6 +219,17 @@ class GameController(
 			return
 		}
 		noteFailure(vSession)
+		if (vSession.hintedSquare == null) {
+			val vSquare = vSession.hintPiece()
+			selected = null
+			if (badge?.second == BadgeKind.Error) {
+				badge = null
+			}
+			header = GameHeader.HintPiece(vSession.board.pieceAt(vSquare)?.type ?: PieceType.Pawn)
+			publish()
+			persist()
+			return
+		}
 		val vMove = vSession.revealNextMove()
 		showMove(inAnimate = true)
 		badge = null
@@ -497,7 +509,7 @@ class GameController(
 	private fun finishedHeader(inSession: PuzzleSession): GameHeader = GameHeader.Finished(
 		success = inSession.result == PuzzleResult.Success,
 		mate = inSession.board.status() == GameStatus.Checkmate,
-		solutionShown = inSession.revealedCount > 0,
+		hintsUsed = inSession.revealedCount > 0,
 	)
 
 	/**
@@ -583,6 +595,7 @@ class GameController(
 			moveId = moveId,
 			animateMove = animate,
 			selected = selected,
+			hint = vSession?.hintedSquare,
 			targets = selected?.let { targetsOf(it) } ?: emptySet(),
 			badge = badge,
 			interactive = isInteractive(),

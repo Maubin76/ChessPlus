@@ -58,6 +58,12 @@ private const val kMoveAnimationMs = 300
 /** Agrandissement de la pièce tenue sous le doigt. */
 private const val kDragScale = 1.3f
 
+/** Opacité de la teinte de la case montrée par l'indice. */
+private const val kHintFillAlpha = 0.35f
+
+/** Épaisseur du cadre de la case montrée par l'indice, en fraction du côté d'une case. */
+private const val kHintStrokeRatio = 0.07f
+
 /**
  * Retourne la ressource cburnett d'une pièce.
  */
@@ -172,6 +178,7 @@ fun ChessBoard(
 	inAnimateMove: Boolean,
 	inSelected: Square?,
 	inTargets: Set<Square>,
+	inHint: Square? = null,
 	inBadge: Pair<Square, BadgeKind>?,
 	inCoordinates: Boolean,
 	inInteractive: Boolean,
@@ -252,6 +259,13 @@ fun ChessBoard(
 				if (vSquare == inSelected) {
 					drawRect(vColors.selected, vTopLeft, vSize)
 				}
+			}
+			inHint?.let { inSquare ->
+				// Indice : case teintée et cerclée de bleu (la couleur des indices), distincte du dernier coup et de la sélection.
+				val vTopLeft = vGeometry.topLeft(inSquare)
+				val vStroke = vSquarePx * kHintStrokeRatio
+				drawRect(vColors.chartHint.copy(alpha = kHintFillAlpha), vTopLeft, vSize)
+				drawRect(vColors.chartHint, vTopLeft + Offset(vStroke / 2, vStroke / 2), Size(vSquarePx - vStroke, vSquarePx - vStroke), style = Stroke(width = vStroke))
 			}
 			if (inCoordinates) {
 				for (vSquare in Square.kAll) {

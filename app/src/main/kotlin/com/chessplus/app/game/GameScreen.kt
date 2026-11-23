@@ -123,6 +123,7 @@ fun GameContent(
 				inMoveId = inState.moveId,
 				inAnimateMove = inState.animateMove,
 				inSelected = inState.selected,
+				inHint = inState.hint,
 				inTargets = inState.targets,
 				inBadge = inState.badge,
 				inCoordinates = inCoordinates,
@@ -223,6 +224,20 @@ private fun headerTexts(inHeader: GameHeader): Triple<String, String, Tone> = wh
 		Tone.Success,
 	)
 	GameHeader.Wrong -> Triple(stringResource(R.string.game_wrong), stringResource(R.string.game_wrong_detail), Tone.Error)
+	is GameHeader.HintPiece -> Triple(
+		stringResource(R.string.game_hint),
+		stringResource(
+			when (inHeader.piece) {
+				PieceType.King -> R.string.game_hint_king
+				PieceType.Queen -> R.string.game_hint_queen
+				PieceType.Rook -> R.string.game_hint_rook
+				PieceType.Bishop -> R.string.game_hint_bishop
+				PieceType.Knight -> R.string.game_hint_knight
+				PieceType.Pawn -> R.string.game_hint_pawn
+			}
+		),
+		Tone.Neutral,
+	)
 	is GameHeader.Hint -> Triple(
 		stringResource(R.string.game_hint),
 		stringResource(R.string.game_hint_detail, inHeader.move.from.toAlgebraic(), inHeader.move.to.toAlgebraic()),
@@ -231,7 +246,7 @@ private fun headerTexts(inHeader: GameHeader): Triple<String, String, Tone> = wh
 	is GameHeader.Finished -> Triple(
 		stringResource(if (inHeader.mate) R.string.game_mate else R.string.game_finished),
 		when {
-			inHeader.solutionShown -> stringResource(R.string.game_solution_shown)
+			inHeader.hintsUsed -> stringResource(R.string.game_hints_used)
 			inHeader.mate -> stringResource(R.string.game_finished)
 			else -> ""
 		},
@@ -248,6 +263,7 @@ private fun BoardNote(inState: GameUiState) {
 	val vColors = kLocalChessColors.current
 	when {
 		inState.header is GameHeader.Wrong -> Text(stringResource(R.string.game_wrong_note), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
+		inState.hint != null -> Text(stringResource(R.string.game_hint_again), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
 		inState.header is GameHeader.ToMove && !inState.header.afterCorrect && inState.interactive ->
 			Text(stringResource(R.string.game_touch_help), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
 		else -> Unit

@@ -159,6 +159,32 @@ class PuzzleSessionTest {
 		assertEquals(PuzzleResult.Failure, vSession.result)
 	}
 
+	/** Vérifie l'indice en deux temps : la pièce, puis le coup, comptés comme un seul indice. */
+	@Test
+	fun hintPieceThenMove() {
+		val vPuzzle = SampleData.puzzle("00sJb")
+		val vSession = PuzzleSession.start(vPuzzle, rules)
+		vSession.playOpponentMove()
+		assertNull(vSession.hintedSquare)
+		assertEquals(vPuzzle.moves[1].from, vSession.hintPiece())
+		assertEquals(vPuzzle.moves[1].from, vSession.hintedSquare)
+		assertEquals(PuzzleResult.Failure, vSession.result)
+		assertEquals(PuzzleStatus.PlayerToMove, vSession.status)
+		assertEquals(1, vSession.solutionPly)
+		vSession.hintPiece()
+		assertEquals(1, vSession.revealedCount)
+		assertEquals(vPuzzle.moves[1], vSession.revealNextMove())
+		assertEquals(1, vSession.revealedCount)
+		assertNull(vSession.hintedSquare)
+		vSession.playOpponentMove()
+		assertNull(vSession.hintedSquare)
+		vSession.hintPiece()
+		assertEquals(2, vSession.revealedCount)
+		vSession.restart()
+		vSession.playOpponentMove()
+		assertNull(vSession.hintedSquare)
+	}
+
 	/** Vérifie que recommencer revient à la FEN de départ en gardant l'échec. */
 	@Test
 	fun restartKeepsFailure() {
@@ -180,6 +206,7 @@ class PuzzleSessionTest {
 		val vSession = PuzzleSession.start(SampleData.puzzle("00sHx"), rules)
 		assertFailsWith<IllegalStateException> { vSession.submitMove(Move.fromUci("a2e6")) }
 		assertFailsWith<IllegalStateException> { vSession.revealNextMove() }
+		assertFailsWith<IllegalStateException> { vSession.hintPiece() }
 		vSession.playOpponentMove()
 		assertFailsWith<IllegalStateException> { vSession.playOpponentMove() }
 	}

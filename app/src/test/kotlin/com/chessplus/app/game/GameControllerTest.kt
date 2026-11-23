@@ -183,7 +183,7 @@ class GameControllerTest {
 		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
 		vController.tapMove("f7", "f8")
 		val vState = vController.state.value
-		assertEquals(GameHeader.Finished(success = true, mate = true, solutionShown = false), vState.header)
+		assertEquals(GameHeader.Finished(success = true, mate = true, hintsUsed = false), vState.header)
 		assertTrue(vState.nextEnabled)
 		assertFalse(vState.interactive)
 		val vSummary = assertNotNull(vState.summary)
@@ -224,7 +224,7 @@ class GameControllerTest {
 		assertEquals(1, vController.state.value.summary?.mistakes)
 	}
 
-	/** Vérifie l'indice : coup montré, échec enregistré, réponse de l'adversaire. */
+	/** Vérifie l'indice en deux temps : pièce en surbrillance, puis coup joué ; échec enregistré. */
 	@Test
 	fun hint() = runBlocking<Unit> {
 		val vProgress = FakeProgress()
@@ -232,14 +232,24 @@ class GameControllerTest {
 		vController.start()
 		vController.awaitIdle()
 		vController.onHint()
-		assertIs<GameHeader.Hint>(vController.state.value.header)
 		vController.awaitIdle()
-		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		assertEquals(GameHeader.HintPiece(PieceType.Bishop), vController.state.value.header)
+		assertEquals(sq("a2"), vController.state.value.hint)
+		assertEquals(Move.fromUci("e8d7"), vController.state.value.lastMove)
+		assertTrue(vController.state.value.interactive)
 		assertEquals(PuzzleResult.Failure, vProgress.records.single().second)
 		vController.onHint()
+		assertIs<GameHeader.Hint>(vController.state.value.header)
+		assertNull(vController.state.value.hint)
 		vController.awaitIdle()
-		assertEquals(GameHeader.Finished(success = false, mate = true, solutionShown = true), vController.state.value.header)
+		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		vController.onHint()
+		assertEquals(sq("f7"), vController.state.value.hint)
+		vController.tapMove("f7", "f8")
+		assertEquals(GameHeader.Finished(success = false, mate = true, hintsUsed = true), vController.state.value.header)
+		assertNull(vController.state.value.hint)
 		assertEquals(2, vController.state.value.summary?.revealed)
+		assertEquals(1, vProgress.records.size)
 	}
 
 	/** Vérifie le glisser-déposer et la promotion avec choix de la pièce. */

@@ -67,6 +67,7 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 - Message d'état : consigne (« Les blancs jouent »), puis retour visuel en grand (« Bon coup ! » en vert avec icône, erreur en rouge).
 - Échiquier pleine largeur ; bon coup signalé par une **pastille ✓ verte** sur la case d'arrivée et le dernier coup surligné en vert.
 - Bas : tuile « Recommencer », gros bouton rond « Indice », tuile « Suivant » (grisée tant que le problème n'est pas terminé).
+- Indice en deux temps (modifié par Mathieu le 2026-11-23) : le premier appui met en surbrillance la pièce à jouer (case teintée et cerclée de bleu, la couleur des indices dans les statistiques) avec « Indice / Jouez le fou en surbrillance » et la mention « Touchez encore Indice pour voir le coup » ; le second appui joue le coup comme avant. Les deux appuis sur un même coup comptent pour un seul indice ; le premier suffit à compter le problème comme échoué.
 
 ## Maquettes (validées le 2026-11-20)
 
@@ -131,7 +132,7 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | --- | --- | --- |
 | 1 | Choix du niveau | Premier lancement : Débutant 800, Intermédiaire 1200, Confirmé 1600, Avancé 2000, ou « Je connais ma cote » (saisie libre) ; modifiable dans les réglages |
 | 2 | Accueil | Tableau de bord : nombre de problèmes résolus ; carte « Reprendre le problème » si un problème est en cours ; bouton « S'entraîner » ; accès à l'entraînement ciblé ; icône des réglages |
-| 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = solution coup par coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
+| 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = pièce à jouer puis coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
 | 4 | Entraînement ciblé | Thèmes par familles ; difficulté relative (plus facile, à mon niveau, plus difficile) **ou** tranche précise ; bouton « Commencer » |
 | 5 | Historique | Onglets Tous, Réussis, Échoués ; une ligne relance le problème, sans effet sur la cote |
 | 6 | Statistiques | Sections détaillées ci-dessous ; une fiche par thème (en attente de validation sur `road-to-v2`) |
