@@ -25,7 +25,7 @@ Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contien
 
 Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 
-- Monochrome, avec **une seule exception** : un vert pour la réussite et un rouge pour l'erreur, réservés au retour visuel (inspiration Chess.com).
+- Monochrome à l'origine, avec un vert pour la réussite et un rouge pour l'erreur. **Version B verte** (choisie par Mathieu le 2026-11-23 pour s'accorder à l'icône, `docs/design/vert/propositions-vert.png`) : boutons principaux, carte « Reprendre », capsule de navigation, bouton « Indice », puces sélectionnées et interrupteurs en vert ; échiquier aux tons verts, dernier coup surligné en jaune ; fonds et cartes inchangés.
 - **Échiquier bord à bord** : toute la largeur de l'écran (384 dp sur le S24, cases de 48 dp), sans carte ni coins arrondis.
 - Police unique : **Inter** (SIL OFL), graisses 400 à 800.
 - Pièces : **cburnett** (Colin M.L. Burnett, GPLv2+), auteur cité dans les crédits.
@@ -39,15 +39,16 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 | Surface (cartes, tuiles) | `#FFFFFF` | `#1C1D1F` |
 | Texte | `#111111` | `#F2F3F4` |
 | Texte secondaire | `#8A8E95` | `#8A8E95` |
-| Bouton principal | `#111111`, icône `#F4F5F6` | `#F2F3F4`, icône `#0F1011` |
+| Bouton principal (vert) | `#2F7D4F`, texte et icône `#FFFFFF` | `#5DB37C`, texte et icône `#0F1011` |
 | Réussite (accent) | `#3E8E5A` | `#5DB37C` |
 | Erreur | `#C2483D` | `#E0675C` |
-| Case claire | `#EEF0F1` | `#A3A8AE` |
-| Case foncée | `#B5BAC0` | `#696E75` |
-| Dernier coup | accent à 24 % d'opacité | accent à 31 % |
+| Case claire | `#E7EFE4` | `#A9C2AE` |
+| Case foncée | `#7FA98A` | `#5F8768` |
+| Dernier coup | jaune `#F2E66B` à 50 % | jaune `#E8D85C` à 50 % |
 | Pièce sélectionnée | `#111111` à 24 % | `#FFFFFF` à 31 % |
 | Coups légaux (points) | `#111111` à 27 % | `#111111` à 31 % |
-| Coordonnées | sur case claire `#111111` à 27 %, sur case foncée `#FFFFFF` à 59 % | `#111111` à 31 % / `#FFFFFF` à 43 % |
+| Coordonnées | sur case claire `#557A61` à 50 %, sur case foncée `#FFFFFF` à 70 % | `#405C49` à 50 % / `#FFFFFF` à 60 % |
+| Sous-titre de la carte « Reprendre » | texte de la carte à 80 % | texte de la carte à 80 % |
 
 ### Typographie (Inter)
 

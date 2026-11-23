@@ -18,7 +18,7 @@ import androidx.compose.ui.unit.sp
 import com.chessplus.app.R
 
 /**
- * Couleurs de ChessPlus (palette « Accent pleine largeur » de docs/DESIGN.md).
+ * Couleurs de ChessPlus (palette « Accent pleine largeur », version B verte, de docs/DESIGN.md).
  */
 @Immutable
 data class ChessColors(
@@ -47,19 +47,19 @@ val kLightChessColors = ChessColors(
 	surface = Color(0xFFFFFFFF),
 	text = Color(0xFF111111),
 	muted = Color(0xFF8A8E95),
-	primary = Color(0xFF111111),
-	onPrimary = Color(0xFFF4F5F6),
+	primary = Color(0xFF2F7D4F),
+	onPrimary = Color(0xFFFFFFFF),
 	success = Color(0xFF3E8E5A),
 	error = Color(0xFFC2483D),
 	track = Color(0xFFE3E5E8),
 	scrim = Color(0x55000000),
-	squareLight = Color(0xFFEEF0F1),
-	squareDark = Color(0xFFB5BAC0),
-	lastMove = Color(0x3D3E8E5A),
+	squareLight = Color(0xFFE7EFE4),
+	squareDark = Color(0xFF7FA98A),
+	lastMove = Color(0x80F2E66B),
 	selected = Color(0x3D111111),
 	dot = Color(0x45111111),
-	coordOnLight = Color(0x45111111),
-	coordOnDark = Color(0x96FFFFFF),
+	coordOnLight = Color(0x80557A61),
+	coordOnDark = Color(0xB3FFFFFF),
 )
 
 /** Palette sombre. */
@@ -68,19 +68,19 @@ val kDarkChessColors = ChessColors(
 	surface = Color(0xFF1C1D1F),
 	text = Color(0xFFF2F3F4),
 	muted = Color(0xFF8A8E95),
-	primary = Color(0xFFF2F3F4),
+	primary = Color(0xFF5DB37C),
 	onPrimary = Color(0xFF0F1011),
 	success = Color(0xFF5DB37C),
 	error = Color(0xFFE0675C),
 	track = Color(0xFF2A2C2F),
 	scrim = Color(0x77000000),
-	squareLight = Color(0xFFA3A8AE),
-	squareDark = Color(0xFF696E75),
-	lastMove = Color(0x505DB37C),
+	squareLight = Color(0xFFA9C2AE),
+	squareDark = Color(0xFF5F8768),
+	lastMove = Color(0x80E8D85C),
 	selected = Color(0x50FFFFFF),
 	dot = Color(0x50111111),
-	coordOnLight = Color(0x50111111),
-	coordOnDark = Color(0x6EFFFFFF),
+	coordOnLight = Color(0x80405C49),
+	coordOnDark = Color(0x99FFFFFF),
 )
 
 /** Couleurs courantes. */

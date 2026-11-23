@@ -59,6 +59,9 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
 
+/** Opacité du sous-titre de la carte « Reprendre », dans la couleur du texte de la carte. */
+private const val kResumeSubtitleAlpha = 0.8f
+
 /** Hauteur des boutons de l'accueil, plus compacts que les boutons pleine largeur. */
 private const val kHomeButtonHeight = 48
 
@@ -208,7 +211,7 @@ fun HomeContent(
 						Text(stringResource(R.string.home_resume), style = ChessType.kSection, color = vColors.onPrimary, maxLines = 1, overflow = TextOverflow.Ellipsis)
 						val vWhen = formatElapsed(inResume.startedAt, inNow)
 						val vProgress = if (inResume.finished) stringResource(R.string.home_resume_finished) else stringResource(R.string.home_resume_move, inResume.move, inResume.total)
-						Text("$vProgress · $vWhen", style = ChessType.kCaption, color = vColors.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+						Text("$vProgress · $vWhen", style = ChessType.kCaption, color = vColors.onPrimary.copy(alpha = kResumeSubtitleAlpha), maxLines = 1, overflow = TextOverflow.Ellipsis)
 					}
 					Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(24.dp))
 				}
