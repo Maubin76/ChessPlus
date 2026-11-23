@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**Phase 6 — Finitions** : configuration de la release faite, en attente du test complet de Mathieu sur son téléphone, hors connexion.
+**V1 terminée le 2026-11-23** : les six phases de la spécification sont validées par Mathieu. Release publiée : v0.1 (https://github.com/Maubin76/ChessPlus/releases/tag/v0.1). Prochaine étape : choisir parmi les points en suspens et les évolutions envisagées (section « Reste à faire »).
 
 ## Fait
 
@@ -115,10 +115,22 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - CI GitHub Actions sur le modèle de PatrimoinePlus (`.github/workflows/ci.yml`) : tests, APK debug, base générée depuis le CSV Lichess (cache mensuel), test de fumée de l'APK release sur émulateur Android 16, numéro de version dans `gradle.properties` (`chessplus.version`, `chessplus.versionCode`) augmenté par la CI, APK signé (secrets `KEYSTORE_BASE64`, `KEY_ALIAS`, `KEY_PASSWORD`, créés par Mathieu le 2026-11-23 avec la clé `chessplus.jks`), release GitHub. Les captures des @Preview ne sont pas validées en CI (rendu dépendant du système).
 - Retours après le premier test sur le S24 (police agrandie) : libellés raccourcis et sur une ligne (« Ciblé », « Reprendre »), captures en police agrandie de 30 % ajoutées ; transitions entre écrans (`AnimatedContent`, ViewModels des écrans quittés libérés après l'animation) ; enfoncement animé au clic (`ui/components/Press.kt`).
 
+### Phase 6 — validée par Mathieu le 2026-11-23
+
+- Test complet de l'APK release v0.1 (signé avec `chessplus.jks`) sur son Galaxy S24 : hors connexion, reprise après interruption et après la mort du processus, fluidité. Tout est bon.
+
 ## Reste à faire
 
-- Phase 6 : test complet de Mathieu sur son téléphone en mode avion (reprise après interruption et mort du processus, fluidité, release) ; clé de signature personnelle si souhaitée.
-- Plus tard (à rappeler à Mathieu) : icône de l'application, sons, famille de thèmes « Évaluation et origine », paramètres Glicko-2, `puzzles.db` hors de git.
+Points en suspens (à rappeler à Mathieu) :
+
+- icône de l'application (encore l'icône Android par défaut) ;
+- sons (réglage affiché « Bientôt disponible » ; trouver des sons libres de droits ou retirer le réglage) ;
+- famille de thèmes « Évaluation et origine » : garder, renommer ou masquer ;
+- paramètres Glicko-2 (tau 0,75, écart des problèmes 75, écart du joueur entre 45 et 350) à confirmer à l'usage.
+
+Évolutions envisagées après la V1 (spécification) : séries chronométrées, objectif quotidien, packs de problèmes téléchargeables par tranche de cote, application desktop (`:core` et `:data` sont déjà multiplateformes).
+
+Fonctionnement des releases : chaque push sur `main` publie une nouvelle version (v0.2, v0.3…) ; ajouter `[skip ci]` au message d'un commit qui ne doit pas en produire.
 
 ## Décisions prises
 
@@ -188,6 +200,4 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 
 ## Questions ouvertes
 
-- `app/src/main/assets/puzzles.db` reste hors de git (à régénérer avec le builder) tant que Mathieu n'a pas demandé autre chose.
-- Paramètres Glicko-2 (tau 0,75, écart des problèmes 75, écart du joueur entre 45 et 350) : à confirmer.
-- La copie depuis les assets (`createFromAsset` avec le driver SQLite intégré) n'est pas encore vérifiée sur appareil : premier test en phase 5.
+- Aucune pour la V1. `puzzles.db` reste hors de git : la CI la génère pour les releases, et le builder la régénère en local. La copie de la base depuis les assets (copie explicite, `installPuzzleDatabase`) est vérifiée sur le téléphone de Mathieu.
