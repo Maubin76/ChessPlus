@@ -32,6 +32,25 @@ Puis :
 ./gradlew :app:installDebug     # installation sur un téléphone branché
 ```
 
+## Intégration continue
+
+`.github/workflows/ci.yml` (même organisation que PatrimoinePlus), à chaque push sur `main` :
+
+1. tests JVM (`:core`, `:data`, `:puzzle-builder`, `:app`) et APK debug ;
+2. génération de la base à partir du CSV Lichess (téléchargé une fois par mois, en cache), APK release (R8) installé et lancé sur un émulateur Android 16 (`ci/release-smoke-android.sh`) ;
+3. numéro de version : celui de `gradle.properties` s'il n'est pas encore publié, sinon +0.1 (commit de la CI) ;
+4. APK signé et release GitHub `vX.Y`.
+
+La signature utilise trois secrets du dépôt (Settings › Secrets and variables › Actions) ; sans eux, la release échoue volontairement plutôt que d'être signée avec la clé de debug :
+
+| Secret | Contenu |
+| --- | --- |
+| `KEYSTORE_BASE64` | fichier de clé encodé en base64 (`base64 -w0 chessplus.jks`) |
+| `KEY_ALIAS` | alias de la clé |
+| `KEY_PASSWORD` | mot de passe (identique pour le fichier et la clé) |
+
+Création d'une clé : `keytool -genkeypair -v -keystore chessplus.jks -alias chessplus -keyalg RSA -keysize 4096 -validity 36500`.
+
 ## Ressources tierces
 
 | Ressource | Auteur | Licence |

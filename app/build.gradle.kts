@@ -24,8 +24,8 @@ android {
 		applicationId = "com.chessplus.app"
 		minSdk = libs.versions.android.minSdk.get().toInt()
 		targetSdk = libs.versions.android.targetSdk.get().toInt()
-		versionCode = 1
-		versionName = "0.1.0"
+		versionCode = property("chessplus.versionCode").toString().toInt()
+		versionName = property("chessplus.version").toString()
 	}
 
 	signingConfigs {
@@ -46,8 +46,11 @@ android {
 			signingConfig = signingConfigs.findByName("publication") ?: signingConfigs.getByName("debug")
 			proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
 			// Bibliothèques natives (SQLite intégré, Compose) pour les téléphones 64 bits ARM seulement :
-			// tous les téléphones récents, dont le Galaxy S24 ; les autres architectures servent aux émulateurs.
-			ndk { abiFilters += "arm64-v8a" }
+			// tous les téléphones récents, dont le Galaxy S24. -Pchessplus.allAbis garde toutes les
+			// architectures (test de l'APK release sur un émulateur x86_64 en CI).
+			if (findProperty("chessplus.allAbis") == null) {
+				ndk { abiFilters += "arm64-v8a" }
+			}
 		}
 	}
 
