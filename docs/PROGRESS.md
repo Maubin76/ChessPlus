@@ -131,7 +131,9 @@ Points en suspens (à rappeler à Mathieu) :
 
 Évolutions envisagées après la V1 (spécification) : séries chronométrées, objectif quotidien, packs de problèmes téléchargeables par tranche de cote, application desktop (`:core` et `:data` sont déjà multiplateformes).
 
-Fonctionnement des releases : chaque push sur `main` publie une nouvelle version (v0.2, v0.3…) ; ajouter `[skip ci]` au message d'un commit qui ne doit pas en produire.
+Fonctionnement des releases : chaque mise à jour de `main` publie une nouvelle version, y compris un push forcé sans nouveau commit ; ajouter `[skip ci]` au message d'un commit qui ne doit pas en produire.
+
+Branches (décision de Mathieu le 2026-11-23) : le développement après la V1 se fait sur `road-to-v2`, qui ne déclenche pas la CI ; `main` reste sur la v1.0 (`206d6f7`) jusqu'à ce que Mathieu demande de fusionner. L'icône Halo et la palette verte sont sur `road-to-v2` uniquement.
 
 ## Décisions prises
 
