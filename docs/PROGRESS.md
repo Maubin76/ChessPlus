@@ -121,9 +121,11 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 
 ## Reste à faire
 
+Icône « Halo » intégrée le 2026-11-23 (choix de Mathieu parmi dix propositions, `docs/design/icones/`).
+
 Points en suspens (à rappeler à Mathieu) :
 
-- icône de l'application (encore l'icône Android par défaut) ;
+- plus de vert dans l'application pour l'accorder à l'icône : trois dosages proposés (`docs/design/vert/propositions-vert.png`), en attente du choix de Mathieu ;
 - sons (réglage affiché « Bientôt disponible » ; trouver des sons libres de droits ou retirer le réglage) ;
 - famille de thèmes « Évaluation et origine » : garder, renommer ou masquer ;
 - paramètres Glicko-2 (tau 0,75, écart des problèmes 75, écart du joueur entre 45 et 350) à confirmer à l'usage.

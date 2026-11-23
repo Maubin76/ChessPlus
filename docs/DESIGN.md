@@ -107,6 +107,11 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | **Longueur** (4) | Un coup (`oneMove`), Court (`short`), Long (`long`), Très long (`veryLong`) |
 | **Évaluation et origine** (6) | Avantage (`advantage`), Gain décisif (`crushing`), Égalisation (`equality`), Partie de maître (`master`), Maître contre maître (`masterVsMaster`), Super grand maître (`superGM`) |
 
+## Icône de l'application (validée le 2026-11-23)
+
+- Proposition 9 « Halo » (`docs/design/icones/icone-09.png`) : fond en dégradé radial vert (`#4FA06B` au centre, `#1F4D33` au bord), cavalier cburnett blanc au contour vert foncé (`#1E4A2E`) avec une ombre douce, roi et dame en silhouettes vertes (`#2E6B48`) inclinées de 12° vers l'extérieur.
+- Icône adaptative (`res/mipmap-anydpi/ic_launcher.xml`) : fond et premier plan en PNG pour chaque densité, contenu dans la zone visible de 72 dp ; calque monochrome (silhouette du cavalier) pour les icônes à thème d'Android.
+
 ## Échiquier et pièces (validé le 2026-11-20)
 
 - Pièces de style **classique Staunton**.

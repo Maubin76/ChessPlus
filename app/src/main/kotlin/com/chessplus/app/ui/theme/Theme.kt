@@ -140,14 +140,16 @@ object ChessType {
 }
 
 /**
- * Thème Compose de ChessPlus, clair ou sombre selon le système.
+ * Thème Compose de ChessPlus, clair ou sombre selon le système. [inColors] remplace la palette
+ * (comparaison de palettes dans les captures).
  */
 @Composable
 fun ChessPlusTheme(
 	inDarkTheme: Boolean = isSystemInDarkTheme(),
+	inColors: ChessColors? = null,
 	inContent: @Composable () -> Unit,
 ) {
-	val vColors = if (inDarkTheme) kDarkChessColors else kLightChessColors
+	val vColors = inColors ?: if (inDarkTheme) kDarkChessColors else kLightChessColors
 	val vScheme = if (inDarkTheme) {
 		darkColorScheme(background = vColors.background, surface = vColors.surface, primary = vColors.primary, onPrimary = vColors.onPrimary, onSurface = vColors.text)
 	} else {
