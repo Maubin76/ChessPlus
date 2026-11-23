@@ -67,7 +67,7 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 - Message d'état : consigne (« Les blancs jouent »), puis retour visuel en grand (« Bon coup ! » en vert avec icône, erreur en rouge).
 - Échiquier pleine largeur ; bon coup signalé par une **pastille ✓ verte** sur la case d'arrivée et le dernier coup surligné en vert.
 - Bas : tuile « Recommencer », gros bouton rond « Indice », tuile « Suivant » (grisée tant que le problème n'est pas terminé).
-- Indice en deux temps (modifié par Mathieu le 2026-11-23) : le premier appui met en surbrillance la pièce à jouer (case teintée et cerclée de bleu, la couleur des indices dans les statistiques) avec « Indice / Jouez le fou en surbrillance » et la mention « Touchez encore Indice pour voir le coup » ; le second appui joue le coup comme avant. Les deux appuis sur un même coup comptent pour un seul indice ; le premier suffit à compter le problème comme échoué.
+- Indice en deux temps (modifié par Mathieu le 2026-11-23) : le premier appui met en surbrillance la pièce à jouer (case légèrement teintée de bleu, sans cadre, la couleur des indices dans les statistiques ; adoucie à la demande de Mathieu) avec « Indice / Jouez le fou en surbrillance » et la mention « Touchez encore Indice pour voir le coup » ; le second appui joue le coup comme avant. Les deux appuis sur un même coup comptent pour un seul indice ; le premier suffit à compter le problème comme échoué.
 
 ## Maquettes (validées le 2026-11-20)
 
