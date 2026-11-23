@@ -5,6 +5,7 @@ import com.chessplus.app.game.Difficulty
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.ui.components.NavTab
+import com.chessplus.core.model.Theme
 import com.chessplus.core.model.ThemeSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,6 +26,7 @@ class NavigationTest {
 			Destination.Home,
 			Destination.History,
 			Destination.Stats,
+			Destination.ThemeStats(Theme.Fork),
 			Destination.Settings,
 			Destination.Targeted,
 			Destination.Game(GameMode.Continuous),

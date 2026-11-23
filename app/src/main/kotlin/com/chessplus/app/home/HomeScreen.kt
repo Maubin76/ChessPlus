@@ -3,6 +3,7 @@ package com.chessplus.app.home
 import com.chessplus.app.ui.components.pressClickable
 import com.chessplus.app.ui.components.rememberPressFeedback
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -36,6 +38,9 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chessplus.app.AppContainer
 import com.chessplus.app.R
+import com.chessplus.app.stats.StatsCalculator
+import com.chessplus.app.stats.Tile
+import com.chessplus.app.stats.percent
 import com.chessplus.app.ui.components.BottomNavBar
 import com.chessplus.app.ui.components.MiniBoard
 import com.chessplus.app.ui.components.NavTab
@@ -52,11 +57,13 @@ import com.chessplus.core.model.Piece
 import com.chessplus.core.model.Square
 import com.chessplus.core.puzzle.PuzzleSession
 import com.chessplus.core.puzzle.PuzzleStatus
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 /** Opacité du sous-titre de la carte « Reprendre », dans la couleur du texte de la carte. */
@@ -90,11 +97,15 @@ data class ResumeInfo(
  * @property solvedCount nombre de problèmes réussis.
  * @property rating cote du joueur, arrondie.
  * @property resume problème en cours, ou null.
+ * @property dayStreak série de jours consécutifs en cours.
+ * @property successRate taux de réussite global (0 à 1), ou null sans tentative.
  */
 data class HomeUiState(
 	val solvedCount: Int = 0,
 	val rating: Int = 0,
 	val resume: ResumeInfo? = null,
+	val dayStreak: Int = 0,
+	val successRate: Float? = null,
 )
 
 /**
@@ -113,6 +124,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 		viewModelScope.launch {
 			val vDao = container.ready().second.userDao()
 			launch { vDao.observeSolvedCount().collect { inCount -> mutableState.update { it.copy(solvedCount = inCount) } } }
+			launch {
+				vDao.observeAllAttempts().collect { inAttempts ->
+					val vReport = withContext(Dispatchers.Default) { StatsCalculator().report(inAttempts, System.currentTimeMillis()) }
+					mutableState.update { it.copy(dayStreak = vReport.dayStreak, successRate = vReport.successRate) }
+				}
+			}
 			launch {
 				vDao.observePlayer().collect { inPlayer ->
 					val vRating = inPlayer?.rating ?: container.ratingSystem.initialRating.rating
@@ -194,6 +211,13 @@ fun HomeContent(
 				Text(formatRating(vState.solvedCount), style = ChessType.kNumber, color = vColors.text)
 				if (vState.rating > 0) {
 					Text(stringResource(R.string.home_rating, formatRating(vState.rating)), style = ChessType.kBody, color = vColors.muted)
+				}
+			}
+			if (vState.successRate != null) {
+				Spacer(Modifier.height(10.dp))
+				Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+					Tile(stringResource(R.string.home_streak), pluralStringResource(R.plurals.stats_days, vState.dayStreak, vState.dayStreak), null, Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable { inOnTab(NavTab.Stats) })
+					Tile(stringResource(R.string.home_success), percent(vState.successRate), null, Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable { inOnTab(NavTab.Stats) })
 				}
 			}
 			vState.resume?.let { inResume ->

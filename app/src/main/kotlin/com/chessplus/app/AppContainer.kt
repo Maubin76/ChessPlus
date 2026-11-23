@@ -102,10 +102,18 @@ class AppContainer(private val context: Context) {
 		override suspend fun currentRating(): PlayerRating = ProgressRepository(ready().second, ratingSystem).currentRating()
 
 		/** Enregistre le résultat et retourne les cotes avant et après. */
-		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean): RecordedResult {
+		override suspend fun record(
+			inPuzzle: Puzzle,
+			inResult: PuzzleResult,
+			inMistakes: Int,
+			inRevealed: Int,
+			inRated: Boolean,
+			inDurationMs: Long?,
+			inFailedAtMove: Int?,
+		): RecordedResult {
 			val vRepository = ProgressRepository(ready().second, ratingSystem)
 			val vBefore = vRepository.currentRating().rating
-			val vAfter = vRepository.recordResult(inPuzzle, inResult, inMistakes, inRevealed, inRated, System.currentTimeMillis()).rating
+			val vAfter = vRepository.recordResult(inPuzzle, inResult, inMistakes, inRevealed, inRated, System.currentTimeMillis(), inDurationMs, inFailedAtMove).rating
 			return RecordedResult(inResult, vBefore, vAfter)
 		}
 

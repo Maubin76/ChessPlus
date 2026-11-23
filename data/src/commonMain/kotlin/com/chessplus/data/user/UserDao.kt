@@ -102,6 +102,12 @@ interface UserDao {
 	fun observeRatingHistory(): Flow<List<RatingPoint>>
 
 	/**
+	 * Observe toutes les tentatives, dans l'ordre chronologique (statistiques).
+	 */
+	@Query("SELECT * FROM attempt ORDER BY playedAt, id")
+	fun observeAllAttempts(): Flow<List<AttemptEntity>>
+
+	/**
 	 * Retourne toutes les tentatives notées, pour les statistiques par thème.
 	 */
 	@Query("SELECT * FROM attempt WHERE rated = 1")

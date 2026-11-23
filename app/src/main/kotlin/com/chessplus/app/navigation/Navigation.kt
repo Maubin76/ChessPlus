@@ -10,6 +10,7 @@ import com.chessplus.app.game.Difficulty
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.ui.components.NavTab
+import com.chessplus.core.model.Theme
 import com.chessplus.core.model.ThemeSet
 
 /**
@@ -27,6 +28,9 @@ sealed interface Destination {
 
 	/** Statistiques. */
 	data object Stats : Destination
+
+	/** Fiche de statistiques d'un thème. */
+	data class ThemeStats(val theme: Theme) : Destination
 
 	/** Réglages. */
 	data object Settings : Destination
@@ -63,6 +67,7 @@ object DestinationCodec {
 		Destination.Home -> "home"
 		Destination.History -> "history"
 		Destination.Stats -> "stats"
+		is Destination.ThemeStats -> "themestats$kSeparator${inDestination.theme.key}"
 		Destination.Settings -> "settings"
 		Destination.Targeted -> "targeted"
 		is Destination.Game -> when (val vMode = inDestination.mode) {
@@ -85,6 +90,7 @@ object DestinationCodec {
 			"home" -> Destination.Home
 			"history" -> Destination.History
 			"stats" -> Destination.Stats
+			"themestats" -> Theme.fromKey(vParts[1])?.let { Destination.ThemeStats(it) }
 			"settings" -> Destination.Settings
 			"targeted" -> Destination.Targeted
 			"game" -> when (vParts[1]) {

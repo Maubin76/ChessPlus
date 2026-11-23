@@ -30,6 +30,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.GameScreen
 import com.chessplus.app.game.GameViewModel
+import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.history.HistoryScreen
 import com.chessplus.app.history.HistoryViewModel
 import com.chessplus.app.home.HomeScreen
@@ -42,10 +43,13 @@ import com.chessplus.app.navigation.tab
 import com.chessplus.app.settings.SettingsScreen
 import com.chessplus.app.stats.StatsScreen
 import com.chessplus.app.stats.StatsViewModel
+import com.chessplus.app.stats.ThemeStatsScreen
+import com.chessplus.app.stats.ThemeStatsViewModel
 import com.chessplus.app.training.TargetedScreen
 import com.chessplus.app.training.TargetedViewModel
 import com.chessplus.app.ui.theme.ChessType
 import com.chessplus.app.ui.theme.kLocalChessColors
+import com.chessplus.core.model.ThemeSet
 import kotlinx.coroutines.launch
 
 /**
@@ -106,7 +110,19 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
 						inOnTab = vNavigation::selectTab,
 					)
-					Destination.Stats -> StatsScreen(viewModel(factory = StatsViewModel.factory(inContainer)), vNavigation::selectTab)
+					Destination.Stats -> StatsScreen(
+						inViewModel = viewModel(factory = StatsViewModel.factory(inContainer)),
+						inOnTheme = { vNavigation.navigate(Destination.ThemeStats(it)) },
+						inOnTrainThemes = { vNavigation.navigate(Destination.Game(GameMode.Targeted(TrainingCriteria(themes = ThemeSet.of(it))))) },
+						inOnTab = vNavigation::selectTab,
+					)
+					is Destination.ThemeStats -> ThemeStatsScreen(
+						inViewModel = viewModel(factory = ThemeStatsViewModel.factory(inContainer, vDestination.theme)),
+						inTheme = vDestination.theme,
+						inOnBack = vBack,
+						inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Targeted(TrainingCriteria(themes = ThemeSet.of(vDestination.theme))))) },
+						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
+					)
 					Destination.Settings -> SettingsScreen(inContainer.settingsStore, inVersion, vBack) { vNavigation.navigate(Destination.Level(firstLaunch = false)) }
 					Destination.Targeted -> TargetedScreen(
 						inViewModel = viewModel(factory = TargetedViewModel.factory(inContainer)),

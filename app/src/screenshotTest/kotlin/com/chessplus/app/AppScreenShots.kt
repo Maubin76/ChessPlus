@@ -14,9 +14,6 @@ import com.chessplus.app.home.ResumeInfo
 import com.chessplus.app.level.LevelScreen
 import com.chessplus.app.settings.Settings
 import com.chessplus.app.settings.SettingsContent
-import com.chessplus.app.stats.StatsContent
-import com.chessplus.app.stats.StatsData
-import com.chessplus.app.stats.ThemeRate
 import com.chessplus.app.training.TargetedContent
 import com.chessplus.app.training.TargetedUiState
 import com.chessplus.app.game.TrainingCriteria
@@ -26,7 +23,6 @@ import com.chessplus.core.model.Square
 import com.chessplus.core.model.Theme
 import com.chessplus.core.model.ThemeSet
 import com.chessplus.core.rules.defaultChessRules
-import com.chessplus.data.user.RatingPoint
 
 /*
  * Captures des écrans réels (contenus sans état) avec des données factices.
@@ -84,21 +80,6 @@ fun RealHistoryShot() = ChessPlusTheme {
 			HistoryRow(1, "00sO1", vPieces, Color.White, ThemeSet.parse("discoveredAttack"), 998, kNow - 26 * 60 * 60_000, true, null),
 		),
 		kNow, {}, {},
-	)
-}
-
-/** Statistiques. */
-@PreviewTest
-@DesignPreviews
-@Composable
-fun RealStatsShot() = ChessPlusTheme {
-	val vDay = 24L * 60 * 60_000
-	val vHistory = listOf(1484, 1490, 1478, 1495, 1502, 1497, 1510, 1505, 1499, 1512, 1520, 1514, 1526, 1519, 1532)
-		.mapIndexed { inIndex, inRating -> RatingPoint(kNow - (15 - inIndex) * vDay, inRating.toDouble()) }
-	StatsContent(
-		StatsData(vHistory, listOf(ThemeRate(Theme.Fork, 18, 0.78f), ThemeRate(Theme.MateIn2, 14, 0.71f), ThemeRate(Theme.Pin, 11, 0.64f), ThemeRate(Theme.RookEndgame, 9, 0.52f))),
-		kNow,
-		{},
 	)
 }
 

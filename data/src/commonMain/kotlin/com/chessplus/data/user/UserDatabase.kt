@@ -1,5 +1,6 @@
 package com.chessplus.data.user
 
+import androidx.room.AutoMigration
 import androidx.room.ConstructedBy
 import androidx.room.Database
 import androidx.room.RoomDatabase
@@ -15,6 +16,8 @@ import androidx.room.RoomDatabaseConstructor
 	entities = [AttemptEntity::class, PuzzleStateEntity::class, PlayerEntity::class, ActiveSessionEntity::class],
 	version = UserDatabase.kVersion,
 	exportSchema = true,
+	// Version 2 : durée, coup de l'échec et écart de cote des tentatives (colonnes facultatives).
+	autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 @ConstructedBy(UserDatabaseConstructor::class)
 abstract class UserDatabase : RoomDatabase() {
@@ -25,7 +28,7 @@ abstract class UserDatabase : RoomDatabase() {
 
 	companion object {
 		/** Version du schéma ; toute évolution après la première version publiée exige une migration. */
-		const val kVersion = 1
+		const val kVersion = 2
 
 		/** Nom du fichier de la base sur l'appareil. */
 		const val kFileName = "user.db"

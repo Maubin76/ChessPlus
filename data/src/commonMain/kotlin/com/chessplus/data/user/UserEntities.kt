@@ -23,6 +23,12 @@ import com.chessplus.core.puzzle.PuzzleResult
  * @property revealedCount nombre de coups de la solution montrés.
  * @property playerRatingBefore cote du joueur avant la tentative.
  * @property playerRatingAfter cote du joueur après la tentative.
+ * @property durationMs durée de résolution (du premier coup possible au résultat), ou null si inconnue
+ *   (tentatives d'avant la version 2 de la base, problème repris après une interruption).
+ * @property failedAtMove numéro du coup du joueur (à partir de 1) où le problème a échoué (erreur ou
+ *   indice), ou null s'il est réussi ou si l'information manque.
+ * @property playerDeviationAfter écart de cote du joueur après la tentative (Glicko-2), ou null si
+ *   la tentative n'est pas notée ou si l'information manque.
  */
 @Entity(
 	tableName = "attempt",
@@ -41,6 +47,9 @@ data class AttemptEntity(
 	val revealedCount: Int,
 	val playerRatingBefore: Double,
 	val playerRatingAfter: Double,
+	val durationMs: Long? = null,
+	val failedAtMove: Int? = null,
+	val playerDeviationAfter: Double? = null,
 )
 
 /**

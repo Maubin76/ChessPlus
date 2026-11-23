@@ -72,6 +72,12 @@ class GameController(
 	/** Date de début du problème en cours. */
 	private var startedAt = 0L
 
+	/** Moment où le joueur a pu jouer pour la première fois (après le coup de l'adversaire), ou null si inconnu. */
+	private var playerStartedAt: Long? = null
+
+	/** Numéro du coup du joueur où le problème a échoué (première erreur ou premier indice), ou null. */
+	private var failedAtMove: Int? = null
+
 	/** Cote actuelle du joueur. */
 	private var rating = 0.0
 
@@ -211,6 +217,7 @@ class GameController(
 		if (!isInteractive()) {
 			return
 		}
+		noteFailure(vSession)
 		val vMove = vSession.revealNextMove()
 		showMove(inAnimate = true)
 		badge = null
@@ -287,6 +294,8 @@ class GameController(
 		val vSession = runCatching { PuzzleSession.restore(vPuzzle, rules, vSaved.snapshot) }.getOrNull() ?: return false
 		busy = false
 		session = vSession
+		playerStartedAt = null
+		failedAtMove = null
 		rated = vSaved.rated
 		resultRecorded = vSaved.resultRecorded
 		recorded = if (resultRecorded) progress.lastResult(vPuzzle.id) else null
@@ -334,6 +343,8 @@ class GameController(
 		val vPuzzle = inPuzzle
 		busy = false
 		session = PuzzleSession.start(vPuzzle, rules)
+		playerStartedAt = null
+		failedAtMove = null
 		rated = mode !is GameMode.Replay && puzzles.isNew(vPuzzle.id)
 		resultRecorded = false
 		recorded = null
@@ -364,6 +375,9 @@ class GameController(
 				return@launch
 			}
 			vSession.playOpponentMove()
+			if (vSession.solutionPly == 1 && playerStartedAt == null && !resultRecorded) {
+				playerStartedAt = clock()
+			}
 			showMove(inAnimate = true)
 			if (header !is GameHeader.Wrong) {
 				badge = null
@@ -421,6 +435,7 @@ class GameController(
 	 */
 	private fun showWrongMove(inMove: Move, inAnimate: Boolean) {
 		val vSession = session ?: return
+		noteFailure(vSession)
 		val vShown = boardPieces(vSession).toMutableMap()
 		vShown.remove(inMove.from)?.let { inPiece -> vShown[inMove.to] = inMove.promotion?.let { Piece(inPiece.color, it) } ?: inPiece }
 		displayOverride = vShown
@@ -439,6 +454,25 @@ class GameController(
 			busy = false
 			publish()
 		}
+	}
+
+	/**
+	 * Mémorise le coup du joueur où le problème échoue, à la première erreur ou au premier indice.
+	 */
+	private fun noteFailure(inSession: PuzzleSession) {
+		if (failedAtMove == null && !resultRecorded) {
+			failedAtMove = inSession.solutionPly / 2 + 1
+		}
+	}
+
+	/**
+	 * Retourne la durée de résolution, ou null si elle est inconnue ou anormalement longue
+	 * (problème laissé de côté).
+	 */
+	private fun durationMs(): Long? {
+		val vStart = playerStartedAt ?: return null
+		val vDuration = clock() - vStart
+		return vDuration.takeIf { it in 0..kMaxDurationMs }
 	}
 
 	/**
@@ -475,7 +509,10 @@ class GameController(
 			persistMutex.withLock {
 				val vResult = vSession.result
 				if (!resultRecorded && vResult != null) {
-					val vRecorded = progress.record(vSession.puzzle, vResult, vSession.mistakeCount, vSession.revealedCount, rated)
+					val vRecorded = progress.record(
+						vSession.puzzle, vResult, vSession.mistakeCount, vSession.revealedCount, rated,
+						durationMs(), if (vResult == PuzzleResult.Failure) failedAtMove else null,
+					)
 					recorded = vRecorded
 					resultRecorded = true
 					rating = vRecorded.ratingAfter
@@ -567,5 +604,8 @@ class GameController(
 
 		/** Durée d'affichage d'un mauvais coup avant qu'il soit annulé. */
 		const val kWrongMoveDelayMs = 900L
+
+		/** Durée de résolution au-delà de laquelle elle n'est pas enregistrée (problème laissé de côté). */
+		const val kMaxDurationMs = 15L * 60 * 1000
 	}
 }

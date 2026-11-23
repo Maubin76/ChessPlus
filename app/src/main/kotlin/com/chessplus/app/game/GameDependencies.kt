@@ -44,9 +44,18 @@ interface ProgressStore {
 	suspend fun currentRating(): PlayerRating
 
 	/**
-	 * Enregistre le résultat d'un problème et retourne les cotes avant et après.
+	 * Enregistre le résultat d'un problème et retourne les cotes avant et après. [inDurationMs] et
+	 * [inFailedAtMove] alimentent les statistiques (null si inconnus).
 	 */
-	suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean): RecordedResult
+	suspend fun record(
+		inPuzzle: Puzzle,
+		inResult: PuzzleResult,
+		inMistakes: Int,
+		inRevealed: Int,
+		inRated: Boolean,
+		inDurationMs: Long?,
+		inFailedAtMove: Int?,
+	): RecordedResult
 
 	/**
 	 * Retourne le dernier résultat enregistré pour un problème, ou null.

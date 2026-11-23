@@ -39,6 +39,9 @@ data class ChessColors(
 	val dot: Color,
 	val coordOnLight: Color,
 	val coordOnDark: Color,
+	val chartGood: Color,
+	val chartHint: Color,
+	val chartBad: Color,
 )
 
 /** Palette claire. */
@@ -60,6 +63,9 @@ val kLightChessColors = ChessColors(
 	dot = Color(0x45111111),
 	coordOnLight = Color(0x80557A61),
 	coordOnDark = Color(0xB3FFFFFF),
+	chartGood = Color(0xFF3E8E5A),
+	chartHint = Color(0xFF3D6FB6),
+	chartBad = Color(0xFFC2483D),
 )
 
 /** Palette sombre. */
@@ -81,6 +87,9 @@ val kDarkChessColors = ChessColors(
 	dot = Color(0x50111111),
 	coordOnLight = Color(0x80405C49),
 	coordOnDark = Color(0x99FFFFFF),
+	chartGood = Color(0xFF4FA06B),
+	chartHint = Color(0xFF6D8FD8),
+	chartBad = Color(0xFFE0675C),
 )
 
 /** Couleurs courantes. */

@@ -134,7 +134,7 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = solution coup par coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
 | 4 | Entraînement ciblé | Thèmes par familles ; difficulté relative (plus facile, à mon niveau, plus difficile) **ou** tranche précise ; bouton « Commencer » |
 | 5 | Historique | Onglets Tous, Réussis, Échoués ; une ligne relance le problème, sans effet sur la cote |
-| 6 | Statistiques | Courbe de la cote, taux de réussite par thème (écran séparé, l'accueil reste sobre) |
+| 6 | Statistiques | Sections détaillées ci-dessous ; une fiche par thème (en attente de validation sur `road-to-v2`) |
 | 7 | Réglages | Thème, vibration, sons, coordonnées, niveau, crédits |
 
 - **Barre de navigation en bas** à trois onglets : Accueil, Historique, Statistiques. Elle est masquée sur l'écran Problème (plein écran), le choix du niveau et les réglages.
@@ -153,6 +153,27 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 - Écran d'accueil : **tableau de bord** destiné à accueillir des statistiques plus tard ; en v1, il affiche seulement le **nombre de problèmes résolus**.
 - Premier lancement : l'utilisateur **choisit son niveau** de départ.
 - Thèmes : noms en français, regroupés en familles (motifs tactiques, mats, finales, phase de jeu, longueur).
+
+## Statistiques (demandées par Mathieu le 2026-11-23, maquettes à valider)
+
+Maquettes : captures `app/src/screenshotTestDebug/reference/com/chessplus/app/StatsScreenShotsKt/` (historique factice de quatre mois, calculé par le vrai `StatsCalculator`).
+
+- **Écran Statistiques**, de haut en bas :
+  - quatre tuiles : cote et variation sur 30 jours, résolus sur le total, série de jours et record, réussite ;
+  - courbe de la cote avec la bande d'incertitude Glicko-2 (cote ± écart), sur 7 jours, 30 jours ou tout ;
+  - calendrier d'activité façon GitHub (17 semaines, lundi en haut, cinq niveaux), série en cours, plus longue série, réussites d'affilée ;
+  - problèmes par semaine (8 semaines) ;
+  - forces et faiblesses : motifs, mats et finales joués au moins 3 fois, triés par réussite ou par cote du thème ; un thème ouvre sa fiche ;
+  - à travailler : les trois thèmes les plus faibles (au moins 5 problèmes) et « S'entraîner sur ces thèmes » (entraînement ciblé à mon niveau) ;
+  - réussite par famille (motifs, mats, finales, phase de jeu), par tranche de difficulté de 200 points (au moins 3 problèmes), selon la longueur de la solution et selon le moment de la journée ;
+  - fin des problèmes en barre empilée : réussi du premier coup, indice ou solution, erreur ;
+  - temps de résolution : moyenne des réussites, thèmes le plus rapide et le plus lent, médiane par semaine ;
+  - coup de la première erreur ou du premier indice (1er, 2e, 3e et plus) ;
+  - records (meilleure cote, plus longue série, réussites d'affilée, problème le plus difficile réussi) et couverture des 73 thèmes.
+- **Fiche d'un thème** : cote du thème (Glicko-2 rejoué sur les seules tentatives du thème), réussite, nombre de problèmes, meilleur réussi ; courbe de la cote du thème avec sa bande ; réussite glissante sur 10 problèmes ; temps moyen ; dix derniers problèmes (un toucher les rejoue) ; bouton « S'entraîner sur ce thème ».
+- **Accueil** : tuiles « Série » et « Réussite » sous le compteur de problèmes résolus ; elles ouvrent l'onglet Statistiques.
+- **Graphiques** (recommandations de visualisation) : une seule teinte (la couleur principale) pour une mesure ; traits de 2 dp ; extrémités arrondies posées sur la ligne de base ; 2 dp entre barres et segments ; valeurs dans la couleur du texte ; pas de radar. Seule la barre empilée utilise trois couleurs (vert `#3E8E5A`, bleu `#3D6FB6`, rouge `#C2483D` en clair ; `#4FA06B`, `#6D8FD8`, `#E0675C` en sombre), vérifiées pour les daltoniens et toujours accompagnées d'une légende chiffrée.
+- **Nouvelles données** (base utilisateur v2, migration automatique) : durée d'une tentative (du premier coup de l'adversaire à la fin, ignorée au-delà de 15 min), coup de la première erreur ou du premier indice, écart de cote après la tentative. Les tentatives antérieures n'ont pas ces données : les cartes concernées l'indiquent.
 
 ## Cote (validé le 2026-11-20)
 

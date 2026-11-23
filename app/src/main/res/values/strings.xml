@@ -73,16 +73,9 @@
 	<string name="history_replay_note">Touchez un problème pour le rejouer (sans effet sur la cote)</string>
 
 	<!-- Statistiques -->
-	<string name="stats_rating">Ma cote</string>
-	<string name="stats_delta">%1$s %2$s</string>
-	<string name="stats_period_7">en 7 jours</string>
-	<string name="stats_period_30">en 30 jours</string>
-	<string name="stats_period_all">depuis le début</string>
 	<string name="stats_tab_7">7 jours</string>
 	<string name="stats_tab_30">30 jours</string>
 	<string name="stats_tab_all">Tout</string>
-	<string name="stats_themes">Réussite par thème</string>
-	<string name="stats_themes_empty">Jouez quelques problèmes de plus pour voir votre réussite par thème</string>
 	<string name="stats_empty">Résolvez un premier problème pour voir vos statistiques</string>
 
 	<!-- Réglages -->

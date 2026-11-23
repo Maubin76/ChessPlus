@@ -69,6 +69,9 @@ class GameControllerTest {
 		/** Résultats enregistrés (problème, résultat, noté). */
 		val records = mutableListOf<Triple<String, PuzzleResult, Boolean>>()
 
+		/** Durée et coup de l'échec de chaque enregistrement. */
+		val details = mutableListOf<Pair<Long?, Int?>>()
+
 		/** Dernier résultat par problème. */
 		private val last = mutableMapOf<String, RecordedResult>()
 
@@ -76,7 +79,8 @@ class GameControllerTest {
 		override suspend fun currentRating(): PlayerRating = rating
 
 		/** Enregistre et met à jour la cote si le problème est noté. */
-		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean): RecordedResult {
+		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean, inDurationMs: Long?, inFailedAtMove: Int?): RecordedResult {
+			details.add(inDurationMs to inFailedAtMove)
 			val vBefore = rating.rating
 			if (inRated) {
 				rating = EloRatingSystem().update(rating, inPuzzle.rating, inResult)
@@ -338,5 +342,26 @@ class GameControllerTest {
 		assertNull(TrainingCriteria(difficulty = Difficulty.Level).ratingRange(1500))
 		assertEquals(1600..1900, TrainingCriteria(difficulty = Difficulty.Harder).ratingRange(1500))
 		assertEquals(800..1000, TrainingCriteria(difficulty = Difficulty.Range, range = 800..1000).ratingRange(1500))
+	}
+
+	/** Vérifie l'enregistrement de la durée et du coup de l'échec. */
+	@Test
+	fun durationAndFailedMove() = runBlocking<Unit> {
+		var vNow = 1_000L
+		val vProgress = FakeProgress()
+		val vController = GameController(this, GameMode.Continuous, defaultChessRules(), FakePuzzles(listOf(kMateIn2, kShort)), vProgress, FakeSessions(), clock = { vNow }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
+		vController.start()
+		vController.awaitIdle()
+		vNow += 4_000
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f6")
+		assertEquals(4_000L to 2, vProgress.details.single(), "échec au 2e coup, 4 s après le premier coup possible")
+		vController.tapMove("f7", "f8")
+		vController.onNext()
+		vController.awaitIdle()
+		vNow += 7_000
+		vController.tapMove("e1", "a5")
+		vController.tapMove("f1", "d1")
+		assertEquals(7_000L to null, vProgress.details.last(), "réussite : durée, pas de coup d'échec")
 	}
 }

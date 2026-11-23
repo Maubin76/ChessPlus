@@ -28,6 +28,7 @@ class ProgressRepository(
 	/**
 	 * Enregistre le résultat d'un problème dans une seule transaction : tentative, bilan du
 	 * problème et, si [inRated], nouvelle cote du joueur. Retourne la cote après le problème.
+	 * [inDurationMs] et [inFailedAtMove] alimentent les statistiques (null si inconnus).
 	 */
 	suspend fun recordResult(
 		inPuzzle: Puzzle,
@@ -36,6 +37,8 @@ class ProgressRepository(
 		inRevealedCount: Int,
 		inRated: Boolean,
 		inNow: Long,
+		inDurationMs: Long? = null,
+		inFailedAtMove: Int? = null,
 	): PlayerRating = database.useWriterConnection { inTransactor ->
 		inTransactor.immediateTransaction {
 			val vBefore = currentRating()
@@ -53,6 +56,9 @@ class ProgressRepository(
 					revealedCount = inRevealedCount,
 					playerRatingBefore = vBefore.rating,
 					playerRatingAfter = vAfter.rating,
+					durationMs = inDurationMs,
+					failedAtMove = inFailedAtMove,
+					playerDeviationAfter = if (inRated) vAfter.deviation else null,
 				)
 			)
 			val vState = dao.getState(inPuzzle.id)
