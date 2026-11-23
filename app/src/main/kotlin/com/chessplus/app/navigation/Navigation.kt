@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.Difficulty
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.TrainingCriteria
@@ -73,6 +74,7 @@ object DestinationCodec {
 		is Destination.Game -> when (val vMode = inDestination.mode) {
 			GameMode.Continuous -> "game${kSeparator}continuous"
 			is GameMode.Replay -> "game${kSeparator}replay$kSeparator${vMode.puzzleId}"
+			is GameMode.Challenge -> "game${kSeparator}challenge$kSeparator${vMode.kind.key}"
 			is GameMode.Targeted -> listOf(
 				"game", "targeted", vMode.criteria.themes.low, vMode.criteria.themes.high, vMode.criteria.difficulty.name,
 				vMode.criteria.range.first, vMode.criteria.range.last,
@@ -96,6 +98,7 @@ object DestinationCodec {
 			"game" -> when (vParts[1]) {
 				"continuous" -> Destination.Game(GameMode.Continuous)
 				"replay" -> Destination.Game(GameMode.Replay(vParts[2]))
+				"challenge" -> ChallengeKind.entries.firstOrNull { it.key == vParts[2] }?.let { Destination.Game(GameMode.Challenge(it)) }
 				"targeted" -> Destination.Game(
 					GameMode.Targeted(
 						TrainingCriteria(ThemeSet(vParts[2].toLong(), vParts[3].toLong()), Difficulty.valueOf(vParts[4]), vParts[5].toInt()..vParts[6].toInt())

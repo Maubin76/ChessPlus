@@ -35,7 +35,38 @@ sealed interface GameHeader {
 
 	/** Aucun problème disponible. */
 	data object NoPuzzle : GameHeader
+
+	/** Défi : problème réussi, le suivant arrive. */
+	data object Solved : GameHeader
+
+	/** Défi (Survie) : mauvais coup ; [move] est le coup qu'il fallait jouer. */
+	data class Missed(val move: Move) : GameHeader
+
+	/** Défi : partie terminée pour la raison [end]. */
+	data class ChallengeOver(val end: ChallengeEnd) : GameHeader
 }
+
+/**
+ * Bilan d'une partie de défi.
+ *
+ * @property end raison de la fin.
+ * @property score problèmes réussis.
+ * @property best meilleur score, partie comprise.
+ * @property newRecord vrai si la partie bat le record précédent.
+ * @property bestPuzzleRating cote du problème le plus difficile réussi, ou null.
+ */
+data class ChallengeResult(val end: ChallengeEnd, val score: Int, val best: Int, val newRecord: Boolean, val bestPuzzleRating: Int?)
+
+/**
+ * État d'une partie de défi affiché à l'écran.
+ *
+ * @property kind défi.
+ * @property score problèmes réussis.
+ * @property lives vies restantes (Survie).
+ * @property endsAt fin du chronomètre (Rush, millisecondes), ou null s'il n'a pas démarré.
+ * @property result bilan, une fois la partie terminée.
+ */
+data class ChallengeUi(val kind: ChallengeKind, val score: Int, val lives: Int, val endsAt: Long?, val result: ChallengeResult?)
 
 /**
  * Pastille posée sur une case.
@@ -105,6 +136,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property promotion promotion en attente.
  * @property summary bilan de fin de problème, affiché sous l'échiquier.
  * @property haptic dernier retour haptique demandé.
+ * @property challenge partie de défi en cours, ou null hors défi.
  */
 data class GameUiState(
 	val header: GameHeader = GameHeader.Loading,
@@ -124,4 +156,5 @@ data class GameUiState(
 	val promotion: PendingPromotion? = null,
 	val summary: GameSummary? = null,
 	val haptic: HapticEvent? = null,
+	val challenge: ChallengeUi? = null,
 )

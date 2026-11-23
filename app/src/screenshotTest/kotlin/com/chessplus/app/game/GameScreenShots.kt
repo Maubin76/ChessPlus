@@ -25,13 +25,74 @@ private fun piecesOf(inFen: String) = defaultChessRules().positionFromFen(inFen)
 	Square.kAll.mapNotNull { vSquare -> inPosition.pieceAt(vSquare)?.let { vSquare to it } }.toMap()
 }
 
+/** Horloge fixe des captures du Rush. */
+private const val kClock = 1_000_000L
+
 /**
  * Affiche l'écran de jeu pour un état donné, sans actions.
  */
 @Composable
-private fun Shot(inState: GameUiState) = ChessPlusTheme {
-	GameContent(inState, "Entraînement", true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {})
+private fun Shot(inState: GameUiState, inTitle: String = "Arcade") = ChessPlusTheme {
+	GameContent(inState, inTitle, true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, inClock = { kClock })
 }
+
+/** Survie : deux vies, sept problèmes résolus. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameSurvivalShot() = Shot(
+	GameUiState(
+		header = GameHeader.ToMove(Color.White, afterCorrect = false),
+		pieces = piecesOf("q5nr/1ppknQpp/3p4/1P2p3/4P3/B1PP1b2/B5PP/5K2 w - - 1 18"),
+		lastMove = Move.fromUci("e8d7"),
+		interactive = true,
+		challenge = ChallengeUi(ChallengeKind.Survival, 7, 2, null, null),
+	),
+	"Survie",
+)
+
+/** Survie : erreur, le coup attendu est montré. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameSurvivalMissedShot() = Shot(
+	GameUiState(
+		header = GameHeader.Missed(Move.fromUci("a2e6")),
+		pieces = piecesOf("q5nr/1ppknQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 18"),
+		lastMove = Move.fromUci("a2e6"),
+		challenge = ChallengeUi(ChallengeKind.Survival, 7, 1, null, null),
+	),
+	"Survie",
+)
+
+/** Rush : 3 min 12 s restantes, douze problèmes résolus. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameRushShot() = Shot(
+	GameUiState(
+		header = GameHeader.Solved,
+		pieces = piecesOf("q5nr/1ppkQ1pp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 19"),
+		lastMove = Move.fromUci("f7e7"),
+		badge = Square.fromAlgebraic("e7") to BadgeKind.Success,
+		challenge = ChallengeUi(ChallengeKind.Rush, 12, 3, kClock + 192_000, null),
+	),
+	"Rush",
+)
+
+/** Rush terminé : bilan et nouveau record. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameChallengeOverShot() = Shot(
+	GameUiState(
+		header = GameHeader.ChallengeOver(ChallengeEnd.TimeUp),
+		pieces = piecesOf("q5nr/1ppkQ1pp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 19"),
+		lastMove = Move.fromUci("f7e7"),
+		challenge = ChallengeUi(ChallengeKind.Rush, 24, 3, kClock - 1, ChallengeResult(ChallengeEnd.TimeUp, 24, 24, true, 1890)),
+	),
+	"Rush",
+)
 
 /** Joueur au trait, fou a2 sélectionné. */
 @PreviewTest

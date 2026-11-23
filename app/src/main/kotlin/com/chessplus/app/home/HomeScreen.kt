@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -16,7 +18,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,14 +43,12 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chessplus.app.AppContainer
 import com.chessplus.app.R
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.stats.StatsCalculator
-import com.chessplus.app.stats.Tile
 import com.chessplus.app.stats.percent
 import com.chessplus.app.ui.components.BottomNavBar
 import com.chessplus.app.ui.components.MiniBoard
 import com.chessplus.app.ui.components.NavTab
-import com.chessplus.app.ui.components.PrimaryButton
-import com.chessplus.app.ui.components.SecondaryButton
 import com.chessplus.app.ui.components.ScreenTopBar
 import com.chessplus.app.ui.components.SurfaceCard
 import com.chessplus.app.ui.components.formatElapsed
@@ -69,8 +72,11 @@ import kotlin.math.roundToInt
 /** Opacité du sous-titre de la carte « Reprendre », dans la couleur du texte de la carte. */
 private const val kResumeSubtitleAlpha = 0.8f
 
-/** Hauteur des boutons de l'accueil, plus compacts que les boutons pleine largeur. */
-private const val kHomeButtonHeight = 48
+/** Taille de la pastille d'icône des cartes de mode. */
+private const val kModeIconSize = 32
+
+/** Opacité de la pastille d'icône sur la carte de mode principale. */
+private const val kModeIconAlpha = 0.18f
 
 /**
  * Problème en cours affiché sur l'accueil.
@@ -99,6 +105,8 @@ data class ResumeInfo(
  * @property resume problème en cours, ou null.
  * @property dayStreak série de jours consécutifs en cours.
  * @property successRate taux de réussite global (0 à 1), ou null sans tentative.
+ * @property survivalBest meilleur score en Survie, ou null.
+ * @property rushBest meilleur score en Rush, ou null.
  */
 data class HomeUiState(
 	val solvedCount: Int = 0,
@@ -106,6 +114,8 @@ data class HomeUiState(
 	val resume: ResumeInfo? = null,
 	val dayStreak: Int = 0,
 	val successRate: Float? = null,
+	val survivalBest: Int? = null,
+	val rushBest: Int? = null,
 )
 
 /**
@@ -124,6 +134,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 		viewModelScope.launch {
 			val vDao = container.ready().second.userDao()
 			launch { vDao.observeSolvedCount().collect { inCount -> mutableState.update { it.copy(solvedCount = inCount) } } }
+			launch {
+				vDao.observeChallengeBests().collect { inBests ->
+					val vByKind = inBests.associate { it.kind to it.score }
+					mutableState.update { it.copy(survivalBest = vByKind[ChallengeKind.Survival.key], rushBest = vByKind[ChallengeKind.Rush.key]) }
+				}
+			}
 			launch {
 				vDao.observeAllAttempts().collect { inAttempts ->
 					val vReport = withContext(Dispatchers.Default) { StatsCalculator().report(inAttempts, System.currentTimeMillis()) }
@@ -173,7 +189,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 /**
- * Accueil : tableau de bord (problèmes résolus, cote), reprise, entraînements.
+ * Accueil : tableau de bord (problèmes résolus, cote), reprise, modes de jeu.
  */
 @Composable
 fun HomeScreen(
@@ -182,10 +198,11 @@ fun HomeScreen(
 	inOnTargeted: () -> Unit,
 	inOnSettings: () -> Unit,
 	inOnTab: (NavTab) -> Unit,
+	inOnChallenge: (ChallengeKind) -> Unit,
 ) {
 	val vState by inViewModel.state.collectAsStateWithLifecycle()
 	LaunchedEffect(Unit) { inViewModel.refresh() }
-	HomeContent(vState, System.currentTimeMillis(), inOnTrain, inOnTargeted, inOnSettings, inOnTab)
+	HomeContent(vState, System.currentTimeMillis(), inOnTrain, inOnTargeted, inOnSettings, inOnTab, inOnChallenge)
 }
 
 /**
@@ -199,25 +216,25 @@ fun HomeContent(
 	inOnTargeted: () -> Unit,
 	inOnSettings: () -> Unit,
 	inOnTab: (NavTab) -> Unit,
+	inOnChallenge: (ChallengeKind) -> Unit = {},
 ) {
 	val vState = inState
 	val vColors = kLocalChessColors.current
 	Column(Modifier.fillMaxSize().background(vColors.background).statusBarsPadding()) {
 		ScreenTopBar(stringResource(R.string.app_name), inActionIcon = R.drawable.ic_settings, inOnAction = inOnSettings)
-		Column(Modifier.weight(1f).padding(horizontal = 20.dp)) {
+		Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = 20.dp)) {
 			Spacer(Modifier.height(8.dp))
-			SurfaceCard {
-				Text(stringResource(R.string.home_solved), style = ChessType.kCaption, color = vColors.muted)
-				Text(formatRating(vState.solvedCount), style = ChessType.kNumber, color = vColors.text)
-				if (vState.rating > 0) {
-					Text(stringResource(R.string.home_rating, formatRating(vState.rating)), style = ChessType.kBody, color = vColors.muted)
+			Column(
+				Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(vColors.surface).clickable { inOnTab(NavTab.Stats) }.padding(horizontal = 20.dp, vertical = 16.dp),
+			) {
+				Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+					DashboardValue(stringResource(R.string.home_solved_short), formatRating(vState.solvedCount), Modifier.weight(0.9f))
+					DashboardValue(stringResource(R.string.home_streak), pluralStringResource(R.plurals.stats_days, vState.dayStreak, vState.dayStreak), Modifier.weight(1.3f))
+					DashboardValue(stringResource(R.string.home_success), vState.successRate?.let { percent(it) } ?: "–", Modifier.weight(0.9f))
 				}
-			}
-			if (vState.successRate != null) {
-				Spacer(Modifier.height(10.dp))
-				Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-					Tile(stringResource(R.string.home_streak), pluralStringResource(R.plurals.stats_days, vState.dayStreak, vState.dayStreak), null, Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable { inOnTab(NavTab.Stats) })
-					Tile(stringResource(R.string.home_success), percent(vState.successRate), null, Modifier.weight(1f).clip(RoundedCornerShape(20.dp)).clickable { inOnTab(NavTab.Stats) })
+				if (vState.rating > 0) {
+					Spacer(Modifier.height(8.dp))
+					Text(stringResource(R.string.home_rating, formatRating(vState.rating)), style = ChessType.kBody, color = vColors.muted)
 				}
 			}
 			vState.resume?.let { inResume ->
@@ -240,13 +257,84 @@ fun HomeContent(
 					Icon(painterResource(R.drawable.ic_chevron_right), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(24.dp))
 				}
 			}
-			Spacer(Modifier.weight(1f))
-			Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-				SecondaryButton(stringResource(R.string.home_targeted), inOnTargeted, R.drawable.ic_tune, Modifier.weight(1f), inHeight = kHomeButtonHeight)
-				PrimaryButton(stringResource(R.string.home_train), inOnTrain, Modifier.weight(1.4f), inIcon = R.drawable.ic_bolt_fill1, inHeight = kHomeButtonHeight)
+			Spacer(Modifier.height(20.dp))
+			SectionTitle(stringResource(R.string.home_section_training))
+			Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+				ModeCard(R.drawable.ic_bolt_fill1, stringResource(R.string.mode_arcade), stringResource(R.string.mode_arcade_detail), null, true, Modifier.weight(1f), inOnTrain)
+				ModeCard(R.drawable.ic_tune, stringResource(R.string.mode_targeted), stringResource(R.string.mode_targeted_detail), null, false, Modifier.weight(1f), inOnTargeted)
 			}
-			Spacer(Modifier.height(8.dp))
+			Spacer(Modifier.height(16.dp))
+			SectionTitle(stringResource(R.string.home_section_challenges))
+			Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+				ModeCard(
+					R.drawable.ic_favorite_fill1, stringResource(R.string.mode_survival), stringResource(R.string.mode_survival_detail),
+					vState.survivalBest, false, Modifier.weight(1f),
+				) { inOnChallenge(ChallengeKind.Survival) }
+				ModeCard(
+					R.drawable.ic_timer_fill1, stringResource(R.string.mode_rush), stringResource(R.string.mode_rush_detail),
+					vState.rushBest, false, Modifier.weight(1f),
+				) { inOnChallenge(ChallengeKind.Rush) }
+			}
+			Spacer(Modifier.height(12.dp))
 		}
 		BottomNavBar(NavTab.Home, inOnTab)
+	}
+}
+
+/**
+ * Chiffre du tableau de bord : libellé et valeur.
+ */
+@Composable
+private fun DashboardValue(inLabel: String, inValue: String, inModifier: Modifier) {
+	val vColors = kLocalChessColors.current
+	Column(inModifier) {
+		Text(inLabel, style = ChessType.kCaption, color = vColors.muted, maxLines = 1)
+		Text(inValue, style = ChessType.kFeedback, color = vColors.text, maxLines = 1)
+	}
+}
+
+/**
+ * Titre d'un groupe de modes de jeu.
+ */
+@Composable
+private fun SectionTitle(inTitle: String) {
+	Text(inTitle, style = ChessType.kSection, color = kLocalChessColors.current.text, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp))
+}
+
+/**
+ * Carte d'un mode de jeu : icône, nom, description et record éventuel ; [inHighlighted] pour le
+ * mode principal (fond vert).
+ */
+@Composable
+private fun ModeCard(inIcon: Int, inTitle: String, inDetail: String, inRecord: Int?, inHighlighted: Boolean, inModifier: Modifier, inOnClick: () -> Unit) {
+	val vColors = kLocalChessColors.current
+	val vPress = rememberPressFeedback()
+	val vText = if (inHighlighted) vColors.onPrimary else vColors.text
+	val vMuted = if (inHighlighted) vColors.onPrimary.copy(alpha = kResumeSubtitleAlpha) else vColors.muted
+	Column(
+		inModifier
+			.fillMaxHeight()
+			.then(vPress.scale)
+			.clip(RoundedCornerShape(20.dp))
+			.background(if (inHighlighted) vColors.primary else vColors.surface)
+			.pressClickable(vPress, inOnClick = inOnClick)
+			.padding(14.dp),
+	) {
+		Row(verticalAlignment = Alignment.CenterVertically) {
+			Box(
+				Modifier.size(kModeIconSize.dp).clip(CircleShape).background(if (inHighlighted) vColors.onPrimary.copy(alpha = kModeIconAlpha) else vColors.background),
+				contentAlignment = Alignment.Center,
+			) {
+				Icon(painterResource(inIcon), contentDescription = null, tint = if (inHighlighted) vColors.onPrimary else vColors.primary, modifier = Modifier.size(20.dp))
+			}
+			if (inRecord != null) {
+				Spacer(Modifier.weight(1f))
+				Text(stringResource(R.string.mode_record, inRecord), style = ChessType.kLabel, color = vMuted, maxLines = 1)
+			}
+		}
+		Spacer(Modifier.height(8.dp))
+		Text(inTitle, style = ChessType.kSection, color = vText, maxLines = 1, overflow = TextOverflow.Ellipsis)
+		Spacer(Modifier.height(2.dp))
+		Text(inDetail, style = ChessType.kCaption, color = vMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
 	}
 }

@@ -1,6 +1,8 @@
 package com.chessplus.app
 
 import android.content.Context
+import com.chessplus.app.game.ChallengeKind
+import com.chessplus.app.game.ChallengeStore
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.ProgressStore
 import com.chessplus.app.game.PuzzleProvider
@@ -22,6 +24,7 @@ import com.chessplus.data.puzzle.PuzzleDatabase
 import com.chessplus.data.selection.PuzzleSelector
 import com.chessplus.data.selection.SelectionCriteria
 import com.chessplus.data.user.ActiveSessionEntity
+import com.chessplus.data.user.ChallengeRunEntity
 import com.chessplus.data.user.PlayerEntity
 import com.chessplus.data.user.ProgressRepository
 import com.chessplus.data.user.UserDatabase
@@ -94,6 +97,25 @@ class AppContainer(private val context: Context) {
 
 		/** Nouveau si la base utilisateur n'a aucun bilan pour ce problème. */
 		override suspend fun isNew(inId: String): Boolean = ready().second.userDao().getState(inId) == null
+
+		/** Tire un problème de défi autour de la cote visée, hors des problèmes déjà vus dans la partie. */
+		override suspend fun challengeNext(inCenter: Int, inExclude: Set<String>): Puzzle? {
+			val (vPuzzles, vUser) = ready()
+			return PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao()).nextPuzzle(inCenter.toDouble(), SelectionCriteria(), null, System.currentTimeMillis(), inExclude)
+		}
+	}
+
+	/** Parties des défis Survie et Rush. */
+	val challengeStore: ChallengeStore = object : ChallengeStore {
+		/** Lit le meilleur score du défi. */
+		override suspend fun best(inKind: ChallengeKind): Int? = ready().second.userDao().getBestChallengeScore(inKind.key)
+
+		/** Enregistre une partie terminée. */
+		override suspend fun save(inKind: ChallengeKind, inScore: Int, inBestPuzzleRating: Int?, inDurationMs: Long) {
+			ready().second.userDao().insertChallengeRun(
+				ChallengeRunEntity(kind = inKind.key, playedAt = System.currentTimeMillis(), score = inScore, bestPuzzleRating = inBestPuzzleRating, durationMs = inDurationMs)
+			)
+		}
 	}
 
 	/** Enregistrement de la progression. */

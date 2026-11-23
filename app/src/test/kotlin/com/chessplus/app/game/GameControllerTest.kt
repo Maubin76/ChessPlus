@@ -13,6 +13,7 @@ import com.chessplus.core.rating.EloRatingSystem
 import com.chessplus.core.rating.PlayerRating
 import com.chessplus.core.rules.defaultChessRules
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -57,6 +58,31 @@ class GameControllerTest {
 
 		/** Nouveau si jamais joué. */
 		override suspend fun isNew(inId: String): Boolean = inId !in played
+
+		/** Cotes visées des problèmes de défi demandés, dans l'ordre. */
+		val centers = mutableListOf<Int>()
+
+		/** Premier problème pas encore vu dans la partie. */
+		override suspend fun challengeNext(inCenter: Int, inExclude: Set<String>): Puzzle? {
+			centers.add(inCenter)
+			return list.firstOrNull { it.id !in inExclude }
+		}
+	}
+
+	/**
+	 * Parties de défi en mémoire.
+	 */
+	private class FakeChallenges(var bestScore: Int? = null) : ChallengeStore {
+		/** Parties enregistrées (défi, score). */
+		val saved = mutableListOf<Pair<ChallengeKind, Int>>()
+
+		/** Meilleur score. */
+		override suspend fun best(inKind: ChallengeKind): Int? = bestScore
+
+		/** Enregistrement. */
+		override suspend fun save(inKind: ChallengeKind, inScore: Int, inBestPuzzleRating: Int?, inDurationMs: Long) {
+			saved.add(inKind to inScore)
+		}
 	}
 
 	/**
@@ -119,7 +145,17 @@ class GameControllerTest {
 		inProgress: ProgressStore = FakeProgress(),
 		inSessions: SessionStore = FakeSessions(),
 		inMode: GameMode = GameMode.Continuous,
-	) = GameController(this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, clock = { 42L }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
+		inChallenges: ChallengeStore = FakeChallenges(),
+		inRushDurationMs: Long = ChallengeRun.kRushDurationMs,
+	) = GameController(
+		this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, inChallenges, clock = { 42L },
+		opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0, challengeNextDelayMs = 0, solutionDelayMs = 0, rushDurationMs = inRushDurationMs,
+	)
+
+	/**
+	 * Retourne des copies de [kMateIn2] d'identifiants différents, pour enchaîner les problèmes d'un défi.
+	 */
+	private fun mateCopies(inCount: Int) = (1..inCount).map { kMateIn2.copy(id = "m$it") }
 
 	/**
 	 * Raccourci : case à partir de son nom.
@@ -252,6 +288,76 @@ class GameControllerTest {
 		assertEquals(1, vProgress.records.size)
 	}
 
+	/** Vérifie la Survie : difficulté croissante, une vie par erreur, fin à zéro vie, rien dans la progression. */
+	@Test
+	fun survival() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(mateCopies(4))
+		val vProgress = FakeProgress()
+		val vSessions = FakeSessions()
+		val vChallenges = FakeChallenges(bestScore = 5)
+		val vController = controller(vPuzzles, vProgress, vSessions, GameMode.Challenge(ChallengeKind.Survival), vChallenges)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(ChallengeUi(ChallengeKind.Survival, 0, 3, null, null), vController.state.value.challenge)
+		assertFalse(vController.state.value.hintEnabled)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(1, vController.state.value.challenge?.score)
+		assertEquals(listOf(1200, 1225), vPuzzles.centers)
+		vController.tapMove("f7", "f6")
+		assertEquals(2, vController.state.value.challenge?.lives)
+		assertEquals(3, vPuzzles.centers.size)
+		vController.tapMove("f7", "f6")
+		vController.tapMove("f7", "f6")
+		val vState = vController.state.value
+		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.NoLives), vState.header)
+		assertEquals(ChallengeResult(ChallengeEnd.NoLives, 1, 5, false, 1760), vState.challenge?.result)
+		assertEquals(Move.fromUci("a2e6"), vState.lastMove)
+		assertFalse(vState.interactive)
+		assertEquals(listOf(ChallengeKind.Survival to 1), vChallenges.saved)
+		assertTrue(vProgress.records.isEmpty())
+		assertNull(vSessions.saved)
+	}
+
+	/** Vérifie le Rush : une erreur passe au problème suivant sans vie perdue, fin au bout du temps. */
+	@Test
+	fun rush() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(mateCopies(3))
+		val vChallenges = FakeChallenges()
+		val vController = controller(vPuzzles, inMode = GameMode.Challenge(ChallengeKind.Rush), inChallenges = vChallenges, inRushDurationMs = 300)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(342L, vController.state.value.challenge?.endsAt)
+		vController.tapMove("f7", "f6")
+		assertEquals(listOf(1500, 1500), vPuzzles.centers)
+		assertEquals(3, vController.state.value.challenge?.lives)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(1, vController.state.value.challenge?.score)
+		delay(500)
+		vController.awaitIdle()
+		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.TimeUp), vController.state.value.header)
+		assertEquals(ChallengeResult(ChallengeEnd.TimeUp, 1, 1, true, 1760), vController.state.value.challenge?.result)
+		assertEquals(listOf(ChallengeKind.Rush to 1), vChallenges.saved)
+	}
+
+	/** Vérifie l'abandon sans score (non enregistré) et la nouvelle partie. */
+	@Test
+	fun abandonAndPlayAgain() = runBlocking<Unit> {
+		val vChallenges = FakeChallenges()
+		val vController = controller(FakePuzzles(mateCopies(2)), inMode = GameMode.Challenge(ChallengeKind.Survival), inChallenges = vChallenges)
+		vController.start()
+		vController.awaitIdle()
+		vController.onAbandon()
+		vController.awaitIdle()
+		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.Abandoned), vController.state.value.header)
+		assertTrue(vChallenges.saved.isEmpty())
+		vController.onPlayAgain()
+		vController.awaitIdle()
+		assertEquals(ChallengeUi(ChallengeKind.Survival, 0, 3, null, null), vController.state.value.challenge)
+		assertTrue(vController.state.value.interactive)
+	}
+
 	/** Vérifie le glisser-déposer et la promotion avec choix de la pièce. */
 	@Test
 	fun dragAndPromotion() = runBlocking<Unit> {
@@ -359,7 +465,7 @@ class GameControllerTest {
 	fun durationAndFailedMove() = runBlocking<Unit> {
 		var vNow = 1_000L
 		val vProgress = FakeProgress()
-		val vController = GameController(this, GameMode.Continuous, defaultChessRules(), FakePuzzles(listOf(kMateIn2, kShort)), vProgress, FakeSessions(), clock = { vNow }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
+		val vController = GameController(this, GameMode.Continuous, defaultChessRules(), FakePuzzles(listOf(kMateIn2, kShort)), vProgress, FakeSessions(), FakeChallenges(), clock = { vNow }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
 		vController.start()
 		vController.awaitIdle()
 		vNow += 4_000

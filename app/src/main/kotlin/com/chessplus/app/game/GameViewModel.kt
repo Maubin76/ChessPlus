@@ -23,6 +23,7 @@ class GameViewModel(inContainer: AppContainer, inMode: GameMode) : ViewModel() {
 		puzzles = inContainer.puzzleProvider,
 		progress = inContainer.progressStore,
 		sessions = inContainer.sessionStore,
+		challenges = inContainer.challengeStore,
 		clock = System::currentTimeMillis,
 	)
 

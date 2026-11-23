@@ -131,7 +131,7 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | # | Écran | Contenu |
 | --- | --- | --- |
 | 1 | Choix du niveau | Premier lancement : Débutant 800, Intermédiaire 1200, Confirmé 1600, Avancé 2000, ou « Je connais ma cote » (saisie libre) ; modifiable dans les réglages |
-| 2 | Accueil | Tableau de bord : nombre de problèmes résolus ; carte « Reprendre le problème » si un problème est en cours ; bouton « S'entraîner » ; accès à l'entraînement ciblé ; icône des réglages |
+| 2 | Accueil | Tableau de bord (résolus, série, réussite, cote ; ouvre les statistiques) ; carte « Reprendre » si un problème est en cours ; modes de jeu en deux groupes (voir « Modes de jeu ») ; icône des réglages |
 | 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = pièce à jouer puis coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
 | 4 | Entraînement ciblé | Thèmes par familles ; difficulté relative (plus facile, à mon niveau, plus difficile) **ou** tranche précise ; bouton « Commencer » |
 | 5 | Historique | Onglets Tous, Réussis, Échoués ; une ligne relance le problème, sans effet sur la cote |
@@ -154,6 +154,15 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 - Écran d'accueil : **tableau de bord** destiné à accueillir des statistiques plus tard ; en v1, il affiche seulement le **nombre de problèmes résolus**.
 - Premier lancement : l'utilisateur **choisit son niveau** de départ.
 - Thèmes : noms en français, regroupés en familles (motifs tactiques, mats, finales, phase de jeu, longueur).
+
+## Modes de jeu (demandés par Mathieu le 2026-11-23, maquettes à valider)
+
+- Accueil en deux groupes de cartes : **Entraînement** = Arcade (l'entraînement continu, adapté à la cote, carte verte) et Ciblé ; **Défis** = Survie et Rush, avec leur record en haut à droite de la carte. Le tableau de bord tient en une carte (résolus, série, réussite, cote) pour que tous les modes soient visibles sans défiler ; l'écran défile si la police est agrandie.
+- **Survie** : 3 vies ; le premier problème est 300 points sous la cote du joueur, puis chaque problème monte de 25 points. Un mauvais coup retire une vie, montre le coup attendu 1,2 s (« Il fallait jouer a2 → e6 »), puis passe au suivant ; à zéro vie, la partie s'arrête. Vies en cœurs dans la barre du haut.
+- **Rush** : 5 minutes ; problèmes autour de la cote du joueur (± 100, élargi si besoin). Le chronomètre part au premier problème et passe en rouge dans les 30 dernières secondes. Un mauvais coup passe directement au problème suivant.
+- Dans les deux défis : un problème réussi enchaîne sur le suivant après 0,5 s ; pas d'indice ni de « Recommencer » ; score sous l'échiquier et bouton « Abandonner ». Aucun problème n'est reproposé dans une même partie.
+- Fin de partie : titre (« Plus de vies », « Temps écoulé », « Partie terminée »), score, « Nouveau record ! » ou le record, problème le plus difficile réussi ; boutons « Accueil » et « Rejouer ».
+- Les défis ne modifient ni la cote, ni l'historique, ni les statistiques par thème (choix de Mathieu) ; chaque partie est enregistrée à part (table `challenge_run`, base utilisateur v3). Quitter une partie en cours compte comme un abandon ; une partie abandonnée sans aucun problème réussi n'est pas enregistrée.
 
 ## Statistiques (demandées par Mathieu le 2026-11-23, maquettes à valider)
 

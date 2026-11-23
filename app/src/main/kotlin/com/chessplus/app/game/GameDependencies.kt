@@ -23,6 +23,27 @@ interface PuzzleProvider {
 	 * Indique si le problème n'a jamais été joué (seul un premier essai modifie la cote).
 	 */
 	suspend fun isNew(inId: String): Boolean
+
+	/**
+	 * Retourne un problème de défi autour de la cote [inCenter], hors des problèmes [inExclude]
+	 * déjà vus dans la partie, ou null si aucun ne convient.
+	 */
+	suspend fun challengeNext(inCenter: Int, inExclude: Set<String>): Puzzle?
+}
+
+/**
+ * Enregistrement des parties de défi.
+ */
+interface ChallengeStore {
+	/**
+	 * Retourne le meilleur score du défi, ou null s'il n'a jamais été joué.
+	 */
+	suspend fun best(inKind: ChallengeKind): Int?
+
+	/**
+	 * Enregistre une partie terminée.
+	 */
+	suspend fun save(inKind: ChallengeKind, inScore: Int, inBestPuzzleRating: Int?, inDurationMs: Long)
 }
 
 /**

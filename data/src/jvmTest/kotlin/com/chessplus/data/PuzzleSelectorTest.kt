@@ -85,6 +85,14 @@ class PuzzleSelectorTest {
 		repeat(10) { assertEquals("b", selector.nextPuzzle(1500.0, SelectionCriteria(), "a", 0L)?.id) }
 	}
 
+	/** Vérifie l'exclusion des problèmes déjà vus dans une partie de défi. */
+	@Test
+	fun excludesSeenPuzzles() = runBlocking {
+		insert("a" to 1500, "b" to 1510, "c" to 1490)
+		repeat(10) { assertEquals("c", selector.nextPuzzle(1500.0, SelectionCriteria(), null, 0L, setOf("a", "b"))?.id) }
+		assertNull(selector.nextPuzzle(1500.0, SelectionCriteria(), "c", 0L, setOf("a", "b")))
+	}
+
 	/** Vérifie le filtre par thème et par tranche imposée. */
 	@Test
 	fun themeAndImposedRange() = runBlocking {

@@ -3,6 +3,7 @@ package com.chessplus.data
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.chessplus.core.puzzle.PuzzleResult
+import com.chessplus.data.user.ChallengeRunEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -12,7 +13,7 @@ import kotlin.test.assertEquals
 import kotlin.test.assertNull
 
 /**
- * Test de la migration de la base utilisateur de la version 1 (v1.0 publiée) à la version 2.
+ * Test de la migration de la base utilisateur de la version 1 (v1.0 publiée) à la dernière version.
  */
 class UserMigrationTest {
 	/**
@@ -60,6 +61,9 @@ class UserMigrationTest {
 				assertNull(vAttempts[0].durationMs)
 				assertNull(vAttempts[0].failedAtMove)
 				assertNull(vAttempts[0].playerDeviationAfter)
+				vDatabase.userDao().insertChallengeRun(ChallengeRunEntity(kind = "rush", playedAt = 2000, score = 12, bestPuzzleRating = 1650, durationMs = 300_000))
+				assertEquals(12, vDatabase.userDao().getBestChallengeScore("rush"))
+				assertNull(vDatabase.userDao().getBestChallengeScore("survival"))
 			} finally {
 				vDatabase.close()
 			}

@@ -27,6 +27,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.GameScreen
 import com.chessplus.app.game.GameViewModel
@@ -104,6 +105,7 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inOnTargeted = { vNavigation.navigate(Destination.Targeted) },
 						inOnSettings = { vNavigation.navigate(Destination.Settings) },
 						inOnTab = vNavigation::selectTab,
+						inOnChallenge = { vNavigation.navigate(Destination.Game(GameMode.Challenge(it))) },
 					)
 					Destination.History -> HistoryScreen(
 						inViewModel = viewModel(factory = HistoryViewModel.factory(inContainer)),
@@ -136,6 +138,10 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 								GameMode.Continuous -> R.string.game_title
 								is GameMode.Targeted -> R.string.game_title_targeted
 								is GameMode.Replay -> R.string.game_title_replay
+								is GameMode.Challenge -> when (vDestination.mode.kind) {
+									ChallengeKind.Survival -> R.string.game_title_survival
+									ChallengeKind.Rush -> R.string.game_title_rush
+								}
 							}
 						),
 						inVibration = vSettings.vibration,

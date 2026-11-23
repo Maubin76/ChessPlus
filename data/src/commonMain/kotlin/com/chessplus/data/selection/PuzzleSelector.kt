@@ -45,8 +45,9 @@ class PuzzleSelector(
 	 * @param inCriteria thèmes et tranche de difficulté.
 	 * @param inExcludeId problème à ne pas reproposer tout de suite (celui qui vient d'être joué).
 	 * @param inNow date courante (millisecondes).
+	 * @param inExcludeIds autres problèmes à ne pas proposer (déjà vus dans une partie de défi).
 	 */
-	suspend fun nextPuzzle(inPlayerRating: Double, inCriteria: SelectionCriteria, inExcludeId: String?, inNow: Long): Puzzle? {
+	suspend fun nextPuzzle(inPlayerRating: Double, inCriteria: SelectionCriteria, inExcludeId: String?, inNow: Long, inExcludeIds: Set<String> = emptySet()): Puzzle? {
 		for (vRange in candidateRanges(inPlayerRating.roundToInt(), inCriteria.ratingRange)) {
 			val vCount = puzzleDao.countInRange(vRange.first, vRange.last, inCriteria.themes.low, inCriteria.themes.high)
 			if (vCount == 0) {
@@ -55,7 +56,7 @@ class PuzzleSelector(
 			repeat(minOf(kTriesPerRange, vCount)) {
 				val vOffset = random.nextInt(vCount)
 				val vId = puzzleDao.getIdAtOffsetInRange(vRange.first, vRange.last, inCriteria.themes.low, inCriteria.themes.high, vOffset)
-				if (vId != null && vId != inExcludeId && isEligible(vId, inNow)) {
+				if (vId != null && vId != inExcludeId && vId !in inExcludeIds && isEligible(vId, inNow)) {
 					puzzleDao.getById(vId)?.let { return it.toPuzzle() }
 				}
 			}

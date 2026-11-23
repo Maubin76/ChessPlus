@@ -13,6 +13,7 @@ import com.chessplus.core.rules.ChessRules
 import com.chessplus.core.rules.GameStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +22,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.math.roundToInt
 
 /**
  * Logique de l'écran de jeu, indépendante d'Android : enchaînement des problèmes, coups du
@@ -34,10 +36,14 @@ import kotlinx.coroutines.sync.withLock
  * @property puzzles source des problèmes.
  * @property progress enregistrement des résultats et cote.
  * @property sessions sauvegarde du problème en cours.
+ * @property challenges enregistrement des parties de défi.
  * @property clock horloge (millisecondes).
  * @property opponentDelayMs pause avant la réponse de l'adversaire.
  * @property startDelayMs pause avant le premier coup de l'adversaire.
  * @property wrongMoveDelayMs durée d'affichage d'un mauvais coup avant son annulation.
+ * @property challengeNextDelayMs pause entre un problème de défi réussi et le suivant.
+ * @property solutionDelayMs durée d'affichage du coup attendu après une erreur en Survie.
+ * @property rushDurationMs durée d'une partie de Rush.
  */
 class GameController(
 	private val scope: CoroutineScope,
@@ -46,10 +52,14 @@ class GameController(
 	private val puzzles: PuzzleProvider,
 	private val progress: ProgressStore,
 	private val sessions: SessionStore,
+	private val challenges: ChallengeStore,
 	private val clock: () -> Long,
 	private val opponentDelayMs: Long = kOpponentDelayMs,
 	private val startDelayMs: Long = kStartDelayMs,
 	private val wrongMoveDelayMs: Long = kWrongMoveDelayMs,
+	private val challengeNextDelayMs: Long = kChallengeNextDelayMs,
+	private val solutionDelayMs: Long = kSolutionDelayMs,
+	private val rushDurationMs: Long = ChallengeRun.kRushDurationMs,
 ) {
 	/** État publié. */
 	private val mutableState = MutableStateFlow(GameUiState())
@@ -117,6 +127,24 @@ class GameController(
 	/** Sérialise les écritures (résultat puis sauvegarde). */
 	private val persistMutex = Mutex()
 
+	/** Défi joué, ou null hors défi. */
+	private val challengeKind: ChallengeKind? = (mode as? GameMode.Challenge)?.kind
+
+	/** Partie de défi en cours ou terminée. */
+	private var run: ChallengeRun? = null
+
+	/** Meilleur score du défi (parties terminées comprises), ou null. */
+	private var challengeBest: Int? = null
+
+	/** Bilan de la partie de défi terminée. */
+	private var challengeResult: ChallengeResult? = null
+
+	/** Fin du chronomètre du Rush, ou null s'il n'a pas démarré. */
+	private var endsAt: Long? = null
+
+	/** Fin programmée du Rush. */
+	private var timerJob: Job? = null
+
 	/**
 	 * Démarre l'écran : en entraînement continu, reprend le problème sauvegardé s'il existe ;
 	 * sinon (ou dans les autres modes) charge un nouveau problème.
@@ -125,6 +153,11 @@ class GameController(
 		busy = true
 		pending = scope.launch {
 			rating = progress.currentRating().rating
+			if (challengeKind != null) {
+				challengeBest = challenges.best(challengeKind)
+				startRun(challengeKind)
+				return@launch
+			}
 			val vRestored = mode == GameMode.Continuous && restore()
 			if (!vRestored) {
 				val vFirst = (mode as? GameMode.Replay)?.let { puzzles.byId(it.puzzleId) }
@@ -215,7 +248,7 @@ class GameController(
 	 */
 	fun onHint() {
 		val vSession = session ?: return
-		if (!isInteractive()) {
+		if (!isInteractive() || challengeKind != null) {
 			return
 		}
 		noteFailure(vSession)
@@ -249,7 +282,7 @@ class GameController(
 	 */
 	fun onRestart() {
 		val vSession = session ?: return
-		if (header == GameHeader.Loading) {
+		if (header == GameHeader.Loading || challengeKind != null) {
 			return
 		}
 		pending?.cancel()
@@ -271,7 +304,7 @@ class GameController(
 	 */
 	fun onNext() {
 		val vSession = session
-		if (vSession == null && header != GameHeader.NoPuzzle) {
+		if (challengeKind != null || vSession == null && header != GameHeader.NoPuzzle) {
 			return
 		}
 		if (vSession != null && vSession.status != PuzzleStatus.Solved) {
@@ -282,6 +315,34 @@ class GameController(
 		displayOverride = null
 		publish()
 		pending = scope.launch { loadNext(vSession?.puzzle?.id) }
+	}
+
+	/**
+	 * Défi : abandonne la partie en cours (son score est enregistré).
+	 */
+	fun onAbandon() {
+		if (run?.end == null) {
+			endRun(ChallengeEnd.Abandoned)
+		}
+	}
+
+	/**
+	 * Défi : appelé quand le joueur quitte l'écran ; une partie en cours compte comme abandonnée.
+	 */
+	fun onLeave() = onAbandon()
+
+	/**
+	 * Défi : recommence une partie une fois la précédente terminée.
+	 */
+	fun onPlayAgain() {
+		val vKind = challengeKind ?: return
+		if (run?.end == null) {
+			return
+		}
+		pending?.cancel()
+		busy = true
+		publish()
+		pending = scope.launch { startRun(vKind) }
 	}
 
 	/**
@@ -351,13 +412,15 @@ class GameController(
 	 * Démarre un problème donné et programme le premier coup de l'adversaire.
 	 */
 	private suspend fun load(inPuzzle: Puzzle) {
-		sessions.clear()
+		if (challengeKind == null) {
+			sessions.clear()
+		}
 		val vPuzzle = inPuzzle
 		busy = false
 		session = PuzzleSession.start(vPuzzle, rules)
 		playerStartedAt = null
 		failedAtMove = null
-		rated = mode !is GameMode.Replay && puzzles.isNew(vPuzzle.id)
+		rated = mode !is GameMode.Replay && challengeKind == null && puzzles.isNew(vPuzzle.id)
 		resultRecorded = false
 		recorded = null
 		startedAt = clock()
@@ -435,7 +498,14 @@ class GameController(
 				showMove(inAnimate)
 				badge = inMove.to to BadgeKind.Success
 				requestHaptic(vSession.result == PuzzleResult.Success || vVerdict.alternativeMate)
-				finish()
+				val vRun = run
+				if (vRun != null) {
+					vRun.onSolved(vSession.puzzle.rating)
+					header = GameHeader.Solved
+					scheduleNextChallenge(challengeNextDelayMs)
+				} else {
+					finish()
+				}
 			}
 			MoveVerdict.Wrong -> showWrongMove(inMove, inAnimate)
 		}
@@ -463,8 +533,108 @@ class GameController(
 			displayOverride = null
 			badge = null
 			showMove(inAnimate = true)
+			if (run != null) {
+				onChallengeMiss(vSession)
+				return@launch
+			}
 			busy = false
 			publish()
+		}
+	}
+
+	/**
+	 * Démarre une partie de défi et charge son premier problème.
+	 */
+	private suspend fun startRun(inKind: ChallengeKind) {
+		timerJob?.cancel()
+		run = ChallengeRun(inKind, rating.roundToInt(), clock())
+		challengeResult = null
+		endsAt = null
+		nextChallengePuzzle()
+	}
+
+	/**
+	 * Charge le prochain problème de la partie de défi ; démarre le chronomètre du Rush au premier.
+	 */
+	private suspend fun nextChallengePuzzle() {
+		val vRun = run ?: return
+		val vPuzzle = puzzles.challengeNext(vRun.targetRating(), vRun.playedIds)
+		if (vPuzzle == null) {
+			endRun(ChallengeEnd.NoPuzzle)
+			return
+		}
+		vRun.onServed(vPuzzle.id)
+		if (vRun.kind == ChallengeKind.Rush && endsAt == null) {
+			endsAt = clock() + rushDurationMs
+			timerJob = scope.launch {
+				delay(rushDurationMs)
+				endRun(ChallengeEnd.TimeUp)
+			}
+		}
+		load(vPuzzle)
+	}
+
+	/**
+	 * Programme le problème de défi suivant après une pause.
+	 */
+	private fun scheduleNextChallenge(inDelayMs: Long) {
+		busy = true
+		publish()
+		pending = scope.launch {
+			delay(inDelayMs)
+			nextChallengePuzzle()
+		}
+	}
+
+	/**
+	 * Défi : après un mauvais coup, Survie retire une vie et montre le coup attendu ; Rush passe
+	 * directement au problème suivant.
+	 */
+	private suspend fun onChallengeMiss(inSession: PuzzleSession) {
+		val vRun = run ?: return
+		val vLost = vRun.onMissed()
+		if (vRun.kind == ChallengeKind.Survival) {
+			val vMove = inSession.revealNextMove()
+			showMove(inAnimate = true)
+			header = GameHeader.Missed(vMove)
+			publish()
+			delay(solutionDelayMs)
+			if (vLost) {
+				endRun(ChallengeEnd.NoLives)
+				return
+			}
+		}
+		nextChallengePuzzle()
+	}
+
+	/**
+	 * Termine la partie de défi : bilan, record, enregistrement (qui survit à la fermeture de l'écran).
+	 */
+	private fun endRun(inEnd: ChallengeEnd) {
+		val vRun = run ?: return
+		if (vRun.end != null) {
+			return
+		}
+		vRun.end = inEnd
+		timerJob?.cancel()
+		pending?.cancel()
+		busy = false
+		selected = null
+		promotion = null
+		displayOverride = null
+		val vPrevious = challengeBest ?: 0
+		val vBest = maxOf(vPrevious, vRun.score)
+		challengeBest = vBest
+		challengeResult = ChallengeResult(inEnd, vRun.score, vBest, vRun.score > vPrevious, vRun.bestPuzzleRating)
+		header = GameHeader.ChallengeOver(inEnd)
+		publish()
+		if (inEnd != ChallengeEnd.Abandoned || vRun.score > 0) {
+			val vDuration = clock() - vRun.startedAt
+			val vJob = scope.launch(NonCancellable) { challenges.save(vRun.kind, vRun.score, vRun.bestPuzzleRating, vDuration) }
+			synchronized(persistJobs) {
+				persistJobs.removeAll { it.isCompleted }
+				persistJobs.add(vJob)
+			}
 		}
 	}
 
@@ -516,6 +686,9 @@ class GameController(
 	 * Enregistre le résultat dès qu'il est connu (une seule fois), puis sauvegarde le problème.
 	 */
 	private fun persist() {
+		if (challengeKind != null) {
+			return
+		}
 		val vSession = session ?: return
 		val vJob = scope.launch {
 			persistMutex.withLock {
@@ -559,7 +732,7 @@ class GameController(
 	 */
 	private fun isInteractive(): Boolean {
 		val vSession = session ?: return false
-		return vSession.status == PuzzleStatus.PlayerToMove && promotion == null && !busy
+		return vSession.status == PuzzleStatus.PlayerToMove && promotion == null && !busy && run?.end == null
 	}
 
 	/**
@@ -600,11 +773,12 @@ class GameController(
 			badge = badge,
 			interactive = isInteractive(),
 			rating = kotlin.math.round(rating).toInt(),
-			hintEnabled = isInteractive(),
+			hintEnabled = isInteractive() && challengeKind == null,
 			nextEnabled = vSession?.status == PuzzleStatus.Solved || header == GameHeader.NoPuzzle,
 			promotion = promotion,
 			summary = vSummary,
 			haptic = haptic,
+			challenge = run?.let { ChallengeUi(it.kind, it.score, it.lives, endsAt, challengeResult) },
 		)
 	}
 
@@ -620,5 +794,11 @@ class GameController(
 
 		/** Durée de résolution au-delà de laquelle elle n'est pas enregistrée (problème laissé de côté). */
 		const val kMaxDurationMs = 15L * 60 * 1000
+
+		/** Pause entre un problème de défi réussi et le suivant. */
+		const val kChallengeNextDelayMs = 500L
+
+		/** Durée d'affichage du coup attendu après une erreur en Survie. */
+		const val kSolutionDelayMs = 1200L
 	}
 }

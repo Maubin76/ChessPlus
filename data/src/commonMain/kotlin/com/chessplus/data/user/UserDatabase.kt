@@ -7,17 +7,18 @@ import androidx.room.RoomDatabase
 import androidx.room.RoomDatabaseConstructor
 
 /**
- * Base utilisateur : historique, bilans par problème, cote et problème en cours.
+ * Base utilisateur : historique, bilans par problème, cote, problème en cours et parties des défis.
  *
  * Elle est séparée de la base des problèmes pour que celle-ci puisse être remplacée sans
  * perdre la progression ; les deux bases ne sont liées que par l'identifiant Lichess.
  */
 @Database(
-	entities = [AttemptEntity::class, PuzzleStateEntity::class, PlayerEntity::class, ActiveSessionEntity::class],
+	entities = [AttemptEntity::class, PuzzleStateEntity::class, PlayerEntity::class, ActiveSessionEntity::class, ChallengeRunEntity::class],
 	version = UserDatabase.kVersion,
 	exportSchema = true,
 	// Version 2 : durée, coup de l'échec et écart de cote des tentatives (colonnes facultatives).
-	autoMigrations = [AutoMigration(from = 1, to = 2)],
+	// Version 3 : parties des défis Survie et Rush (nouvelle table).
+	autoMigrations = [AutoMigration(from = 1, to = 2), AutoMigration(from = 2, to = 3)],
 )
 @ConstructedBy(UserDatabaseConstructor::class)
 abstract class UserDatabase : RoomDatabase() {
@@ -28,7 +29,7 @@ abstract class UserDatabase : RoomDatabase() {
 
 	companion object {
 		/** Version du schéma ; toute évolution après la première version publiée exige une migration. */
-		const val kVersion = 2
+		const val kVersion = 3
 
 		/** Nom du fichier de la base sur l'appareil. */
 		const val kFileName = "user.db"

@@ -1,6 +1,7 @@
 package com.chessplus.app.navigation
 
 import androidx.lifecycle.SavedStateHandle
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.Difficulty
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.TrainingCriteria
@@ -31,6 +32,8 @@ class NavigationTest {
 			Destination.Targeted,
 			Destination.Game(GameMode.Continuous),
 			Destination.Game(GameMode.Replay("00sHx")),
+			Destination.Game(GameMode.Challenge(ChallengeKind.Survival)),
+			Destination.Game(GameMode.Challenge(ChallengeKind.Rush)),
 			Destination.Game(GameMode.Targeted(TrainingCriteria(ThemeSet.parse("fork zugzwang smotheredMate"), Difficulty.Range, 900..1300))),
 		)
 		for (vDestination in vDestinations) {

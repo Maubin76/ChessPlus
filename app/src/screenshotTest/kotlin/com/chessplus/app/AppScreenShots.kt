@@ -54,6 +54,9 @@ fun RealHomeShot() = ChessPlusTheme {
 			solvedCount = 128,
 			rating = 1520,
 			resume = ResumeInfo(piecesOf("q5nr/1ppknQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 1"), Color.White, 2, 2, false, kNow - 3 * 60_000),
+			dayStreak = 4,
+			successRate = 0.62f,
+			survivalBest = 23,
 		),
 		kNow, {}, {}, {}, {},
 	)

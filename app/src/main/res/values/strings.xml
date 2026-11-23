@@ -20,12 +20,11 @@
 
 	<!-- Accueil -->
 	<string name="home_solved">Problèmes résolus</string>
+	<string name="home_solved_short">Résolus</string>
 	<string name="home_rating">Votre cote : %1$s</string>
 	<string name="home_resume">Reprendre</string>
 	<string name="home_resume_move">Coup %1$d sur %2$d</string>
 	<string name="home_resume_finished">Terminé</string>
-	<string name="home_targeted">Ciblé</string>
-	<string name="home_train">S’entraîner</string>
 
 	<!-- Choix du niveau -->
 	<string name="level_welcome">BIENVENUE</string>
@@ -96,7 +95,7 @@
 	<string name="settings_version">ChessPlus %1$s</string>
 
 	<!-- Écran de jeu : barre -->
-	<string name="game_title">Entraînement</string>
+	<string name="game_title">Arcade</string>
 	<string name="game_title_targeted">Entraînement ciblé</string>
 	<string name="game_title_replay">Rejouer</string>
 
@@ -128,6 +127,47 @@
 	<string name="game_touch_help">Touchez une pièce puis sa case, ou faites-la glisser</string>
 	<string name="game_no_puzzle">Aucun problème disponible</string>
 	<string name="game_no_puzzle_detail">Tous les problèmes de votre niveau ont été résolus</string>
+
+	<!-- Accueil : modes de jeu -->
+	<string name="home_section_training">Entraînement</string>
+	<string name="home_section_challenges">Défis</string>
+	<string name="mode_arcade">Arcade</string>
+	<string name="mode_arcade_detail">Adapté à votre cote</string>
+	<string name="mode_targeted">Ciblé</string>
+	<string name="mode_targeted_detail">Thèmes au choix</string>
+	<string name="mode_survival">Survie</string>
+	<string name="mode_survival_detail">3 vies, de plus en plus dur</string>
+	<string name="mode_rush">Rush</string>
+	<string name="mode_rush_detail">5 minutes chrono</string>
+	<string name="mode_record">Record %1$d</string>
+
+	<!-- Défis Survie et Rush -->
+	<string name="game_title_survival">Survie</string>
+	<string name="game_title_rush">Rush</string>
+	<string name="challenge_solved_title">Réussi !</string>
+	<string name="challenge_next">Problème suivant…</string>
+	<string name="challenge_life_lost">Une vie en moins</string>
+	<string name="challenge_missed_detail">Il fallait jouer %1$s → %2$s</string>
+	<string name="challenge_over_lives">Plus de vies</string>
+	<string name="challenge_over_time">Temps écoulé</string>
+	<string name="challenge_over_abandoned">Partie terminée</string>
+	<string name="challenge_over_no_puzzle">Plus de problèmes</string>
+	<string name="challenge_over_survival">Partie de Survie terminée</string>
+	<string name="challenge_over_rush">Partie de Rush terminée</string>
+	<string name="challenge_new_record">Nouveau record !</string>
+	<string name="challenge_record">Record : %1$d</string>
+	<string name="challenge_best_puzzle">Problème le plus difficile réussi : %1$s</string>
+	<plurals name="challenge_solved">
+		<item quantity="one">problème résolu</item>
+		<item quantity="other">problèmes résolus</item>
+	</plurals>
+	<plurals name="challenge_lives">
+		<item quantity="one">%d vie restante</item>
+		<item quantity="other">%d vies restantes</item>
+	</plurals>
+	<string name="action_abandon">Abandonner</string>
+	<string name="action_play_again">Rejouer</string>
+	<string name="action_home">Accueil</string>
 
 	<!-- Écran de jeu : commandes -->
 	<string name="action_restart">Recommencer</string>

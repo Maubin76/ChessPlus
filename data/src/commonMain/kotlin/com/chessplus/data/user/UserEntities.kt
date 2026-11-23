@@ -126,6 +126,37 @@ data class ActiveSessionEntity(
 )
 
 /**
+ * Partie terminée d'un défi (Survie, Rush), sans effet sur la cote.
+ *
+ * @property id identifiant technique.
+ * @property kind défi : « survival » ou « rush ».
+ * @property playedAt date de fin de la partie (millisecondes).
+ * @property score nombre de problèmes réussis.
+ * @property bestPuzzleRating cote du problème le plus difficile réussi, ou null si aucun.
+ * @property durationMs durée de la partie.
+ */
+@Entity(
+	tableName = "challenge_run",
+	indices = [Index("kind", "score")],
+)
+data class ChallengeRunEntity(
+	@PrimaryKey(autoGenerate = true) val id: Long = 0,
+	val kind: String,
+	val playedAt: Long,
+	val score: Int,
+	val bestPuzzleRating: Int?,
+	val durationMs: Long,
+)
+
+/**
+ * Meilleur score d'un défi.
+ *
+ * @property kind défi.
+ * @property score meilleur score.
+ */
+data class ChallengeBest(val kind: String, val score: Int)
+
+/**
  * Point de l'évolution de la cote du joueur.
  *
  * @property playedAt date de la tentative (millisecondes).

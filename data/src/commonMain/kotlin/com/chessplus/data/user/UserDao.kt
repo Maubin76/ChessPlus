@@ -112,4 +112,22 @@ interface UserDao {
 	 */
 	@Query("SELECT * FROM attempt WHERE rated = 1")
 	suspend fun getRatedAttempts(): List<AttemptEntity>
+
+	/**
+	 * Enregistre une partie de défi.
+	 */
+	@Insert
+	suspend fun insertChallengeRun(inRun: ChallengeRunEntity): Long
+
+	/**
+	 * Retourne le meilleur score d'un défi, ou null s'il n'a jamais été joué.
+	 */
+	@Query("SELECT MAX(score) FROM challenge_run WHERE kind = :inKind")
+	suspend fun getBestChallengeScore(inKind: String): Int?
+
+	/**
+	 * Observe le meilleur score de chaque défi joué.
+	 */
+	@Query("SELECT kind, MAX(score) AS score FROM challenge_run GROUP BY kind")
+	fun observeChallengeBests(): Flow<List<ChallengeBest>>
 }
