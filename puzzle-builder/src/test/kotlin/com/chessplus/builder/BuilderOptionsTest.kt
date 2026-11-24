@@ -16,6 +16,7 @@ class BuilderOptionsTest {
 		val vOptions = BuilderOptions.parse(arrayOf("puzzles.csv.zst"))
 		assertEquals(File("puzzles.csv.zst"), vOptions.source)
 		assertEquals(BuilderOptions.kDefaultMaxRatingDeviation, vOptions.maxRatingDeviation)
+		assertEquals(QualityThresholds(80, 90, 250, 600, 100, 85, 100), vOptions.thresholds())
 		assertEquals(File("app/src/main/assets/puzzles.db"), vOptions.output)
 		assertTrue(vOptions.dropIndexes)
 		assertTrue(vOptions.validate)
@@ -31,6 +32,8 @@ class BuilderOptionsTest {
 			)
 		)
 		assertEquals(BuilderOptions(File("x.csv.zst"), 75, -20, 1000, 0, File("out.db"), File("work.db"), 500, dropIndexes = false, validate = false), vOptions)
+		val vLow = BuilderOptions.parse(arrayOf("x.csv.zst", "--low-limit=800", "--low-max-rd=120", "--low-min-popularity=80", "--low-min-plays=50"))
+		assertEquals(QualityThresholds(80, 90, 250, 800, 120, 80, 50), vLow.thresholds())
 	}
 
 	/** Vérifie le rejet des arguments invalides. */

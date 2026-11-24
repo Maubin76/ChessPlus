@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes du choix du niveau (premier lancement et réglages). -->
+<resources>
+	<string name="lvl_welcome">Bienvenue</string>
+	<string name="lvl_title">Quel est ton niveau ?</string>
+	<string name="lvl_detail">Ton classement de départ s’ajustera ensuite après chaque puzzle.</string>
+	<string name="lvl_back_title">Classement de départ</string>
+	<string name="lvl_section">Niveaux</string>
+	<string name="lvl_beginner">Débutant</string>
+	<string name="lvl_beginner_detail">Tu connais les règles</string>
+	<string name="lvl_intermediate">Intermédiaire</string>
+	<string name="lvl_intermediate_detail">Tu joues de temps en temps</string>
+	<string name="lvl_confirmed">Confirmé</string>
+	<string name="lvl_confirmed_detail">Tu joues régulièrement</string>
+	<string name="lvl_advanced">Avancé</string>
+	<string name="lvl_advanced_detail">Tu joues en club ou en ligne</string>
+	<string name="lvl_custom">Je connais mon classement</string>
+	<string name="lvl_custom_detail">Entre une valeur entre %1$d et %2$d</string>
+	<string name="lvl_custom_hint">1 650</string>
+	<string name="lvl_custom_invalid">Le classement doit être compris entre %1$d et %2$d.</string>
+	<string name="lvl_start">Commencer</string>
+	<string name="lvl_save">Enregistrer</string>
+</resources>

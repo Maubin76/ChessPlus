@@ -14,7 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 
 /** Échelle d'un élément pendant l'appui. */
-private const val kPressedScale = 0.95f
+private const val kPressedScale = 0.97f
 
 /**
  * Retour visuel d'un appui : léger enfoncement animé, partagé avec l'onde du clic.
@@ -36,7 +36,7 @@ fun rememberPressFeedback(): PressFeedback {
 	val vPressed by vSource.collectIsPressedAsState()
 	val vScale by animateFloatAsState(
 		if (vPressed) kPressedScale else 1f,
-		spring(dampingRatio = Spring.DampingRatioMediumBouncy, stiffness = Spring.StiffnessMedium),
+		spring(dampingRatio = Spring.DampingRatioNoBouncy, stiffness = Spring.StiffnessMedium),
 		label = "appui",
 	)
 	return PressFeedback(vSource, Modifier.graphicsLayer {

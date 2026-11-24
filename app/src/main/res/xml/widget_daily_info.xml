@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Déclaration du widget ChessPlus : 4 × 2 cases, redimensionnable, mis à jour toutes les 30 minutes
+     (et à chaque puzzle terminé dans l'application). -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+	android:description="@string/widget_description"
+	android:initialLayout="@layout/widget_daily"
+	android:minWidth="250dp"
+	android:minHeight="110dp"
+	android:previewLayout="@layout/widget_daily"
+	android:resizeMode="horizontal|vertical"
+	android:targetCellWidth="4"
+	android:targetCellHeight="2"
+	android:updatePeriodMillis="1800000"
+	android:widgetCategory="home_screen" />

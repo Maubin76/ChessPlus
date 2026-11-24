@@ -65,6 +65,7 @@ class PuzzleSelectorTest {
 		insert("far" to 1850, "tooFar" to 2200)
 		assertEquals("far", selector.nextPuzzle(1500.0, SelectionCriteria(), null, 0L)?.id)
 		assertEquals(listOf(1400..1600, 1300..1700, 1200..1800, 1100..1900, 1000..2000, 900..2100), selector.candidateRanges(1500, null))
+		assertEquals(listOf(475..525, 375..625, 275..725, 175..825, 75..925, -25..1025), selector.candidateRanges(500, null, 25), "Survie : fenêtre resserrée")
 	}
 
 	/** Vérifie qu'un problème réussi n'est jamais reproposé et qu'un échoué revient après le délai. */
@@ -83,6 +84,28 @@ class PuzzleSelectorTest {
 	fun excludesCurrentPuzzle() = runBlocking {
 		insert("a" to 1500, "b" to 1510)
 		repeat(10) { assertEquals("b", selector.nextPuzzle(1500.0, SelectionCriteria(), "a", 0L)?.id) }
+	}
+
+	/** Vérifie l'exclusion des problèmes déjà vus dans une partie de défi. */
+	@Test
+	fun excludesSeenPuzzles() = runBlocking {
+		insert("a" to 1500, "b" to 1510, "c" to 1490)
+		repeat(10) { assertEquals("c", selector.nextPuzzle(1500.0, SelectionCriteria(), null, 0L, setOf("a", "b"))?.id) }
+		assertNull(selector.nextPuzzle(1500.0, SelectionCriteria(), "c", 0L, setOf("a", "b")))
+	}
+
+	/** Vérifie la Survie : les problèmes déjà réussis peuvent revenir, sauf ceux de la partie. */
+	@Test
+	fun includeSeenPuzzles() = runBlocking<Unit> {
+		insert("a" to 1500, "b" to 1510)
+		val vRepository = ProgressRepository(user, EloRatingSystem())
+		vRepository.recordResult(TestDatabases.puzzle("a", 1500), PuzzleResult.Success, 0, 0, inRated = false, inNow = 1_000L)
+		repeat(10) { assertEquals("b", selector.nextPuzzle(1500.0, SelectionCriteria(), null, 2_000L)?.id, "un problème réussi n'est pas reproposé") }
+		val vCriteria = SelectionCriteria(includeSeen = true)
+		val vSeen = mutableSetOf<String>()
+		repeat(50) { vSeen.add(assertNotNull(selector.nextPuzzle(1500.0, vCriteria, null, 2_000L)).id) }
+		assertEquals(setOf("a", "b"), vSeen, "sauf si les problèmes déjà vus sont acceptés")
+		repeat(10) { assertEquals("a", selector.nextPuzzle(1500.0, vCriteria, null, 2_000L, setOf("b"))?.id) }
 	}
 
 	/** Vérifie le filtre par thème et par tranche imposée. */

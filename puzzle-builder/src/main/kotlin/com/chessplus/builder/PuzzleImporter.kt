@@ -35,7 +35,7 @@ class PuzzleImporter(
 	private val validator = PuzzleValidator(rules)
 
 	/** Seuils de qualité. */
-	private val thresholds = QualityThresholds(options.maxRatingDeviation, options.minPopularity, options.minPlays)
+	private val thresholds = options.thresholds()
 
 	/**
 	 * Exécute la génération complète et retourne le rapport.

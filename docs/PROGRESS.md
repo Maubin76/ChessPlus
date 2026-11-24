@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**V1 terminée le 2026-11-23** : les six phases de la spécification sont validées par Mathieu. Release publiée : v0.1 (https://github.com/Maubin76/ChessPlus/releases/tag/v0.1). Prochaine étape : choisir parmi les points en suspens et les évolutions envisagées (section « Reste à faire »).
+**V2 publiée le 2026-11-24 en version 2.0.0** (fusion de `road-to-v2` dans `main`, validée par Mathieu) : nouveau design system, modes Survie, Rush et Révision, puzzle du jour avec calendrier, objectif quotidien et rappel, statistiques détaillées, revue de la solution, sons et retours haptiques, widget, export et import de la progression, suites de l'étude volumétrique (`docs/VOLUMETRIE.md`). La V1 était terminée le 2026-11-23 (release v1.0). Les travaux suivants se font sur une nouvelle branche dédiée.
 
 ## Fait
 
@@ -58,6 +58,7 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - 6 193 530 lignes lues → **292 090 problèmes retenus** ; rejets : RD 2 600 916, popularité 1 421 356, parties 221 531, plafond 1 657 637, solution invalide 0.
 - Répartition : 30 000 par tranche de 600 à 2399 ; 1 314 en 400-599 ; 20 214 en 2400-2599 ; 562 en 2600-2799.
 - Les 73 thèmes sont présents ; les plus rares : balestraMate 28, underPromotion 58, vukovicMate 67, superGM 71, castling 88.
+- **Seuils des puzzles faciles** (demandés par Mathieu le 2026-11-24, après l'étude volumétrique) : sous 600, RD ≤ 100, popularité ≥ 85, parties ≥ 100 (options `--low-limit`, `--low-max-rd`, `--low-min-popularity`, `--low-min-plays`). Les seuils généraux n'en gardaient que 1 314 sous 600, dont 23 sous 500 ; le CSV en contient environ 85 000 avec ces seuils entre 350 et 599 (environ 1 300 en 350-399, puis le plafond de 30 000 en 400-599). Les tranches à partir de 600 ne changent pas. Base à régénérer (`./gradlew :puzzle-builder:run`) ; le téléphone recopie désormais la base embarquée à chaque mise à jour de l'application.
 - **Durée : 27 à 37 s** selon la charge de la machine (passe 1 ≈ 7 s, passe 2 ≈ 19 à 27 s).
 - **Fichier : 36,8 Mo** ; compressé à 20,3 Mo dans l'APK release (25,3 Mo au total).
 - Effet des index sur la passe 2 : avec l'index simple sur `rating`, négligeable (< 1 s) ; avec l'index couvrant, 30,2 s en le gardant contre 18,9 s en le supprimant puis recréant (0,3 s) → suppression par défaut, `--keep-indexes` pour l'autre mode.
@@ -121,16 +122,26 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 
 ## Reste à faire
 
+Icône « Halo » intégrée le 2026-11-23 (choix de Mathieu parmi dix propositions, `docs/design/icones/`) ; palette verte B appliquée le même jour (accents et échiquier verts, `docs/design/vert/propositions-vert.png`).
+
+Décisions du 2026-11-24 : la famille « Évaluation et origine » est gardée dans l'Entraînement ; les anciennes maquettes de la phase 4 (`design/preview`) et les icônes Material sont supprimées ; trois styles de pièces.
+
 Points en suspens (à rappeler à Mathieu) :
 
-- icône de l'application (encore l'icône Android par défaut) ;
-- sons (réglage affiché « Bientôt disponible » ; trouver des sons libres de droits ou retirer le réglage) ;
-- famille de thèmes « Évaluation et origine » : garder, renommer ou masquer ;
+- sons (réglage retiré avec la refonte ; à réintroduire avec des sons libres de droits) ;
 - paramètres Glicko-2 (tau 0,75, écart des problèmes 75, écart du joueur entre 45 et 350) à confirmer à l'usage.
 
 Évolutions envisagées après la V1 (spécification) : séries chronométrées, objectif quotidien, packs de problèmes téléchargeables par tranche de cote, application desktop (`:core` et `:data` sont déjà multiplateformes).
 
-Fonctionnement des releases : chaque push sur `main` publie une nouvelle version (v0.2, v0.3…) ; ajouter `[skip ci]` au message d'un commit qui ne doit pas en produire.
+Fonctionnement des releases : chaque mise à jour de `main` publie une nouvelle version, y compris un push forcé sans nouveau commit ; ajouter `[skip ci]` au message d'un commit qui ne doit pas en produire.
+
+Branches (décision de Mathieu le 2026-11-23) : le développement après la V1 se fait sur `road-to-v2`, qui ne déclenche pas la CI ; `main` reste sur la v1.0 (`206d6f7`) jusqu'à ce que Mathieu demande de fusionner. L'icône Halo et la palette verte sont sur `road-to-v2` uniquement.
+
+Refonte graphique (design system fourni par Mathieu le 2026-11-23, dossier local `chessplus-design/` non versionné) : tous les écrans repris sur `road-to-v2` ; nouvelles fonctions déduites des maquettes (puzzle du jour, Solution, Retourner, Passer, confirmation des coups, enchaînement automatique, difficulté, thèmes d'échiquier, notation SAN dans `:core`). Captures à faire valider ; détail et écarts dans `docs/DESIGN.md`.
+
+Modes de jeu (demandés par Mathieu le 2026-11-23) : accueil en groupes Entraînement (Arcade, Ciblé) et Défis (Survie, Rush), défis sans effet sur la cote, records enregistrés (base utilisateur v3). Indice en deux temps (pièce, puis coup). Implémentés sur `road-to-v2`, maquettes à faire valider ; détail dans `docs/DESIGN.md`.
+
+Statistiques (demandées par Mathieu le 2026-11-23, toutes les suggestions retenues) : implémentées sur `road-to-v2` (écran en sections, fiche par thème, tuiles de l'accueil, base utilisateur v2 avec durée et coup de l'échec, migration testée). Maquettes à faire valider par Mathieu (captures `StatsScreenShotsKt`) ; détail dans `docs/DESIGN.md`.
 
 ## Décisions prises
 

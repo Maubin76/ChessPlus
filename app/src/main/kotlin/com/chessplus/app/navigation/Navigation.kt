@@ -6,10 +6,12 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelStore
 import androidx.lifecycle.ViewModelStoreOwner
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.Difficulty
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.ui.components.NavTab
+import com.chessplus.core.model.Theme
 import com.chessplus.core.model.ThemeSet
 
 /**
@@ -28,6 +30,9 @@ sealed interface Destination {
 	/** Statistiques. */
 	data object Stats : Destination
 
+	/** Fiche de statistiques d'un thème. */
+	data class ThemeStats(val theme: Theme) : Destination
+
 	/** Réglages. */
 	data object Settings : Destination
 
@@ -43,8 +48,8 @@ sealed interface Destination {
  */
 fun Destination.tab(): NavTab? = when (this) {
 	Destination.Home -> NavTab.Home
-	Destination.History -> NavTab.History
 	Destination.Stats -> NavTab.Stats
+	Destination.Settings -> NavTab.Settings
 	else -> null
 }
 
@@ -63,11 +68,15 @@ object DestinationCodec {
 		Destination.Home -> "home"
 		Destination.History -> "history"
 		Destination.Stats -> "stats"
+		is Destination.ThemeStats -> "themestats$kSeparator${inDestination.theme.key}"
 		Destination.Settings -> "settings"
 		Destination.Targeted -> "targeted"
 		is Destination.Game -> when (val vMode = inDestination.mode) {
 			GameMode.Continuous -> "game${kSeparator}continuous"
+			GameMode.Review -> "game${kSeparator}review"
 			is GameMode.Replay -> "game${kSeparator}replay$kSeparator${vMode.puzzleId}"
+			is GameMode.Challenge -> "game${kSeparator}challenge$kSeparator${vMode.kind.key}"
+			is GameMode.Daily -> "game${kSeparator}daily$kSeparator${vMode.day}$kSeparator${vMode.puzzleId}"
 			is GameMode.Targeted -> listOf(
 				"game", "targeted", vMode.criteria.themes.low, vMode.criteria.themes.high, vMode.criteria.difficulty.name,
 				vMode.criteria.range.first, vMode.criteria.range.last,
@@ -85,11 +94,15 @@ object DestinationCodec {
 			"home" -> Destination.Home
 			"history" -> Destination.History
 			"stats" -> Destination.Stats
+			"themestats" -> Theme.fromKey(vParts[1])?.let { Destination.ThemeStats(it) }
 			"settings" -> Destination.Settings
 			"targeted" -> Destination.Targeted
 			"game" -> when (vParts[1]) {
 				"continuous" -> Destination.Game(GameMode.Continuous)
+				"review" -> Destination.Game(GameMode.Review)
 				"replay" -> Destination.Game(GameMode.Replay(vParts[2]))
+				"daily" -> Destination.Game(GameMode.Daily(vParts[2], vParts[3]))
+				"challenge" -> ChallengeKind.entries.firstOrNull { it.key == vParts[2] }?.let { Destination.Game(GameMode.Challenge(it)) }
 				"targeted" -> Destination.Game(
 					GameMode.Targeted(
 						TrainingCriteria(ThemeSet(vParts[2].toLong(), vParts[3].toLong()), Difficulty.valueOf(vParts[4]), vParts[5].toInt()..vParts[6].toInt())
@@ -182,8 +195,8 @@ class NavigationViewModel(private val savedState: SavedStateHandle) : ViewModel(
 	fun selectTab(inTab: NavTab) {
 		val vTarget = when (inTab) {
 			NavTab.Home -> Destination.Home
-			NavTab.History -> Destination.History
 			NavTab.Stats -> Destination.Stats
+			NavTab.Settings -> Destination.Settings
 		}
 		if (backStack.lastOrNull()?.destination == vTarget) {
 			return

@@ -61,7 +61,7 @@ sealed interface MoveVerdict {
  * @property solutionPly nombre de coups de [Puzzle.moves] déjà joués sur l'échiquier.
  * @property alternativeMateUci coup de mat alternatif qui a terminé le problème, en UCI, ou null.
  * @property mistakeCount nombre de mauvais coups joués.
- * @property revealedCount nombre de coups de la solution montrés au joueur.
+ * @property revealedCount nombre d'indices utilisés (un par coup du joueur au plus).
  */
 data class PuzzleSnapshot(
 	val puzzleId: String,
@@ -98,13 +98,27 @@ class PuzzleSession private constructor(
 	var mistakeCount: Int = 0
 		private set
 
-	/** Nombre de coups de la solution montrés au joueur. */
+	/** Nombre d'indices utilisés : un par coup du joueur au plus (pièce montrée, puis coup joué). */
 	var revealedCount: Int = 0
 		private set
+
+	/**
+	 * Coup de la solution dont la pièce a été montrée, ou null. Non sauvegardé : après une reprise,
+	 * l'indice repart de la pièce.
+	 */
+	private var hintedPly: Int? = null
+
+	/** Case de la pièce à jouer montrée par l'indice pour le coup en cours, ou null. */
+	val hintedSquare: Square?
+		get() = if (hintedPly == solutionPly && status == PuzzleStatus.PlayerToMove) puzzle.moves[solutionPly].from else null
 
 	/** Position courante, en lecture seule, pour l'affichage. */
 	val board: PositionView
 		get() = position
+
+	/** Coups joués sur l'échiquier depuis la FEN de départ, pour la notation. */
+	val playedMoves: List<Move>
+		get() = position.history
 
 	/** Dernier coup joué sur l'échiquier, pour le surlignage, ou null au départ. */
 	val lastMove: Move?
@@ -172,14 +186,33 @@ class PuzzleSession private constructor(
 	fun expectedMove(): Move? = if (status == PuzzleStatus.PlayerToMove) puzzle.moves[solutionPly] else null
 
 	/**
-	 * Montre la solution coup par coup : joue le prochain coup attendu du joueur et le retourne.
+	 * Premier niveau de l'indice : retourne la case de la pièce à jouer, sans jouer le coup.
 	 * Le problème est alors compté comme échoué.
+	 *
+	 * @throws IllegalStateException si ce n'est pas au joueur de jouer.
+	 */
+	fun hintPiece(): Square {
+		check(status == PuzzleStatus.PlayerToMove) { "Ce n'est pas au joueur de jouer ($status)" }
+		if (hintedPly != solutionPly) {
+			revealedCount++
+			hintedPly = solutionPly
+		}
+		return puzzle.moves[solutionPly].from
+	}
+
+	/**
+	 * Second niveau de l'indice : joue le prochain coup attendu du joueur et le retourne. Le problème
+	 * est alors compté comme échoué ; si la pièce de ce coup a déjà été montrée, l'indice n'est pas
+	 * compté une seconde fois.
 	 *
 	 * @throws IllegalStateException si ce n'est pas au joueur de jouer.
 	 */
 	fun revealNextMove(): Move {
 		check(status == PuzzleStatus.PlayerToMove) { "Ce n'est pas au joueur de jouer ($status)" }
-		revealedCount++
+		if (hintedPly != solutionPly) {
+			revealedCount++
+		}
+		hintedPly = null
 		return playSolutionMove()
 	}
 
@@ -191,6 +224,7 @@ class PuzzleSession private constructor(
 		position = rules.positionFromFen(puzzle.fen)
 		solutionPly = 0
 		alternativeMate = null
+		hintedPly = null
 	}
 
 	/**

@@ -39,11 +39,13 @@ import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import com.chessplus.app.R
 import com.chessplus.app.game.BadgeKind
-import com.chessplus.app.ui.theme.ChessType
-import com.chessplus.app.ui.theme.kLocalChessColors
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.ui.draw.clip
+import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Move
 import com.chessplus.core.model.Piece
@@ -57,6 +59,33 @@ private const val kMoveAnimationMs = 300
 
 /** Agrandissement de la pièce tenue sous le doigt. */
 private const val kDragScale = 1.3f
+
+/** Diamètre du point d'un coup possible, en fraction de la case (24 %). */
+private const val kDotRatio = 0.24f
+
+/** Retrait de l'anneau d'une prise possible, en fraction de la case (3 %). */
+private const val kRingInsetRatio = 0.03f
+
+/** Épaisseur de l'anneau d'une prise possible, en fraction de la case (≈ 9 %). */
+private const val kRingWidthRatio = 0.088f
+
+/** Taille des coordonnées, en fraction de la largeur de l'échiquier (2,2 %). */
+private const val kCoordinateRatio = 0.022f
+
+/** Marge des coordonnées, en fraction de la largeur de l'échiquier (0,6 %). */
+private const val kCoordinateMarginRatio = 0.006f
+
+/** Épaisseur du cadre de la pièce montrée par l'indice. */
+private const val kHintStroke = 2
+
+/** Opacité de départ de l'éclat de la case (réussite ou erreur). */
+private const val kFlashAlpha = 0.55f
+
+/** Durée de l'éclat de la case. */
+private const val kFlashMs = 700
+
+/** Amplitude du tremblement de l'échiquier sur une erreur. */
+private const val kShakeDp = 7f
 
 /**
  * Retourne la ressource cburnett d'une pièce.
@@ -172,6 +201,7 @@ fun ChessBoard(
 	inAnimateMove: Boolean,
 	inSelected: Square?,
 	inTargets: Set<Square>,
+	inHint: Square? = null,
 	inBadge: Pair<Square, BadgeKind>?,
 	inCoordinates: Boolean,
 	inInteractive: Boolean,
@@ -180,7 +210,7 @@ fun ChessBoard(
 	inOnDrop: (Square, Square?) -> Unit,
 	inModifier: Modifier = Modifier,
 ) {
-	val vColors = kLocalChessColors.current
+	val vColors = ChessPlusTheme.colors
 	val vTextMeasurer = rememberTextMeasurer()
 	val vMemory = remember { BoardMemory(inPieces, inMoveId) }
 	val vPlan = remember(inMoveId) {
@@ -191,6 +221,22 @@ fun ChessBoard(
 		vMemory.moveId = inMoveId
 	}
 	val vProgress = remember(inMoveId) { Animatable(if (vPlan.isEmpty) 1f else 0f) }
+	// Retour visuel : la case d'arrivée s'illumine (vert à la réussite, rouge sur une erreur) ; sur une erreur, l'échiquier tremble.
+	val vFlash = remember { Animatable(0f) }
+	val vShake = remember { Animatable(0f) }
+	LaunchedEffect(inBadge, inMoveId) {
+		if (inBadge != null) {
+			vFlash.snapTo(1f)
+			vFlash.animateTo(0f, tween(kFlashMs))
+		}
+	}
+	LaunchedEffect(inBadge, inMoveId) {
+		if (inBadge?.second == BadgeKind.Error) {
+			for (vStep in listOf(-1f, 1f, -0.7f, 0.7f, -0.35f, 0f)) {
+				vShake.animateTo(vStep * kShakeDp, tween(45))
+			}
+		}
+	}
 	var vDragFrom by remember { mutableStateOf<Square?>(null) }
 	var vDragPosition by remember { mutableStateOf(Offset.Zero) }
 	val vPieces by rememberUpdatedState(inPieces)
@@ -205,7 +251,12 @@ fun ChessBoard(
 		}
 	}
 
-	BoxWithConstraints(inModifier.aspectRatio(1f)) {
+	BoxWithConstraints(
+		inModifier
+			.graphicsLayer { translationX = vShake.value * density }
+			.aspectRatio(1f)
+			.clip(RoundedCornerShape(ChessPlusTheme.radius.radiusSm)),
+	) {
 		val vSquareDp = maxWidth / 8
 		val vSquarePx = with(LocalDensity.current) { vSquareDp.toPx() }
 		val vGeometry = BoardGeometry(vSquarePx, inOrientation)
@@ -245,27 +296,42 @@ fun ChessBoard(
 			for (vSquare in Square.kAll) {
 				val vTopLeft = vGeometry.topLeft(vSquare)
 				val vLight = vSquare.isLight
-				drawRect(if (vLight) vColors.squareLight else vColors.squareDark, vTopLeft, vSize)
+				drawRect(if (vLight) vColors.boardLight else vColors.boardDark, vTopLeft, vSize)
 				if (inLastMove != null && (vSquare == inLastMove.from || vSquare == inLastMove.to)) {
-					drawRect(vColors.lastMove, vTopLeft, vSize)
+					drawRect(vColors.boardLast, vTopLeft, vSize)
 				}
 				if (vSquare == inSelected) {
-					drawRect(vColors.selected, vTopLeft, vSize)
+					drawRect(vColors.boardSelect, vTopLeft, vSize)
 				}
 			}
+			inBadge?.let { (inSquare, inKind) ->
+				val vAlpha = kFlashAlpha * vFlash.value
+				if (vAlpha > 0f) {
+					drawRect((if (inKind == BadgeKind.Success) vColors.success else vColors.danger).copy(alpha = vAlpha), vGeometry.topLeft(inSquare), vSize)
+				}
+			}
+			inHint?.let { inSquare ->
+				// Indice : cadre `accent` à l'intérieur de la case de la pièce à jouer, discret.
+				val vStroke = kHintStroke.dp.toPx()
+				drawRect(vColors.accent, vGeometry.topLeft(inSquare) + Offset(vStroke / 2, vStroke / 2), Size(vSquarePx - vStroke, vSquarePx - vStroke), style = Stroke(width = vStroke))
+			}
 			if (inCoordinates) {
+				// Coordonnées en mono, dans le coin de la case, de la couleur de la case opposée.
+				val vBoardPx = vSquarePx * 8
+				val vMargin = vBoardPx * kCoordinateMarginRatio
+				val vFontSize = (vBoardPx * kCoordinateRatio / density / fontScale).sp
 				for (vSquare in Square.kAll) {
 					val vTopLeft = vGeometry.topLeft(vSquare)
-					val vColor = if (vSquare.isLight) vColors.coordOnLight else vColors.coordOnDark
-					val vStyle = ChessType.kCoordinate.copy(color = vColor)
+					val vColor = if (vSquare.isLight) vColors.boardDark else vColors.boardLight
+					val vStyle = ChessPlusTheme.typography.coordinate.copy(color = vColor, fontSize = vFontSize, lineHeight = vFontSize)
 					val vBottomRow = vTopLeft.y >= vSquarePx * 7 - 1
 					val vLeftColumn = vTopLeft.x <= 1
 					if (vLeftColumn) {
-						drawText(vTextMeasurer, "${vSquare.rank + 1}", Offset(vTopLeft.x + 3.dp.toPx(), vTopLeft.y + 1.dp.toPx()), vStyle)
+						drawText(vTextMeasurer, "${vSquare.rank + 1}", Offset(vTopLeft.x + vMargin, vTopLeft.y + vMargin), vStyle)
 					}
 					if (vBottomRow) {
 						val vLayout = vTextMeasurer.measure("${'a' + vSquare.file}", vStyle)
-						drawText(vLayout, topLeft = Offset(vTopLeft.x + vSquarePx - vLayout.size.width - 3.dp.toPx(), vTopLeft.y + vSquarePx - vLayout.size.height))
+						drawText(vLayout, topLeft = Offset(vTopLeft.x + vSquarePx - vLayout.size.width - vMargin, vTopLeft.y + vSquarePx - vLayout.size.height - vMargin))
 					}
 				}
 			}
@@ -277,7 +343,7 @@ fun ChessBoard(
 		for ((vSquare, vPiece) in vPlan.fading) {
 			val vPosition = vGeometry.topLeft(vSquare)
 			Image(
-				painterResource(pieceDrawable(vPiece)),
+				rememberPiecePainter(vPiece),
 				contentDescription = null,
 				modifier = Modifier
 					.size(vSquareDp)
@@ -292,7 +358,7 @@ fun ChessBoard(
 			val vTarget = vGeometry.topLeft(vSquare)
 			val vStart = vPlan.motions[vSquare]?.let { vGeometry.topLeft(it) }
 			Image(
-				painterResource(pieceDrawable(vPiece)),
+				rememberPiecePainter(vPiece),
 				contentDescription = null,
 				modifier = Modifier
 					.size(vSquareDp)
@@ -304,46 +370,23 @@ fun ChessBoard(
 			)
 		}
 
-		// Cases d'arrivée possibles : point sur une case vide, anneau sur une prise.
+		// Coups possibles : petit point rond (24 % de la case) sur une case vide, anneau fin sur une prise.
 		Canvas(Modifier.fillMaxSize()) {
 			for (vTarget in inTargets) {
 				val vCenter = vGeometry.topLeft(vTarget) + Offset(vSquarePx / 2, vSquarePx / 2)
 				if (inPieces.containsKey(vTarget)) {
-					drawCircle(vColors.dot, radius = vSquarePx * 0.46f, center = vCenter, style = Stroke(width = vSquarePx * 0.08f))
+					val vRing = vSquarePx * kRingWidthRatio
+					drawCircle(vColors.boardHint, radius = vSquarePx * (0.5f - kRingInsetRatio) - vRing / 2, center = vCenter, style = Stroke(width = vRing))
 				} else {
-					drawCircle(vColors.dot, radius = vSquarePx * 0.16f, center = vCenter)
+					drawCircle(vColors.boardHint, radius = vSquarePx * kDotRatio / 2, center = vCenter)
 				}
-			}
-		}
-
-		inBadge?.let { (inSquare, inKind) ->
-			val vTopLeft = vGeometry.topLeft(inSquare)
-			val vRadius = vSquareDp * 0.24f
-			val vRadiusPx = vSquarePx * 0.24f
-			val vX = vTopLeft.x + vSquarePx * 0.88f - vRadiusPx
-			val vY = vTopLeft.y + vSquarePx * 0.12f - vRadiusPx
-			Box(
-				Modifier
-					.offset { IntOffset(vX.roundToInt(), vY.roundToInt()) }
-					.zIndex(2f)
-					.size(vRadius * 2)
-					.background(if (inKind == BadgeKind.Success) vColors.success else vColors.error, CircleShape)
-					.border(1.5.dp, vColors.background, CircleShape),
-				contentAlignment = Alignment.Center,
-			) {
-				Icon(
-					painterResource(if (inKind == BadgeKind.Success) R.drawable.ic_check else R.drawable.ic_close),
-					contentDescription = null,
-					tint = vColors.onPrimary,
-					modifier = Modifier.size(vRadius * 1.4f),
-				)
 			}
 		}
 
 		vDragFrom?.let { inFrom ->
 			inPieces[inFrom]?.let { inPiece ->
 				Image(
-					painterResource(pieceDrawable(inPiece)),
+					rememberPiecePainter(inPiece),
 					contentDescription = null,
 					modifier = Modifier
 						.offset { IntOffset((vDragPosition.x - vSquarePx / 2).roundToInt(), (vDragPosition.y - vSquarePx * 0.8f).roundToInt()) }

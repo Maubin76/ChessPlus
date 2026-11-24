@@ -2,6 +2,31 @@
 
 Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contient que des choix validés par Mathieu ; les propositions en attente sont dans `docs/PROGRESS.md`.
 
+## Design system ChessPlus (fourni par Mathieu le 2026-11-23, maquettes à valider sur l'appareil)
+
+Source : dossier local `chessplus-design/` (non versionné, exclu par `.git/info/exclude`) : README, captures `screens/`, consignes `guidelines/`, jetons `tokens/tokens.json`, maquettes HTML `mockups/`. Il remplace l'ambiance « Calm », la direction « Accent pleine largeur », la palette verte B, la typographie Inter seule et les icônes Material Symbols décrites plus bas, qui restent comme historique.
+
+- **Jetons** : `ui/theme/ChessPlusTokens.kt` est le fichier Kotlin généré du design system, repris tel quel (seul le paquet change ; il ne suit donc pas les conventions de nommage du projet). `ChessPlusTheme.colors / .typography / .spacing / .radius` ; aucun écran n'écrit de couleur en dur.
+- **Rayons** : `tokens.json` (3 / 6 / 10 / 20 dp) fait foi. Les captures `screens/*.png` ont été rendues avec un `tokens.css` périmé (cartes à 4 px, barre de navigation sans arrondi, couleur `streak` absente) : l'application suit `tokens.json`.
+- **Polices embarquées** (OFL) : Space Grotesk (titres), Inter (texte), JetBrains Mono (chiffres, coups, chronos) ; polices variables dans `res/font/`.
+- **Icônes au trait** 1,6 sur grille 24 (`res/drawable/ic_ln_*.xml`), converties des tracés `kIcons` des maquettes ; check, close et rejouer dessinées dans le même style.
+- **Navigation** : barre flottante à trois onglets, Accueil, Stats, Réglages. L'historique n'est plus un onglet : il s'ouvre depuis les statistiques (ligne « Historique »).
+- **Ton** : tutoiement, « puzzle » au lieu de « problème », « classement » au lieu de « cote », retours factuels sans point d'exclamation.
+- **Accueil** (maquette) : date, série de jours (flamme), puzzle du jour, liste des modes Arcade, Rush (3 minutes, comme la maquette), Survie, Entraînement (ex-ciblé ; valeur à droite : nombre de thèmes, 73), mention hors ligne. La carte « Reprendre » et le tableau de bord disparaissent : l'Arcade reprend le puzzle en cours.
+- **Widget** (demandé par Mathieu le 2026-11-24) : widget 4 × 2 de l'écran d'accueil du téléphone (RemoteViews, sans dépendance) aux couleurs du design system, clair ou sombre : « Objectif du jour 3/5 » et sa barre, puis « Puzzle du jour », son thème et son état (« Résolu » en `success`, sinon « Résoudre » en `accent`). Toucher le puzzle l'ouvre directement, toucher le reste ouvre l'application. Mis à jour à chaque puzzle terminé, à chaque changement d'objectif et toutes les 30 minutes.
+- **Sauvegarde de la progression** (demandée par Mathieu le 2026-11-24) : Réglages > Données. « Exporter ma progression » écrit une copie complète de la base utilisateur (`VACUUM INTO`, fichier `chessplus-progression-AAAAMMJJ.db`) à l'endroit choisi ; « Importer une progression » demande confirmation, vérifie le fichier (base ChessPlus d'une version connue, les plus anciennes sont migrées), puis redémarre l'application pour le mettre en place avant l'ouverture de la base. Les réglages ne font pas partie de la sauvegarde.
+- **Retours haptiques et visuels** (demandés par Mathieu le 2026-11-24) : vibreur d'Android (plus net que le retour d'interface, permission VIBRATE) : clic franc quand le dernier coup d'un puzzle est trouvé (même après une erreur), deux impulsions sèches sur un mauvais coup ; plus de vibration sur les coups intermédiaires. En même temps, la case d'arrivée s'illumine en `success` ou en `danger` (0,7 s) et, sur une erreur, l'échiquier tremble brièvement. Réglage « Vibration ».
+- **Sons** (demandés par Mathieu le 2026-11-24) : créations ChessPlus synthétisées par programme (`res/raw/sound_*.wav`) ; le jeu de sons « standard » de Lichess n'est pas libre et les autres sont sous AGPLv3+. Pièce posée (coup du joueur ou de l'adversaire, solution), prise, mauvais coup, puzzle réussi. Réglage « Sons » dans le groupe Échiquier, activé par défaut ; lecture par SoundPool.
+- **Évolution des défis** (demandée par Mathieu le 2026-11-24) : section « Défis » des statistiques, sous les records : une courbe des scores des 30 dernières parties de Survie et de Rush, avec le record et le nombre de parties.
+- **Revue de la solution** (demandée par Mathieu le 2026-11-24) : une fois un puzzle terminé (hors défis), une barre « Solution · Coup 3/4 » avec quatre boutons (début, précédent, suivant, fin) permet de rejouer la solution coup par coup, de la position avant le coup de l'adversaire jusqu'au dernier coup ; les pièces glissent d'une position à l'autre, le coup affiché est souligné dans la notation (toute la ligne, les coups à venir atténués). « Fin » revient à la position réelle.
+- **Révision** (demandée par Mathieu le 2026-11-24) : répétition espacée des puzzles ratés. Tout échec hors défis (Arcade, Entraînement, puzzle du jour, Révision, rejeu) place le puzzle au premier palier, à réviser le lendemain ; chaque réussite d'un puzzle arrivé à échéance le fait passer au palier suivant (7 puis 30 jours), et à la troisième réussite il est maîtrisé et quitte la file ; un nouvel échec le fait redescendre d'un palier seulement et le remet au lendemain ; une réussite avant l'échéance ne change rien. File plafonnée à 200 puzzles : ceux des paliers les plus bas, ratés depuis le plus longtemps, en sortent (protéger les paliers avancés est indispensable : en évinçant seulement les plus anciens, la simulation n'aboutissait à aucune maîtrise, la file se renouvelant en un mois alors que le dernier palier en dure un). Révisé le 2026-11-24 après l'étude volumétrique (`docs/VOLUMETRIE.md`) : avec 5 paliers, un retour au premier palier à chaque échec et les défis, la file grossissait sans fin. Les échéances tombent en début de journée locale. À la migration (base utilisateur v5), les puzzles ratés jamais réussis entrent dans la file. Sur l'accueil, ligne « Révision » sous l'Arcade avec le nombre de puzzles à réviser ; l'écran enchaîne les puzzles arrivés à échéance, les plus avancés d'abord (les plus proches d'être maîtrisés), puis du plus ancien au plus récent, avec la confirmation de fin de session et son récapitulatif ; « Rien à réviser. Reviens plus tard. » quand la file du jour est vide (texte court pour tenir sur deux lignes avec une grande police). Sans effet sur le classement (puzzles déjà joués).
+- **Puzzle du jour** (modifié par Mathieu le 2026-11-24) : un puzzle par date, tiré à la première demande autour du classement (graine = date) puis conservé (table `daily_puzzle`, base utilisateur v4) ; noté s'il n'a jamais été joué. Les puzzles du jour **ne s'enchaînent pas** : ni « Passer », ni « Puzzle suivant », ni enchaînement automatique. Une fois le puzzle terminé, un **calendrier** remplace le bilan : un mois à la fois (12 mois en arrière au plus), jours résolus pleins en `accent`, aujourd'hui cerclé, jour affiché en `accentSoft`, jours à venir inactifs ; toucher un jour charge son puzzle. Un jour compte comme résolu quand son puzzle a été réussi au moins une fois. Sur l'accueil, la carte s'intitule « Aujourd’hui » (plus court que « Puzzle du jour », qui était coupé à côté de « ✓ Résolu » sur le S24), affiche « ✓ Résolu » et propose « Rejouer » (bouton secondaire) une fois le puzzle d'aujourd'hui réussi. Le puzzle du jour ne touche plus au puzzle en cours de l'Arcade.
+- **Jeu** (maquette) : chrono du puzzle (Arcade, Entraînement, rejeu), compte à rebours (Rush) ou vies (Survie) en chip ; numéro du puzzle (remplacé par l'étiquette du thème en Entraînement) et camp au trait à gauche ; classement du puzzle bien en vue à droite, dans tous les modes (« CLASSEMENT » puis la valeur en mono, taille `heading` ; demandé par Mathieu le 2026-11-24) ; étiquette du thème principal affichée **seulement en Entraînement** (décision de Mathieu le 2026-11-24 : ailleurs, ce serait un indice ; la maquette la montrait en Arcade) ; notation SAN ; carte de retour à bordure `success` / `danger` ; bilan de la session (réussis, ratés, variation du classement) ; actions Indice (pièce à jouer cerclée d'`accent`), Solution (joue le coup), Retourner, Passer (un puzzle non terminé compte comme raté). « Recommencer » et le volet de bilan disparaissent ; une fois le puzzle terminé, bouton principal « Puzzle suivant ». Pas d'indice ni de solution en défi ; Passer y compte comme une erreur.
+- **Objectif quotidien** (demandé par Mathieu le 2026-11-24) : nombre de puzzles à réussir par jour (3, 5, 10, 15, 20 ou 30 ; 5 par défaut), tous modes confondus, défis compris. Sur l'accueil, une carte « Objectif du jour » sous le puzzle du jour : « 3/5 » en mono, barre de progression (`success` une fois atteint) ; pas de sous-titre (retiré à la demande de Mathieu le 2026-11-24). Dans les réglages, section « Objectif quotidien » : puzzles par jour, rappel (désactivé par défaut ; l'activer demande l'autorisation des notifications), heure du rappel (20:00 par défaut, sélecteur 24 h). Le rappel est une alarme approximative (AlarmManager, à quelques minutes près, sans permission d'alarme exacte) : à son déclenchement, une notification n'est envoyée que si l'objectif n'est pas atteint ; elle est reprogrammée chaque jour, après un redémarrage, une mise à jour ou un changement d'heure.
+- **Styles de pièces** (demandés par Mathieu le 2026-11-24) : Classique (cburnett), Géométrique (silhouettes construites sur des formes simples, grille 45 × 45 comme cburnett, création ChessPlus) et Lettres (disque clair cerné ou foncé portant l'initiale française R, D, T, F, C, P en Space Grotesk, création ChessPlus). Choix dans Réglages > Style des pièces, avec un aperçu de chaque style ; le style s'applique à l'échiquier, aux vignettes et à la promotion.
+- **Réglages** (maquette) : thèmes d'échiquier Sauge, Bois, Ardoise, Gris (variantes sombres assombries dans les proportions de la sauge), style des pièces (cburnett seul), coordonnées, confirmer les coups (Confirmer / Annuler avant de jouer), difficulté de l'Arcade (± 200 points), enchaîner automatiquement (1,2 s après une réussite), base hors ligne et « Gérer » (informations), apparence. Ajoutés dans la même charte : vibration, classement de départ, À propos. Le réglage Sons est retiré.
+- **Statistiques** (maquette) : classement et variation sur 30 jours, courbe sans bande d'incertitude, périodes 7 j / 30 j / 1 an / Tout, tuiles Résolus, Réussite, Série, Chrono record (record du Rush), activité sur 12 semaines, réussite par thème ; les autres sections suivent dans la même charte.
+
 ## Contexte d'usage (validé le 2026-11-20)
 
 - Usage à **une main**, au pouce, dans les transports : commandes en bas de l'écran, échiquier juste au-dessus.
@@ -25,7 +50,7 @@ Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contien
 
 Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 
-- Monochrome, avec **une seule exception** : un vert pour la réussite et un rouge pour l'erreur, réservés au retour visuel (inspiration Chess.com).
+- Monochrome à l'origine, avec un vert pour la réussite et un rouge pour l'erreur. **Version B verte** (choisie par Mathieu le 2026-11-23 pour s'accorder à l'icône, `docs/design/vert/propositions-vert.png`) : boutons principaux, carte « Reprendre », capsule de navigation, bouton « Indice », puces sélectionnées et interrupteurs en vert ; échiquier aux tons verts, dernier coup surligné en jaune ; fonds et cartes inchangés.
 - **Échiquier bord à bord** : toute la largeur de l'écran (384 dp sur le S24, cases de 48 dp), sans carte ni coins arrondis.
 - Police unique : **Inter** (SIL OFL), graisses 400 à 800.
 - Pièces : **cburnett** (Colin M.L. Burnett, GPLv2+), auteur cité dans les crédits.
@@ -39,15 +64,16 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 | Surface (cartes, tuiles) | `#FFFFFF` | `#1C1D1F` |
 | Texte | `#111111` | `#F2F3F4` |
 | Texte secondaire | `#8A8E95` | `#8A8E95` |
-| Bouton principal | `#111111`, icône `#F4F5F6` | `#F2F3F4`, icône `#0F1011` |
+| Bouton principal (vert) | `#2F7D4F`, texte et icône `#FFFFFF` | `#5DB37C`, texte et icône `#0F1011` |
 | Réussite (accent) | `#3E8E5A` | `#5DB37C` |
 | Erreur | `#C2483D` | `#E0675C` |
-| Case claire | `#EEF0F1` | `#A3A8AE` |
-| Case foncée | `#B5BAC0` | `#696E75` |
-| Dernier coup | accent à 24 % d'opacité | accent à 31 % |
+| Case claire | `#E7EFE4` | `#A9C2AE` |
+| Case foncée | `#7FA98A` | `#5F8768` |
+| Dernier coup | jaune `#F2E66B` à 50 % | jaune `#E8D85C` à 50 % |
 | Pièce sélectionnée | `#111111` à 24 % | `#FFFFFF` à 31 % |
 | Coups légaux (points) | `#111111` à 27 % | `#111111` à 31 % |
-| Coordonnées | sur case claire `#111111` à 27 %, sur case foncée `#FFFFFF` à 59 % | `#111111` à 31 % / `#FFFFFF` à 43 % |
+| Coordonnées | sur case claire `#557A61` à 50 %, sur case foncée `#FFFFFF` à 70 % | `#405C49` à 50 % / `#FFFFFF` à 60 % |
+| Sous-titre de la carte « Reprendre » | texte de la carte à 80 % | texte de la carte à 80 % |
 
 ### Typographie (Inter)
 
@@ -66,6 +92,7 @@ Référence : `docs/design/suggestions/suggestion-10-pleine-largeur.png`.
 - Message d'état : consigne (« Les blancs jouent »), puis retour visuel en grand (« Bon coup ! » en vert avec icône, erreur en rouge).
 - Échiquier pleine largeur ; bon coup signalé par une **pastille ✓ verte** sur la case d'arrivée et le dernier coup surligné en vert.
 - Bas : tuile « Recommencer », gros bouton rond « Indice », tuile « Suivant » (grisée tant que le problème n'est pas terminé).
+- Indice en deux temps (modifié par Mathieu le 2026-11-23) : le premier appui met en surbrillance la pièce à jouer (case légèrement teintée de bleu, sans cadre, la couleur des indices dans les statistiques ; adoucie à la demande de Mathieu) avec « Indice / Jouez le fou en surbrillance » et la mention « Touchez encore Indice pour voir le coup » ; le second appui joue le coup comme avant. Les deux appuis sur un même coup comptent pour un seul indice ; le premier suffit à compter le problème comme échoué.
 
 ## Maquettes (validées le 2026-11-20)
 
@@ -107,6 +134,11 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | **Longueur** (4) | Un coup (`oneMove`), Court (`short`), Long (`long`), Très long (`veryLong`) |
 | **Évaluation et origine** (6) | Avantage (`advantage`), Gain décisif (`crushing`), Égalisation (`equality`), Partie de maître (`master`), Maître contre maître (`masterVsMaster`), Super grand maître (`superGM`) |
 
+## Icône de l'application (validée le 2026-11-23)
+
+- Proposition 9 « Halo » (`docs/design/icones/icone-09.png`) : fond en dégradé radial vert (`#4FA06B` au centre, `#1F4D33` au bord), cavalier cburnett blanc au contour vert foncé (`#1E4A2E`) avec une ombre douce, roi et dame en silhouettes vertes (`#2E6B48`) inclinées de 12° vers l'extérieur.
+- Icône adaptative (`res/mipmap-anydpi/ic_launcher.xml`) : fond et premier plan en PNG pour chaque densité, contenu dans la zone visible de 72 dp ; calque monochrome (silhouette du cavalier) pour les icônes à thème d'Android.
+
 ## Échiquier et pièces (validé le 2026-11-20)
 
 - Pièces de style **classique Staunton**.
@@ -124,11 +156,11 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 | # | Écran | Contenu |
 | --- | --- | --- |
 | 1 | Choix du niveau | Premier lancement : Débutant 800, Intermédiaire 1200, Confirmé 1600, Avancé 2000, ou « Je connais ma cote » (saisie libre) ; modifiable dans les réglages |
-| 2 | Accueil | Tableau de bord : nombre de problèmes résolus ; carte « Reprendre le problème » si un problème est en cours ; bouton « S'entraîner » ; accès à l'entraînement ciblé ; icône des réglages |
-| 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = solution coup par coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
+| 2 | Accueil | Tableau de bord (résolus, série, réussite, cote ; ouvre les statistiques) ; carte « Reprendre » si un problème est en cours ; modes de jeu en deux groupes (voir « Modes de jeu ») ; icône des réglages |
+| 3 | Problème | Plein écran : échiquier, consigne, retour visuel, commandes en bas (Recommencer, Indice = pièce à jouer puis coup, Suivant) ; 3a promotion (choix de la pièce) ; 3b bilan en volet bas (résultat, cote et thèmes révélés, évolution de la cote, lien Lichess, Suivant) |
 | 4 | Entraînement ciblé | Thèmes par familles ; difficulté relative (plus facile, à mon niveau, plus difficile) **ou** tranche précise ; bouton « Commencer » |
 | 5 | Historique | Onglets Tous, Réussis, Échoués ; une ligne relance le problème, sans effet sur la cote |
-| 6 | Statistiques | Courbe de la cote, taux de réussite par thème (écran séparé, l'accueil reste sobre) |
+| 6 | Statistiques | Sections détaillées ci-dessous ; une fiche par thème (en attente de validation sur `road-to-v2`) |
 | 7 | Réglages | Thème, vibration, sons, coordonnées, niveau, crédits |
 
 - **Barre de navigation en bas** à trois onglets : Accueil, Historique, Statistiques. Elle est masquée sur l'écran Problème (plein écran), le choix du niveau et les réglages.
@@ -147,6 +179,38 @@ La famille « Évaluation et origine » s'ajoute aux cinq familles validées pou
 - Écran d'accueil : **tableau de bord** destiné à accueillir des statistiques plus tard ; en v1, il affiche seulement le **nombre de problèmes résolus**.
 - Premier lancement : l'utilisateur **choisit son niveau** de départ.
 - Thèmes : noms en français, regroupés en familles (motifs tactiques, mats, finales, phase de jeu, longueur).
+
+## Modes de jeu (demandés par Mathieu le 2026-11-23, maquettes à valider)
+
+- Accueil en deux groupes de cartes : **Entraînement** = Arcade (l'entraînement continu, adapté à la cote, carte verte) et Ciblé ; **Défis** = Survie et Rush, avec leur record en haut à droite de la carte. Le tableau de bord tient en une carte (résolus, série, réussite, cote) pour que tous les modes soient visibles sans défiler ; l'écran défile si la police est agrandie.
+- **Survie** : 3 vies ; difficulté progressive indépendante du joueur (modifiée par Mathieu le 2026-11-24) : premier puzzle à 400, puis 50 points de plus à chaque puzzle ; chaque puzzle est cherché à ± 25 de la cible (élargi par pas de 100 s'il n'y en a pas), pour que la difficulté monte régulièrement ; les puzzles déjà joués hors de la partie peuvent revenir (seuls ceux de la partie sont exclus), pour que chaque Survie reparte vraiment des puzzles faciles. Un mauvais coup retire une vie, montre le coup attendu 1,2 s (« Il fallait jouer a2 → e6 »), puis passe au suivant ; à zéro vie, la partie s'arrête. Vies en cœurs dans la barre du haut.
+- **Rush** : 5 minutes ; problèmes autour de la cote du joueur (± 100, élargi si besoin). Le chronomètre part au premier problème et passe en rouge dans les 30 dernières secondes. Un mauvais coup passe directement au problème suivant.
+- Dans les deux défis : un problème réussi enchaîne sur le suivant après 0,5 s ; pas d'indice ni de « Recommencer » ; score sous l'échiquier et bouton « Abandonner ». Aucun problème n'est reproposé dans une même partie.
+- Fin d'une session d'Arcade ou d'Entraînement (demandé par Mathieu le 2026-11-24) : dès qu'au moins un puzzle est terminé, le retour (flèche ou geste) ouvre « Mettre fin à la session ? » (« Continuer » / « Terminer » ; en Arcade le puzzle en cours reste gardé pour la reprise, en Entraînement il ne l'est pas), puis le récapitulatif « Session terminée » : classement et variation de la session, six tuiles : durée de la session (de l'ouverture de l'écran à « Terminer » : « 45 s », « 12 min », « 1 h 05 »), puzzles joués, réussis, ratés, réussite, temps moyen ; « Accueil » quitte l'écran. Sans puzzle terminé, le retour quitte directement.
+- Fin de Survie et de Rush (demandés par Mathieu le 2026-11-24) : fenêtre récapitulative « Survie terminée » ou « Rush terminé » (« Les 3 minutes sont écoulées. ») avec quatre tuiles, puzzles réussis, ratés, temps moyen d'un puzzle terminé (réussi ou raté, à partir du moment où le joueur peut jouer) et record absolu ; « Nouveau record. » le cas échéant ; boutons « Fermer » et « Rejouer ». Une fois fermée, l'écran garde « Accueil » et « Rejouer ».
+- Fin de partie : titre (« Plus de vies », « Temps écoulé », « Partie terminée »), score, « Nouveau record ! » ou le record, problème le plus difficile réussi ; boutons « Accueil » et « Rejouer ».
+- Les défis ne modifient pas le classement (choix de Mathieu) ; depuis le 2026-11-24, **chaque puzzle de défi compte** dans les statistiques, l'historique et l'objectif quotidien (tentative non notée : réussi, ou raté sur une erreur ou « Passer » ; un puzzle interrompu par la fin du temps ou un abandon ne compte pas). Chaque partie est aussi enregistrée à part pour les records (table `challenge_run`, base utilisateur v3). Quitter une partie en cours compte comme un abandon ; une partie abandonnée sans aucun problème réussi n'est pas enregistrée.
+
+## Statistiques (demandées par Mathieu le 2026-11-23, maquettes à valider)
+
+Maquettes : captures `app/src/screenshotTestDebug/reference/com/chessplus/app/StatsScreenShotsKt/` (historique factice de quatre mois, calculé par le vrai `StatsCalculator`).
+
+- **Écran Statistiques**, de haut en bas :
+  - quatre tuiles : cote et variation sur 30 jours, résolus sur le total, série de jours et record, réussite ;
+  - courbe de la cote avec la bande d'incertitude Glicko-2 (cote ± écart), sur 7 jours, 30 jours ou tout ;
+  - calendrier d'activité façon GitHub (17 semaines, lundi en haut, cinq niveaux), série en cours, plus longue série, réussites d'affilée ;
+  - problèmes par semaine (8 semaines) ;
+  - forces et faiblesses : motifs, mats et finales joués au moins 3 fois, triés par réussite ou par cote du thème ; un thème ouvre sa fiche ;
+  - à travailler : les trois thèmes les plus faibles (au moins 5 problèmes) et « S'entraîner sur ces thèmes » (entraînement ciblé à mon niveau) ;
+  - réussite par famille (motifs, mats, finales, phase de jeu), par tranche de difficulté de 200 points (au moins 3 problèmes), selon la longueur de la solution et selon le moment de la journée ;
+  - fin des problèmes en barre empilée : réussi du premier coup, indice ou solution, erreur ;
+  - temps de résolution : moyenne des réussites, thèmes le plus rapide et le plus lent, médiane par semaine ;
+  - coup de la première erreur ou du premier indice (1er, 2e, 3e et plus) ;
+  - records (meilleure cote, plus longue série, réussites d'affilée, problème le plus difficile réussi) et couverture des 73 thèmes.
+- **Fiche d'un thème** : cote du thème (Glicko-2 rejoué sur les seules tentatives du thème), réussite, nombre de problèmes, meilleur réussi ; courbe de la cote du thème avec sa bande ; réussite glissante sur 10 problèmes ; temps moyen ; dix derniers problèmes (un toucher les rejoue) ; bouton « S'entraîner sur ce thème ».
+- **Accueil** : tuiles « Série » et « Réussite » sous le compteur de problèmes résolus ; elles ouvrent l'onglet Statistiques.
+- **Graphiques** (recommandations de visualisation) : une seule teinte (la couleur principale) pour une mesure ; traits de 2 dp ; extrémités arrondies posées sur la ligne de base ; 2 dp entre barres et segments ; valeurs dans la couleur du texte ; pas de radar. Seule la barre empilée utilise trois couleurs (vert `#3E8E5A`, bleu `#3D6FB6`, rouge `#C2483D` en clair ; `#4FA06B`, `#6D8FD8`, `#E0675C` en sombre), vérifiées pour les daltoniens et toujours accompagnées d'une légende chiffrée.
+- **Nouvelles données** (base utilisateur v2, migration automatique) : durée d'une tentative (du premier coup de l'adversaire à la fin, ignorée au-delà de 15 min), coup de la première erreur ou du premier indice, écart de cote après la tentative. Les tentatives antérieures n'ont pas ces données : les cartes concernées l'indiquent.
 
 ## Cote (validé le 2026-11-20)
 

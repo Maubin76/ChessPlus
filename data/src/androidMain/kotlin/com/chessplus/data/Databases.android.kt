@@ -14,8 +14,11 @@ import java.io.File
 private const val kVersionSuffix = ".version"
 
 /**
- * Copie `assets/puzzles.db` dans le répertoire des bases si elle est absente ou si sa version
- * diffère de [PuzzleDatabase.kVersion]. À appeler hors du fil principal (copie de ~37 Mo).
+ * Copie `assets/puzzles.db` dans le répertoire des bases si elle est absente, si sa version
+ * diffère de [PuzzleDatabase.kVersion] ou si l'application a été installée ou mise à jour depuis la
+ * dernière copie : la base embarquée change avec l'application (régénérée chaque mois par la CI,
+ * nouvelles règles du générateur) sans que son schéma change. À appeler hors du fil principal
+ * (copie de ~40 Mo, une fois par mise à jour).
  *
  * La copie est faite explicitement plutôt qu'avec `createFromAsset`, pour ne pas dépendre de la
  * prise en charge des bases préremplies par le driver SQLite intégré.
@@ -23,7 +26,8 @@ private const val kVersionSuffix = ".version"
 fun installPuzzleDatabase(inContext: Context) {
 	val vTarget = inContext.getDatabasePath(PuzzleDatabase.kFileName)
 	val vMarker = File(vTarget.path + kVersionSuffix)
-	val vExpected = PuzzleDatabase.kVersion.toString()
+	val vInstalledAt = inContext.packageManager.getPackageInfo(inContext.packageName, 0).lastUpdateTime
+	val vExpected = "${PuzzleDatabase.kVersion}@$vInstalledAt"
 	if (vTarget.isFile && vMarker.isFile && vMarker.readText() == vExpected) {
 		return
 	}

@@ -1,10 +1,12 @@
 package com.chessplus.app.navigation
 
 import androidx.lifecycle.SavedStateHandle
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.Difficulty
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.ui.components.NavTab
+import com.chessplus.core.model.Theme
 import com.chessplus.core.model.ThemeSet
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -25,10 +27,15 @@ class NavigationTest {
 			Destination.Home,
 			Destination.History,
 			Destination.Stats,
+			Destination.ThemeStats(Theme.Fork),
 			Destination.Settings,
 			Destination.Targeted,
 			Destination.Game(GameMode.Continuous),
+			Destination.Game(GameMode.Review),
 			Destination.Game(GameMode.Replay("00sHx")),
+			Destination.Game(GameMode.Daily("20261124", "00sJ9")),
+			Destination.Game(GameMode.Challenge(ChallengeKind.Survival)),
+			Destination.Game(GameMode.Challenge(ChallengeKind.Rush)),
 			Destination.Game(GameMode.Targeted(TrainingCriteria(ThemeSet.parse("fork zugzwang smotheredMate"), Difficulty.Range, 900..1300))),
 		)
 		for (vDestination in vDestinations) {
@@ -57,11 +64,11 @@ class NavigationTest {
 	fun tabs() {
 		val vNavigation = NavigationViewModel(SavedStateHandle())
 		vNavigation.initialize(Destination.Home)
-		vNavigation.navigate(Destination.Settings)
+		vNavigation.navigate(Destination.Targeted)
 		vNavigation.selectTab(NavTab.Stats)
 		assertEquals(listOf(Destination.Home, Destination.Stats), vNavigation.backStack.map { it.destination })
-		vNavigation.selectTab(NavTab.History)
-		assertEquals(listOf(Destination.Home, Destination.History), vNavigation.backStack.map { it.destination })
+		vNavigation.selectTab(NavTab.Settings)
+		assertEquals(listOf(Destination.Home, Destination.Settings), vNavigation.backStack.map { it.destination })
 		vNavigation.selectTab(NavTab.Home)
 		assertEquals(listOf<Destination>(Destination.Home), vNavigation.backStack.map { it.destination })
 	}

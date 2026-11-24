@@ -23,6 +23,75 @@ interface PuzzleProvider {
 	 * Indique si le problème n'a jamais été joué (seul un premier essai modifie la cote).
 	 */
 	suspend fun isNew(inId: String): Boolean
+
+	/**
+	 * Retourne un problème de défi autour de la cote [inCenter] (première tranche de demi-largeur
+	 * [inHalfWidth], élargie s'il le faut), hors des problèmes [inExclude] déjà vus dans la partie,
+	 * ou null si aucun ne convient. Si [inIncludeSeen], les problèmes déjà joués hors de la partie
+	 * peuvent revenir.
+	 */
+	suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inIncludeSeen: Boolean, inExclude: Set<String>): Puzzle?
+}
+
+/**
+ * Réglages qui modifient le déroulement d'un puzzle, lus à chaque usage.
+ */
+interface GamePreferences {
+	/** Vrai si un coup doit être confirmé avant d'être joué. */
+	val confirmMoves: Boolean
+
+	/** Vrai pour passer au puzzle suivant après une réussite. */
+	val autoNext: Boolean
+
+	/** Écart entre la difficulté visée en Arcade et le classement du joueur. */
+	val difficultyOffset: Int
+
+	companion object {
+		/** Réglages neutres : ni confirmation, ni enchaînement, difficulté normale. */
+		val kDefault = object : GamePreferences {
+			override val confirmMoves = false
+			override val autoNext = false
+			override val difficultyOffset = 0
+		}
+	}
+}
+
+/**
+ * Puzzles du jour : un puzzle attribué à chaque date, et les jours déjà résolus.
+ */
+interface DailyStore {
+	/**
+	 * Retourne le puzzle du jour [inDay] (« yyyyMMdd »), tiré et conservé à la première demande.
+	 */
+	suspend fun puzzleFor(inDay: String): Puzzle?
+
+	/**
+	 * Retourne les jours dont le puzzle a été réussi au moins une fois.
+	 */
+	suspend fun solvedDays(): Set<String>
+
+	companion object {
+		/** Aucun puzzle du jour (tests des autres modes). */
+		val kNone = object : DailyStore {
+			override suspend fun puzzleFor(inDay: String): Puzzle? = null
+			override suspend fun solvedDays(): Set<String> = emptySet()
+		}
+	}
+}
+
+/**
+ * Enregistrement des parties de défi.
+ */
+interface ChallengeStore {
+	/**
+	 * Retourne le meilleur score du défi, ou null s'il n'a jamais été joué.
+	 */
+	suspend fun best(inKind: ChallengeKind): Int?
+
+	/**
+	 * Enregistre une partie terminée.
+	 */
+	suspend fun save(inKind: ChallengeKind, inScore: Int, inBestPuzzleRating: Int?, inDurationMs: Long)
 }
 
 /**
@@ -44,9 +113,20 @@ interface ProgressStore {
 	suspend fun currentRating(): PlayerRating
 
 	/**
-	 * Enregistre le résultat d'un problème et retourne les cotes avant et après.
+	 * Enregistre le résultat d'un problème et retourne les cotes avant et après. [inDurationMs] et
+	 * [inFailedAtMove] alimentent les statistiques (null si inconnus) ; [inReviewable] est faux pour
+	 * les défis, qui n'alimentent pas la file de révision.
 	 */
-	suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean): RecordedResult
+	suspend fun record(
+		inPuzzle: Puzzle,
+		inResult: PuzzleResult,
+		inMistakes: Int,
+		inRevealed: Int,
+		inRated: Boolean,
+		inDurationMs: Long?,
+		inFailedAtMove: Int?,
+		inReviewable: Boolean = true,
+	): RecordedResult
 
 	/**
 	 * Retourne le dernier résultat enregistré pour un problème, ou null.

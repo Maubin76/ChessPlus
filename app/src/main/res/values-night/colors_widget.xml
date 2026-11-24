@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Couleurs du widget (RemoteViews, sans accès au thème Compose) : jetons du design system, thème sombre. -->
+<resources>
+	<color name="widget_surface">#FF1B1D1F</color>
+	<color name="widget_line">#FF2A2D30</color>
+	<color name="widget_ink">#FFECEAE5</color>
+	<color name="widget_ink_muted">#FF9A9DA1</color>
+	<color name="widget_accent">#FF5CBFA5</color>
+	<color name="widget_track">#FF0C0D0E</color>
+	<color name="widget_success">#FF6CC98F</color>
+</resources>

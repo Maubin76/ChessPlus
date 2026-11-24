@@ -27,9 +27,13 @@ import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.chessplus.app.game.ChallengeKind
+import com.chessplus.app.game.DailyDays
+import com.chessplus.app.widget.ChessPlusWidget
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.GameScreen
 import com.chessplus.app.game.GameViewModel
+import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.history.HistoryScreen
 import com.chessplus.app.history.HistoryViewModel
 import com.chessplus.app.home.HomeScreen
@@ -42,10 +46,12 @@ import com.chessplus.app.navigation.tab
 import com.chessplus.app.settings.SettingsScreen
 import com.chessplus.app.stats.StatsScreen
 import com.chessplus.app.stats.StatsViewModel
+import com.chessplus.app.stats.ThemeStatsScreen
+import com.chessplus.app.stats.ThemeStatsViewModel
 import com.chessplus.app.training.TargetedScreen
 import com.chessplus.app.training.TargetedViewModel
-import com.chessplus.app.ui.theme.ChessType
-import com.chessplus.app.ui.theme.kLocalChessColors
+import com.chessplus.app.ui.theme.ChessPlusTheme
+import com.chessplus.core.model.ThemeSet
 import kotlinx.coroutines.launch
 
 /**
@@ -53,7 +59,14 @@ import kotlinx.coroutines.launch
  * retour système, et écran courant avec ses propres ViewModels.
  */
 @Composable
-fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> Unit) {
+fun ChessPlusApp(
+	inContainer: AppContainer,
+	inVersion: String,
+	inOnExit: () -> Unit,
+	inOnRestart: () -> Unit = {},
+	inOpen: String? = null,
+	inOnOpened: () -> Unit = {},
+) {
 	val vNavigation: NavigationViewModel = viewModel()
 	val vSettings by inContainer.settingsStore.settings.collectAsStateWithLifecycle()
 	val vScope = rememberCoroutineScope()
@@ -62,10 +75,18 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 			vNavigation.initialize(if (inContainer.hasPlayer()) Destination.Home else Destination.Level(firstLaunch = true))
 		}
 	}
+	// Widget : ouvre le puzzle du jour une fois la navigation prête (et le joueur créé).
+	LaunchedEffect(inOpen, vNavigation.isInitialized) {
+		if (inOpen == ChessPlusWidget.kOpenDaily && vNavigation.isInitialized && inContainer.hasPlayer()) {
+			val vDay = DailyDays.keyOf(System.currentTimeMillis())
+			inContainer.dailyStore.puzzleFor(vDay)?.let { vNavigation.navigate(Destination.Game(GameMode.Daily(vDay, it.id))) }
+			inOnOpened()
+		}
+	}
 	val vEntry = vNavigation.backStack.lastOrNull()
 	if (vEntry == null) {
-		Box(Modifier.fillMaxSize().background(kLocalChessColors.current.background), contentAlignment = Alignment.Center) {
-			Text(stringResource(R.string.loading), style = ChessType.kBody, color = kLocalChessColors.current.muted)
+		Box(Modifier.fillMaxSize().background(ChessPlusTheme.colors.surface), contentAlignment = Alignment.Center) {
+			Text(stringResource(R.string.loading), style = ChessPlusTheme.typography.body, color = ChessPlusTheme.colors.inkMuted)
 		}
 		return
 	}
@@ -96,18 +117,42 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 					)
 					Destination.Home -> HomeScreen(
 						inViewModel = viewModel(factory = HomeViewModel.factory(inContainer)),
-						inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
-						inOnTargeted = { vNavigation.navigate(Destination.Targeted) },
-						inOnSettings = { vNavigation.navigate(Destination.Settings) },
+						inOnDaily = { vNavigation.navigate(Destination.Game(GameMode.Daily(it.day, it.puzzleId))) },
+						inOnArcade = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
+						inOnTraining = { vNavigation.navigate(Destination.Targeted) },
+						inOnReview = { vNavigation.navigate(Destination.Game(GameMode.Review)) },
+						inOnChallenge = { vNavigation.navigate(Destination.Game(GameMode.Challenge(it))) },
 						inOnTab = vNavigation::selectTab,
 					)
 					Destination.History -> HistoryScreen(
 						inViewModel = viewModel(factory = HistoryViewModel.factory(inContainer)),
 						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
+						inOnBack = vBack,
+					)
+					Destination.Stats -> StatsScreen(
+						inViewModel = viewModel(factory = StatsViewModel.factory(inContainer)),
+						inOnTheme = { vNavigation.navigate(Destination.ThemeStats(it)) },
+						inOnTrainThemes = { vNavigation.navigate(Destination.Game(GameMode.Targeted(TrainingCriteria(themes = ThemeSet.of(it))))) },
+						inOnHistory = { vNavigation.navigate(Destination.History) },
 						inOnTab = vNavigation::selectTab,
 					)
-					Destination.Stats -> StatsScreen(viewModel(factory = StatsViewModel.factory(inContainer)), vNavigation::selectTab)
-					Destination.Settings -> SettingsScreen(inContainer.settingsStore, inVersion, vBack) { vNavigation.navigate(Destination.Level(firstLaunch = false)) }
+					is Destination.ThemeStats -> ThemeStatsScreen(
+						inViewModel = viewModel(factory = ThemeStatsViewModel.factory(inContainer, vDestination.theme)),
+						inTheme = vDestination.theme,
+						inOnBack = vBack,
+						inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Targeted(TrainingCriteria(themes = ThemeSet.of(vDestination.theme))))) },
+						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
+					)
+					Destination.Settings -> SettingsScreen(
+						inStore = inContainer.settingsStore,
+						inVersion = inVersion,
+						inLoadBaseInfo = inContainer::offlineBaseInfo,
+						inOnLevel = { vNavigation.navigate(Destination.Level(firstLaunch = false)) },
+						inOnTab = vNavigation::selectTab,
+						inExport = inContainer::exportProgress,
+						inStageImport = inContainer::stageImport,
+						inRestart = inOnRestart,
+					)
 					Destination.Targeted -> TargetedScreen(
 						inViewModel = viewModel(factory = TargetedViewModel.factory(inContainer)),
 						inOnBack = vBack,
@@ -118,11 +163,18 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inTitle = stringResource(
 							when (vDestination.mode) {
 								GameMode.Continuous -> R.string.game_title
+								GameMode.Review -> R.string.game_title_review
 								is GameMode.Targeted -> R.string.game_title_targeted
 								is GameMode.Replay -> R.string.game_title_replay
+								is GameMode.Daily -> R.string.game_title_daily
+								is GameMode.Challenge -> when (vDestination.mode.kind) {
+									ChallengeKind.Survival -> R.string.game_title_survival
+									ChallengeKind.Rush -> R.string.game_title_rush
+								}
 							}
 						),
 						inVibration = vSettings.vibration,
+						inSounds = vSettings.sounds,
 						inCoordinates = vSettings.coordinates,
 						inOnBack = vBack,
 					)

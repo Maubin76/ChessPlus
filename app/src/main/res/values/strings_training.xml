@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes de l'écran Entraînement (ex-entraînement ciblé). -->
+<resources>
+	<string name="train_title">Entraînement</string>
+	<string name="train_section_difficulty">Difficulté</string>
+	<string name="train_easier">Plus facile</string>
+	<string name="train_level">Ton niveau</string>
+	<string name="train_harder">Plus dur</string>
+	<string name="train_range">Tranche précise</string>
+	<string name="train_range_value">De %1$s à %2$s</string>
+	<string name="train_section_themes">Thèmes</string>
+	<string name="train_all_themes">Tous les thèmes</string>
+	<string name="train_family_all">Tout choisir</string>
+	<string name="train_family_none">Tout retirer</string>
+	<string name="train_counting">Calcul…</string>
+	<plurals name="train_count">
+		<item quantity="one">%s puzzle disponible</item>
+		<item quantity="other">%s puzzles disponibles</item>
+	</plurals>
+	<string name="train_start">Commencer</string>
+</resources>

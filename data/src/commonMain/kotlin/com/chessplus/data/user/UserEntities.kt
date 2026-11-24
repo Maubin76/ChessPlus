@@ -23,6 +23,12 @@ import com.chessplus.core.puzzle.PuzzleResult
  * @property revealedCount nombre de coups de la solution montrés.
  * @property playerRatingBefore cote du joueur avant la tentative.
  * @property playerRatingAfter cote du joueur après la tentative.
+ * @property durationMs durée de résolution (du premier coup possible au résultat), ou null si inconnue
+ *   (tentatives d'avant la version 2 de la base, problème repris après une interruption).
+ * @property failedAtMove numéro du coup du joueur (à partir de 1) où le problème a échoué (erreur ou
+ *   indice), ou null s'il est réussi ou si l'information manque.
+ * @property playerDeviationAfter écart de cote du joueur après la tentative (Glicko-2), ou null si
+ *   la tentative n'est pas notée ou si l'information manque.
  */
 @Entity(
 	tableName = "attempt",
@@ -41,6 +47,9 @@ data class AttemptEntity(
 	val revealedCount: Int,
 	val playerRatingBefore: Double,
 	val playerRatingAfter: Double,
+	val durationMs: Long? = null,
+	val failedAtMove: Int? = null,
+	val playerDeviationAfter: Double? = null,
 )
 
 /**
@@ -115,6 +124,72 @@ data class ActiveSessionEntity(
 	val resultRecorded: Boolean,
 	val startedAt: Long,
 )
+
+/**
+ * Partie terminée d'un défi (Survie, Rush), sans effet sur la cote.
+ *
+ * @property id identifiant technique.
+ * @property kind défi : « survival » ou « rush ».
+ * @property playedAt date de fin de la partie (millisecondes).
+ * @property score nombre de problèmes réussis.
+ * @property bestPuzzleRating cote du problème le plus difficile réussi, ou null si aucun.
+ * @property durationMs durée de la partie.
+ */
+@Entity(
+	tableName = "challenge_run",
+	indices = [Index("kind", "score")],
+)
+data class ChallengeRunEntity(
+	@PrimaryKey(autoGenerate = true) val id: Long = 0,
+	val kind: String,
+	val playedAt: Long,
+	val score: Int,
+	val bestPuzzleRating: Int?,
+	val durationMs: Long,
+)
+
+/**
+ * Puzzle du jour attribué à une date (tiré une fois, puis conservé pour pouvoir le rejouer depuis le calendrier).
+ *
+ * @property day jour, au format « yyyyMMdd ».
+ * @property puzzleId identifiant Lichess du puzzle.
+ * @property assignedAt date du tirage (millisecondes).
+ */
+@Entity(tableName = "daily_puzzle")
+data class DailyPuzzleEntity(
+	@PrimaryKey val day: String,
+	val puzzleId: String,
+	val assignedAt: Long,
+)
+
+/**
+ * Puzzle à réviser (répétition espacée) : entré après un échec, revu à intervalles croissants
+ * tant qu'il est réussi, puis retiré une fois maîtrisé.
+ *
+ * @property puzzleId identifiant Lichess du puzzle.
+ * @property level palier de l'intervalle (indice dans [ProgressRepository.kReviewIntervalsDays]).
+ * @property dueAt date à partir de laquelle le puzzle est à réviser (millisecondes).
+ * @property addedAt date du dernier échec, entrée dans la file ou nouvel échec (millisecondes) :
+ *   quand la file déborde, les puzzles des paliers les plus bas ratés depuis le plus longtemps en sortent.
+ */
+@Entity(
+	tableName = "review_item",
+	indices = [Index("dueAt")],
+)
+data class ReviewItemEntity(
+	@PrimaryKey val puzzleId: String,
+	val level: Int,
+	val dueAt: Long,
+	val addedAt: Long,
+)
+
+/**
+ * Meilleur score d'un défi.
+ *
+ * @property kind défi.
+ * @property score meilleur score.
+ */
+data class ChallengeBest(val kind: String, val score: Int)
 
 /**
  * Point de l'évolution de la cote du joueur.

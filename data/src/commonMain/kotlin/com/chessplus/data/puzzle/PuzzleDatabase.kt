@@ -19,7 +19,7 @@ abstract class PuzzleDatabase : RoomDatabase() {
 	abstract fun puzzleDao(): PuzzleDao
 
 	companion object {
-		/** Version du schéma ; à incrémenter à chaque nouvelle base embarquée. */
+		/** Version du schéma (la base embarquée est de toute façon recopiée à chaque mise à jour de l'application). */
 		const val kVersion = 1
 
 		/** Nom du fichier de la base, dans les assets comme sur l'appareil. */

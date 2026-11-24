@@ -2,6 +2,7 @@ package com.chessplus.app.game
 
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Move
+import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
 import com.chessplus.core.model.Square
 import com.chessplus.core.model.ThemeSet
@@ -13,6 +14,7 @@ import com.chessplus.core.rating.EloRatingSystem
 import com.chessplus.core.rating.PlayerRating
 import com.chessplus.core.rules.defaultChessRules
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -49,14 +51,51 @@ class GameControllerTest {
 		/** Modes demandés, dans l'ordre. */
 		val modes = mutableListOf<GameMode>()
 
+		/** Cotes visées des problèmes demandés, dans l'ordre. */
+		val ratings = mutableListOf<Double>()
+
 		/** Premier problème différent de l'exclu. */
 		override suspend fun next(inRating: Double, inExcludeId: String?, inMode: GameMode): Puzzle? {
 			modes.add(inMode)
+			ratings.add(inRating)
 			return list.firstOrNull { it.id != inExcludeId }
 		}
 
 		/** Nouveau si jamais joué. */
 		override suspend fun isNew(inId: String): Boolean = inId !in played
+
+		/** Cotes visées des problèmes de défi demandés, dans l'ordre. */
+		val centers = mutableListOf<Int>()
+
+		/** Demi-largeurs de recherche des problèmes de défi demandés, dans l'ordre. */
+		val halfWidths = mutableListOf<Int>()
+
+		/** Acceptation des problèmes déjà joués, pour chaque problème de défi demandé. */
+		val includeSeen = mutableListOf<Boolean>()
+
+		/** Premier problème pas encore vu dans la partie. */
+		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inIncludeSeen: Boolean, inExclude: Set<String>): Puzzle? {
+			centers.add(inCenter)
+			halfWidths.add(inHalfWidth)
+			includeSeen.add(inIncludeSeen)
+			return list.firstOrNull { it.id !in inExclude }
+		}
+	}
+
+	/**
+	 * Parties de défi en mémoire.
+	 */
+	private class FakeChallenges(var bestScore: Int? = null) : ChallengeStore {
+		/** Parties enregistrées (défi, score). */
+		val saved = mutableListOf<Pair<ChallengeKind, Int>>()
+
+		/** Meilleur score. */
+		override suspend fun best(inKind: ChallengeKind): Int? = bestScore
+
+		/** Enregistrement. */
+		override suspend fun save(inKind: ChallengeKind, inScore: Int, inBestPuzzleRating: Int?, inDurationMs: Long) {
+			saved.add(inKind to inScore)
+		}
 	}
 
 	/**
@@ -69,6 +108,12 @@ class GameControllerTest {
 		/** Résultats enregistrés (problème, résultat, noté). */
 		val records = mutableListOf<Triple<String, PuzzleResult, Boolean>>()
 
+		/** Passage par la file de révision, pour chaque enregistrement. */
+		val reviewable = mutableListOf<Boolean>()
+
+		/** Durée et coup de l'échec de chaque enregistrement. */
+		val details = mutableListOf<Pair<Long?, Int?>>()
+
 		/** Dernier résultat par problème. */
 		private val last = mutableMapOf<String, RecordedResult>()
 
@@ -76,7 +121,9 @@ class GameControllerTest {
 		override suspend fun currentRating(): PlayerRating = rating
 
 		/** Enregistre et met à jour la cote si le problème est noté. */
-		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean): RecordedResult {
+		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean, inDurationMs: Long?, inFailedAtMove: Int?, inReviewable: Boolean): RecordedResult {
+			details.add(inDurationMs to inFailedAtMove)
+			reviewable.add(inReviewable)
 			val vBefore = rating.rating
 			if (inRated) {
 				rating = EloRatingSystem().update(rating, inPuzzle.rating, inResult)
@@ -115,7 +162,41 @@ class GameControllerTest {
 		inProgress: ProgressStore = FakeProgress(),
 		inSessions: SessionStore = FakeSessions(),
 		inMode: GameMode = GameMode.Continuous,
-	) = GameController(this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, clock = { 42L }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
+		inChallenges: ChallengeStore = FakeChallenges(),
+		inRushDurationMs: Long = ChallengeRun.kRushDurationMs,
+		inPreferences: GamePreferences = GamePreferences.kDefault,
+		inDaily: DailyStore = DailyStore.kNone,
+	) = GameController(
+		this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, inChallenges, clock = { 42L }, preferences = inPreferences, daily = inDaily,
+		opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0, challengeNextDelayMs = 0, solutionDelayMs = 0, rushDurationMs = inRushDurationMs,
+		autoNextDelayMs = 0,
+	)
+
+	/**
+	 * Puzzles du jour en mémoire : un puzzle par jour ; un jour est résolu si son puzzle a été réussi.
+	 */
+	private class FakeDaily(val byDay: Map<String, Puzzle>, val progress: FakeProgress) : DailyStore {
+		/** Puzzle du jour. */
+		override suspend fun puzzleFor(inDay: String): Puzzle? = byDay[inDay]
+
+		/** Jours dont le puzzle a été réussi. */
+		override suspend fun solvedDays(): Set<String> =
+			byDay.filter { (_, vPuzzle) -> progress.records.any { it.first == vPuzzle.id && it.second == PuzzleResult.Success } }.keys
+	}
+
+	/**
+	 * Réglages de jeu modifiables pour les tests.
+	 */
+	private class FakePreferences(
+		override var confirmMoves: Boolean = false,
+		override var autoNext: Boolean = false,
+		override var difficultyOffset: Int = 0,
+	) : GamePreferences
+
+	/**
+	 * Retourne des copies de [kMateIn2] d'identifiants différents, pour enchaîner les problèmes d'un défi.
+	 */
+	private fun mateCopies(inCount: Int) = (1..inCount).map { kMateIn2.copy(id = "m$it") }
 
 	/**
 	 * Raccourci : case à partir de son nom.
@@ -141,6 +222,7 @@ class GameControllerTest {
 		val vState = vController.state.value
 		assertEquals(GameHeader.ToMove(Color.White, afterCorrect = false), vState.header)
 		assertEquals(Color.White, vState.orientation)
+		assertFalse(vState.showThemeTag, "pas de thème en Arcade")
 		assertEquals(Move.fromUci("e8d7"), vState.lastMove)
 		assertTrue(vState.animateMove)
 		assertTrue(vState.interactive)
@@ -173,13 +255,14 @@ class GameControllerTest {
 		vController.onSquareTap(sq("a2"))
 		vController.onSquareTap(sq("e6"))
 		assertEquals(GameHeader.Correct(Color.Black), vController.state.value.header)
-		assertEquals(sq("e6") to BadgeKind.Success, vController.state.value.badge)
+		assertNull(vController.state.value.badge, "pas de retour visuel sur un coup intermédiaire")
+		assertNull(vController.state.value.haptic, "pas de vibration sur un coup intermédiaire")
 		vController.awaitIdle()
 		assertEquals(GameHeader.ToMove(Color.White, afterCorrect = true), vController.state.value.header)
 		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
 		vController.tapMove("f7", "f8")
 		val vState = vController.state.value
-		assertEquals(GameHeader.Finished(success = true, mate = true, solutionShown = false), vState.header)
+		assertEquals(GameHeader.Finished(success = true, mate = true, hintsUsed = false), vState.header)
 		assertTrue(vState.nextEnabled)
 		assertFalse(vState.interactive)
 		val vSummary = assertNotNull(vState.summary)
@@ -220,7 +303,7 @@ class GameControllerTest {
 		assertEquals(1, vController.state.value.summary?.mistakes)
 	}
 
-	/** Vérifie l'indice : coup montré, échec enregistré, réponse de l'adversaire. */
+	/** Vérifie l'indice en deux temps : pièce en surbrillance, puis coup joué ; échec enregistré. */
 	@Test
 	fun hint() = runBlocking<Unit> {
 		val vProgress = FakeProgress()
@@ -228,14 +311,293 @@ class GameControllerTest {
 		vController.start()
 		vController.awaitIdle()
 		vController.onHint()
-		assertIs<GameHeader.Hint>(vController.state.value.header)
 		vController.awaitIdle()
-		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		assertEquals(GameHeader.HintPiece(PieceType.Bishop), vController.state.value.header)
+		assertEquals(sq("a2"), vController.state.value.hint)
+		assertEquals(Move.fromUci("e8d7"), vController.state.value.lastMove)
+		assertTrue(vController.state.value.interactive)
 		assertEquals(PuzzleResult.Failure, vProgress.records.single().second)
 		vController.onHint()
+		assertEquals(sq("a2"), vController.state.value.hint, "un second Indice ne fait rien")
+		assertFalse(vController.state.value.hintEnabled)
+		vController.onSolution()
+		assertIs<GameHeader.Hint>(vController.state.value.header)
+		assertNull(vController.state.value.hint)
 		vController.awaitIdle()
-		assertEquals(GameHeader.Finished(success = false, mate = true, solutionShown = true), vController.state.value.header)
+		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		vController.onHint()
+		assertEquals(sq("f7"), vController.state.value.hint)
+		vController.tapMove("f7", "f8")
+		assertEquals(GameHeader.Finished(success = false, mate = true, hintsUsed = true), vController.state.value.header)
+		assertNull(vController.state.value.hint)
 		assertEquals(2, vController.state.value.summary?.revealed)
+		assertEquals(1, vProgress.records.size)
+	}
+
+	/** Vérifie la notation (« 17… Kd7 18. ? ») et le bilan de la session. */
+	@Test
+	fun notationAndTally() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2, kShort)))
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(listOf("17…", "Kd7", "18.", "?"), vController.state.value.notation.map { it.text })
+		assertEquals(listOf(NotationKind.Past, NotationKind.Past, NotationKind.Current, NotationKind.Pending), vController.state.value.notation.map { it.kind })
+		assertEquals(2, vController.state.value.remainingMoves)
+		vController.tapMove("a2", "e6")
+		assertEquals(listOf("17…", "Kd7", "18.", "Be6+", "Kd8", "19.", "?"), vController.state.value.notation.map { it.text })
+		vController.tapMove("f7", "f8")
+		assertEquals(SessionTally(1, 0, vController.state.value.tally.ratingDelta, 0L), vController.state.value.tally)
+		assertTrue(vController.state.value.sessionRecap, "l'Arcade demande confirmation avant de quitter")
+		assertTrue(vController.state.value.keepsPuzzle)
+		assertEquals(42L, vController.state.value.sessionStartedAt, "début de la session à l'ouverture de l'écran")
+		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
+	}
+
+	/** Vérifie les retours haptiques et visuels : erreur, puis dernier coup trouvé (même après l'erreur). */
+	@Test
+	fun hapticAndVisualFeedback() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2)))
+		vController.start()
+		vController.awaitIdle()
+		vController.onSquareTap(sq("f7"))
+		vController.onSquareTap(sq("f6"))
+		assertEquals(false, vController.state.value.haptic?.success)
+		assertEquals(sq("f6") to BadgeKind.Error, vController.state.value.badge)
+		vController.awaitIdle()
+		vController.tapMove("a2", "e6")
+		val vErrorId = vController.state.value.haptic!!.id
+		vController.onSquareTap(sq("f7"))
+		vController.onSquareTap(sq("f8"))
+		assertEquals(true, vController.state.value.haptic?.success, "dernier coup trouvé")
+		assertTrue(vController.state.value.haptic!!.id > vErrorId)
+		assertEquals(sq("f8") to BadgeKind.Success, vController.state.value.badge)
+	}
+
+	/** Vérifie les sons demandés : coup de l'adversaire, bon coup, erreur, prise, réussite. */
+	@Test
+	fun sounds() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2)))
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(SoundKind.Move, vController.state.value.sound?.kind, "coup de l'adversaire")
+		vController.tapMove("f7", "f6")
+		assertEquals(SoundKind.Error, vController.state.value.sound?.kind)
+		vController.tapMove("a2", "e6")
+		assertEquals(SoundKind.Move, vController.state.value.sound?.kind, "réponse de l'adversaire après le bon coup")
+		val vBefore = vController.state.value.sound!!.id
+		vController.tapMove("f7", "f8")
+		assertEquals(SoundKind.Success, vController.state.value.sound?.kind)
+		assertTrue(vController.state.value.sound!!.id > vBefore)
+		val vTake = Puzzle("take", "4k3/8/8/3p4/4P3/8/8/4K3 b - - 0 1", Move.listFromUci("e8e7 e4d5 e7d6 e1e2"), 900, ThemeSet.kEmpty)
+		val vCapture = controller(FakePuzzles(listOf(vTake)))
+		vCapture.start()
+		vCapture.awaitIdle()
+		vCapture.onSquareTap(sq("e4"))
+		vCapture.onSquareTap(sq("d5"))
+		assertEquals(SoundKind.Capture, vCapture.state.value.sound?.kind, "exd5 prend un pion")
+		vCapture.awaitIdle()
+	}
+
+	/** Vérifie la revue de la solution : indisponible pendant le puzzle, puis coup par coup une fois terminé. */
+	@Test
+	fun solutionReview() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2, kShort)))
+		vController.start()
+		vController.awaitIdle()
+		vController.onSolutionStep(-1)
+		assertNull(vController.state.value.solutionPly, "pas de revue avant la fin du puzzle")
+		assertEquals(0, vController.state.value.solutionLength)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(4, vController.state.value.solutionLength)
+		vController.onSolutionStep(-1)
+		assertEquals(3, vController.state.value.solutionPly)
+		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		assertEquals(Piece(Color.White, PieceType.Queen), vController.state.value.pieces[sq("f7")], "la dame n'a pas encore joué f8")
+		assertEquals(NotationKind.Selected, vController.state.value.notation.first { it.text == "Kd8" }.kind)
+		vController.onSolutionJump(false)
+		assertEquals(0, vController.state.value.solutionPly)
+		assertNull(vController.state.value.lastMove)
+		assertEquals(Piece(Color.Black, PieceType.King), vController.state.value.pieces[sq("e8")], "position avant le coup de l'adversaire")
+		vController.onSolutionJump(true)
+		assertNull(vController.state.value.solutionPly, "à la fin, retour à la position réelle")
+		assertEquals(Move.fromUci("f7f8"), vController.state.value.lastMove)
+	}
+
+	/** Vérifie Passer : un puzzle non terminé compte comme raté, puis le suivant arrive. */
+	@Test
+	fun skipRecordsFailure() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vController = controller(FakePuzzles(listOf(kMateIn2, kShort)), vProgress)
+		vController.start()
+		vController.awaitIdle()
+		vController.onSkip()
+		vController.awaitIdle()
+		assertEquals(listOf(Triple("00sHx", PuzzleResult.Failure, true)), vProgress.records)
+		assertEquals("00sO1", vController.state.value.puzzleId)
+		assertEquals(SessionTally(0, 1, vController.state.value.tally.ratingDelta, 0L), vController.state.value.tally)
+	}
+
+	/** Vérifie Retourner : l'orientation change, pas le camp au trait. */
+	@Test
+	fun flip() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2)))
+		vController.start()
+		vController.awaitIdle()
+		vController.onFlip()
+		assertEquals(Color.Black, vController.state.value.orientation)
+		assertEquals(Color.White, vController.state.value.sideToMove)
+	}
+
+	/** Vérifie la confirmation des coups : rien n'est joué avant « Confirmer », « Annuler » rend la main. */
+	@Test
+	fun confirmMoves() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vController = controller(FakePuzzles(listOf(kMateIn2)), vProgress, inPreferences = FakePreferences(confirmMoves = true))
+		vController.start()
+		vController.awaitIdle()
+		vController.tapMove("f7", "f6")
+		assertTrue(vController.state.value.pendingConfirm)
+		assertFalse(vController.state.value.interactive)
+		assertTrue(vProgress.records.isEmpty())
+		vController.onCancelMove()
+		assertFalse(vController.state.value.pendingConfirm)
+		assertTrue(vController.state.value.interactive)
+		vController.tapMove("a2", "e6")
+		vController.onConfirmMove()
+		vController.awaitIdle()
+		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		assertTrue(vProgress.records.isEmpty())
+	}
+
+	/** Vérifie l'enchaînement automatique après une réussite et la difficulté de l'Arcade. */
+	@Test
+	fun autoNextAndDifficulty() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(listOf(kMateIn2, kShort))
+		val vController = controller(vPuzzles, inPreferences = FakePreferences(autoNext = true, difficultyOffset = 200))
+		vController.start()
+		vController.awaitIdle()
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		vController.awaitIdle()
+		assertEquals("00sO1", vController.state.value.puzzleId, "puzzle suivant sans appui")
+		assertEquals(2, vPuzzles.ratings.size)
+		assertEquals(1700.0, vPuzzles.ratings[0], "classement 1 500 + 200 (plus dur)")
+		assertTrue(vPuzzles.ratings[1] > 1700.0, "le classement a monté après la réussite")
+	}
+
+	/** Vérifie le puzzle du jour : pas d'enchaînement, calendrier à jour, choix d'un autre jour, Arcade intacte. */
+	@Test
+	fun dailyPuzzle() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vSessions = FakeSessions()
+		val vDaily = FakeDaily(mapOf("20261124" to kMateIn2, "20261120" to kShort), vProgress)
+		val vController = controller(
+			FakePuzzles(listOf(kMateIn2, kShort)), vProgress, vSessions, GameMode.Daily("20261124", "00sHx"),
+			inPreferences = FakePreferences(autoNext = true), inDaily = vDaily,
+		)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals("20261124", vController.state.value.daily?.day)
+		assertTrue(vController.state.value.daily?.solvedDays.orEmpty().isEmpty())
+		assertFalse(vController.state.value.skipEnabled)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		vController.awaitIdle()
+		assertIs<GameHeader.Finished>(vController.state.value.header, "pas d'enchaînement automatique")
+		assertEquals("00sHx", vController.state.value.puzzleId)
+		assertEquals(setOf("20261124"), vController.state.value.daily?.solvedDays)
+		vController.onNext()
+		vController.onSkip()
+		vController.awaitIdle()
+		assertEquals("00sHx", vController.state.value.puzzleId, "ni Suivant ni Passer pour le puzzle du jour")
+		vController.onDailyDay("20261120")
+		vController.awaitIdle()
+		assertEquals("00sO1", vController.state.value.puzzleId)
+		assertEquals("20261120", vController.state.value.daily?.day)
+		assertNull(vSessions.saved, "le puzzle en cours de l'Arcade n'est pas touché")
+	}
+
+	/** Vérifie la Survie : difficulté croissante à partir de 400, une vie par erreur, fin à zéro vie, rien sur le classement. */
+	@Test
+	fun survival() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(mateCopies(4))
+		val vProgress = FakeProgress()
+		val vSessions = FakeSessions()
+		val vChallenges = FakeChallenges(bestScore = 5)
+		val vController = controller(vPuzzles, vProgress, vSessions, GameMode.Challenge(ChallengeKind.Survival), vChallenges)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(ChallengeUi(ChallengeKind.Survival, 0, 3, null, null), vController.state.value.challenge)
+		assertFalse(vController.state.value.hintEnabled)
+		assertFalse(vController.state.value.showThemeTag, "pas de thème en Survie")
+		assertFalse(vController.state.value.sessionRecap, "la Survie a son propre récapitulatif")
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(1, vController.state.value.challenge?.score)
+		assertEquals(listOf(400, 450), vPuzzles.centers, "de 400 en montant de 50, quel que soit le classement")
+		assertEquals(listOf(25, 25), vPuzzles.halfWidths)
+		assertEquals(listOf(true, true), vPuzzles.includeSeen, "la Survie reprend aussi les puzzles déjà joués")
+		vController.tapMove("f7", "f6")
+		assertEquals(2, vController.state.value.challenge?.lives)
+		assertEquals(3, vPuzzles.centers.size)
+		vController.tapMove("f7", "f6")
+		vController.tapMove("f7", "f6")
+		val vState = vController.state.value
+		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.NoLives), vState.header)
+		assertEquals(ChallengeResult(ChallengeEnd.NoLives, 1, 5, false, 1760, failed = 3, averageDurationMs = 0L), vState.challenge?.result)
+		assertEquals(Move.fromUci("a2e6"), vState.lastMove)
+		assertFalse(vState.interactive)
+		assertEquals(listOf(ChallengeKind.Survival to 1), vChallenges.saved)
+		assertEquals(
+			listOf(Triple("m1", PuzzleResult.Success, false), Triple("m2", PuzzleResult.Failure, false), Triple("m3", PuzzleResult.Failure, false), Triple("m4", PuzzleResult.Failure, false)),
+			vProgress.records,
+			"chaque puzzle compte dans les statistiques, sans effet sur le classement",
+		)
+		assertEquals(listOf<Int?>(null, 1, 1, 1), vProgress.details.map { it.second }, "coup de l'échec")
+		assertEquals(listOf(false, false, false, false), vProgress.reviewable, "les défis n'alimentent pas la révision")
+		assertNull(vSessions.saved)
+	}
+
+	/** Vérifie le Rush : une erreur passe au problème suivant sans vie perdue, fin au bout du temps. */
+	@Test
+	fun rush() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(mateCopies(3))
+		val vChallenges = FakeChallenges()
+		val vProgress = FakeProgress()
+		val vController = controller(vPuzzles, vProgress, inMode = GameMode.Challenge(ChallengeKind.Rush), inChallenges = vChallenges, inRushDurationMs = 300)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(342L, vController.state.value.challenge?.endsAt)
+		vController.tapMove("f7", "f6")
+		assertEquals(listOf(1500, 1500), vPuzzles.centers)
+		assertEquals(3, vController.state.value.challenge?.lives)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(1, vController.state.value.challenge?.score)
+		delay(500)
+		vController.awaitIdle()
+		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.TimeUp), vController.state.value.header)
+		assertEquals(ChallengeResult(ChallengeEnd.TimeUp, 1, 1, true, 1760, failed = 1, averageDurationMs = 0L), vController.state.value.challenge?.result)
+		assertEquals(listOf(ChallengeKind.Rush to 1), vChallenges.saved)
+		assertEquals(listOf(Triple("m1", PuzzleResult.Failure, false), Triple("m2", PuzzleResult.Success, false)), vProgress.records)
+	}
+
+	/** Vérifie l'abandon sans score (non enregistré) et la nouvelle partie. */
+	@Test
+	fun abandonAndPlayAgain() = runBlocking<Unit> {
+		val vChallenges = FakeChallenges()
+		val vController = controller(FakePuzzles(mateCopies(2)), inMode = GameMode.Challenge(ChallengeKind.Survival), inChallenges = vChallenges)
+		vController.start()
+		vController.awaitIdle()
+		vController.onAbandon()
+		vController.awaitIdle()
+		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.Abandoned), vController.state.value.header)
+		assertTrue(vChallenges.saved.isEmpty())
+		vController.onPlayAgain()
+		vController.awaitIdle()
+		assertEquals(ChallengeUi(ChallengeKind.Survival, 0, 3, null, null), vController.state.value.challenge)
+		assertTrue(vController.state.value.interactive)
 	}
 
 	/** Vérifie le glisser-déposer et la promotion avec choix de la pièce. */
@@ -315,6 +677,26 @@ class GameControllerTest {
 		vController.awaitIdle()
 		assertEquals(Move.fromUci("b8c7"), vController.state.value.lastMove)
 		assertEquals(listOf<GameMode>(GameMode.Targeted(vCriteria)), vPuzzles.modes)
+		assertTrue(vController.state.value.showThemeTag, "thème affiché en Entraînement")
+		assertTrue(vController.state.value.sessionRecap, "l'Entraînement demande aussi confirmation et récapitule la session")
+		assertFalse(vController.state.value.keepsPuzzle, "l'Entraînement ne garde pas le puzzle en cours")
+	}
+
+	/** Vérifie la Révision : le mode est transmis à la source, récapitulatif de session, message quand tout est révisé. */
+	@Test
+	fun reviewMode() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(listOf(kMateIn2))
+		val vController = controller(vPuzzles, inMode = GameMode.Review)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(listOf<GameMode>(GameMode.Review), vPuzzles.modes)
+		assertTrue(vController.state.value.isReview)
+		assertTrue(vController.state.value.sessionRecap)
+		assertFalse(vController.state.value.keepsPuzzle, "la Révision ne touche pas au puzzle en cours de l'Arcade")
+		val vEmpty = controller(FakePuzzles(emptyList()), inMode = GameMode.Review)
+		vEmpty.start()
+		vEmpty.awaitIdle()
+		assertEquals(GameHeader.NoPuzzle, vEmpty.state.value.header)
 	}
 
 	/** Vérifie que le rejeu charge le problème demandé, sans effet sur la cote. */
@@ -338,5 +720,26 @@ class GameControllerTest {
 		assertNull(TrainingCriteria(difficulty = Difficulty.Level).ratingRange(1500))
 		assertEquals(1600..1900, TrainingCriteria(difficulty = Difficulty.Harder).ratingRange(1500))
 		assertEquals(800..1000, TrainingCriteria(difficulty = Difficulty.Range, range = 800..1000).ratingRange(1500))
+	}
+
+	/** Vérifie l'enregistrement de la durée et du coup de l'échec. */
+	@Test
+	fun durationAndFailedMove() = runBlocking<Unit> {
+		var vNow = 1_000L
+		val vProgress = FakeProgress()
+		val vController = GameController(this, GameMode.Continuous, defaultChessRules(), FakePuzzles(listOf(kMateIn2, kShort)), vProgress, FakeSessions(), FakeChallenges(), clock = { vNow }, opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0)
+		vController.start()
+		vController.awaitIdle()
+		vNow += 4_000
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f6")
+		assertEquals(4_000L to 2, vProgress.details.single(), "échec au 2e coup, 4 s après le premier coup possible")
+		vController.tapMove("f7", "f8")
+		vController.onNext()
+		vController.awaitIdle()
+		vNow += 7_000
+		vController.tapMove("e1", "a5")
+		vController.tapMove("f1", "d1")
+		assertEquals(7_000L to null, vProgress.details.last(), "réussite : durée, pas de coup d'échec")
 	}
 }

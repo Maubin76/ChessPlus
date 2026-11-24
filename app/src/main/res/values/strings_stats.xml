@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes de l'écran Statistiques et des fiches de thème (tutoiement, « puzzle », « classement »). -->
+<resources>
+	<!-- En-tête et courbe -->
+	<string name="stats_page_title">Statistiques</string>
+	<string name="stats_rating_section">Classement puzzles</string>
+	<string name="stats_none">Résous un premier puzzle pour voir tes statistiques.</string>
+	<string name="stats_range_7">7 j</string>
+	<string name="stats_range_30">30 j</string>
+	<string name="stats_range_year">1 an</string>
+	<string name="stats_range_all">Tout</string>
+	<string name="stats_delta_7">%1$s · 7 j</string>
+	<string name="stats_delta_30">%1$s · 30 j</string>
+	<string name="stats_delta_year">%1$s · 1 an</string>
+	<string name="stats_delta_all">%1$s · depuis le début</string>
+
+	<!-- Tuiles -->
+	<string name="stats_tile_solved">Résolus</string>
+	<string name="stats_tile_success">Réussite</string>
+	<string name="stats_tile_streak">Série</string>
+	<string name="stats_tile_rush">Chrono record</string>
+	<string name="stats_days_short">%1$d j</string>
+	<plurals name="stats_days">
+		<item quantity="one">%d jour</item>
+		<item quantity="other">%d jours</item>
+	</plurals>
+	<plurals name="stats_problems">
+		<item quantity="one">%d puzzle</item>
+		<item quantity="other">%d puzzles</item>
+	</plurals>
+
+	<!-- Activité -->
+	<string name="stats_activity">Activité · 12 semaines</string>
+	<string name="stats_less">Moins</string>
+	<string name="stats_more">Plus</string>
+	<string name="stats_volume">Puzzles par semaine</string>
+
+	<!-- Thèmes -->
+	<string name="stats_themes_title">Réussite par thème</string>
+	<string name="stats_show_all">Voir tous les thèmes (%1$d)</string>
+	<string name="stats_show_less">Voir moins</string>
+	<string name="stats_weak_title">À travailler</string>
+	<string name="stats_weak_train">S’entraîner sur ces thèmes</string>
+	<string name="stats_weak_empty">Il faut au moins 5 puzzles sur un thème pour le classer.</string>
+	<string name="stats_families">Par famille de thèmes</string>
+
+	<!-- Difficulté, fin des puzzles, longueur, moment -->
+	<string name="stats_difficulty">Selon la difficulté</string>
+	<string name="stats_profile">Fin des puzzles</string>
+	<string name="stats_profile_clean">Réussi du premier coup</string>
+	<string name="stats_profile_hint">Indice ou solution</string>
+	<string name="stats_profile_mistake">Erreur</string>
+	<string name="stats_length">Selon la longueur</string>
+	<string name="stats_length_axis">Taux de réussite selon le nombre de coups à trouver</string>
+	<string name="stats_length_more">4 et +</string>
+	<plurals name="stats_length_moves">
+		<item quantity="one">%d coup</item>
+		<item quantity="other">%d coups</item>
+	</plurals>
+	<plurals name="stats_length_played">
+		<item quantity="one">%d joué</item>
+		<item quantity="other">%d joués</item>
+	</plurals>
+	<string name="stats_dayparts">Selon le moment</string>
+	<string name="stats_daypart_morning">Matin · 6 h à 12 h</string>
+	<string name="stats_daypart_afternoon">Après-midi · 12 h à 18 h</string>
+	<string name="stats_daypart_evening">Soir · 18 h à 24 h</string>
+	<string name="stats_daypart_night">Nuit · 0 h à 6 h</string>
+
+	<!-- Temps et erreurs -->
+	<string name="stats_time">Temps de résolution</string>
+	<string name="stats_time_average">Temps moyen</string>
+	<string name="stats_time_empty">Le temps se mesure depuis cette version. Résous quelques puzzles pour le voir.</string>
+	<string name="stats_time_fastest">Plus rapide</string>
+	<string name="stats_time_slowest">Plus lent</string>
+	<string name="stats_time_weekly">Médiane par semaine</string>
+	<string name="stats_errors">Coup de l’échec</string>
+	<string name="stats_errors_move1">1er coup</string>
+	<string name="stats_errors_move2">2e coup</string>
+	<string name="stats_errors_move3">3e et plus</string>
+	<string name="stats_errors_empty">Aucun échec enregistré depuis cette version.</string>
+	<string name="duration_seconds">%1$d s</string>
+	<string name="duration_minutes">%1$d min %2$02d s</string>
+
+	<!-- Records et couverture -->
+	<string name="stats_records">Records</string>
+	<string name="stats_record_rating">Meilleur classement</string>
+	<string name="stats_record_solved">Plus difficile réussi</string>
+	<string name="stats_record_days">Plus longue série</string>
+	<string name="stats_record_run">Réussites d’affilée</string>
+	<string name="stats_record_survival">Record Survie</string>
+	<string name="stats_record_rush">Record Rush</string>
+	<string name="stats_coverage_title">Couverture</string>
+	<string name="stats_coverage">Thèmes rencontrés</string>
+	<string name="stats_coverage_value">%1$d sur %2$d</string>
+	<string name="stats_coverage_unseen">Jamais rencontrés</string>
+
+	<!-- Historique -->
+	<string name="stats_history">Historique</string>
+	<string name="stats_history_detail">Tes puzzles joués, à rejouer</string>
+
+	<!-- Fiche d'un thème -->
+	<string name="theme_stats_rating">Classement</string>
+	<string name="theme_stats_success">Réussite</string>
+	<string name="theme_stats_problems">Puzzles</string>
+	<string name="theme_stats_best">Meilleur réussi</string>
+	<string name="theme_stats_rating_curve">Classement sur ce thème</string>
+	<string name="theme_stats_rolling">Réussite sur 10 puzzles</string>
+	<string name="theme_stats_rolling_now">Actuellement %1$s</string>
+	<string name="theme_stats_time">Temps moyen d’une réussite</string>
+	<string name="theme_stats_recent">Derniers puzzles</string>
+	<string name="theme_stats_train">S’entraîner sur ce thème</string>
+	<string name="theme_stats_empty">Tu n’as pas encore joué de puzzle sur ce thème.</string>
+	<string name="theme_stats_replay">Rejouer le puzzle</string>
+
+	<!-- Accueil -->
+	<!-- Évolution des défis -->
+	<string name="stats_challenges">Défis</string>
+	<string name="stats_challenge_survival">Survie</string>
+	<string name="stats_challenge_rush">Rush</string>
+	<string name="stats_challenge_detail">record %1$d · %2$s</string>
+	<plurals name="stats_challenge_runs">
+		<item quantity="one">%d partie</item>
+		<item quantity="other">%d parties</item>
+	</plurals>
+	<string name="stats_challenge_empty">Joue au moins deux parties pour voir l’évolution.</string>
+</resources>

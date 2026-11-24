@@ -3,37 +3,35 @@ package com.chessplus.app
 import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
-import com.chessplus.app.design.preview.kDevice
 import com.android.tools.screenshot.PreviewTest
-import com.chessplus.app.design.preview.DesignPreviews
+
+
+import com.chessplus.app.game.TrainingCriteria
 import com.chessplus.app.history.HistoryContent
 import com.chessplus.app.history.HistoryRow
+import com.chessplus.app.home.DailyInfo
 import com.chessplus.app.home.HomeContent
 import com.chessplus.app.home.HomeUiState
-import com.chessplus.app.home.ResumeInfo
 import com.chessplus.app.level.LevelScreen
 import com.chessplus.app.settings.Settings
 import com.chessplus.app.settings.SettingsContent
-import com.chessplus.app.stats.StatsContent
-import com.chessplus.app.stats.StatsData
-import com.chessplus.app.stats.ThemeRate
 import com.chessplus.app.training.TargetedContent
 import com.chessplus.app.training.TargetedUiState
-import com.chessplus.app.game.TrainingCriteria
+import com.chessplus.app.ui.theme.BoardTheme
 import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Square
 import com.chessplus.core.model.Theme
 import com.chessplus.core.model.ThemeSet
 import com.chessplus.core.rules.defaultChessRules
-import com.chessplus.data.user.RatingPoint
 
 /*
- * Captures des écrans réels (contenus sans état) avec des données factices.
+ * Captures des écrans réels (contenus sans état) avec des données factices, d'après les maquettes
+ * chessplus-design/screens.
  */
 
-/** Date de référence des captures (20 novembre 2026, 12 h). */
-private const val kNow = 1_795_172_400_000L
+/** Date de référence des captures (lundi 23 novembre 2026, 12 h). */
+private const val kNow = 1_795_431_600_000L
 
 /**
  * Retourne les pièces d'une position FEN.
@@ -42,33 +40,94 @@ private fun piecesOf(inFen: String) = defaultChessRules().positionFromFen(inFen)
 	Square.kAll.mapNotNull { vSquare -> inPosition.pieceAt(vSquare)?.let { vSquare to it } }.toMap()
 }
 
+/** État de l'accueil de la maquette : série de 9 jours, mat en 1 du jour, records 28 et 41. */
+private val kHomeState = HomeUiState(
+	rating = 1642,
+	dayStreak = 9,
+	daily = DailyInfo("20261123", "4821", piecesOf("6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1"), Color.White, 1210, Theme.MateIn1),
+	survivalBest = 41,
+	rushBest = 28,
+	offlineCount = 12_400,
+	goal = com.chessplus.app.goal.GoalProgress(3, 5),
+	dueReviews = 4,
+)
+
+/** Accueil. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHomeShot() = ChessPlusTheme { HomeContent(kHomeState, kNow, {}, {}, {}, {}, {}) }
+
+/** Accueil : puzzle du jour déjà résolu, à rejouer, et objectif atteint. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHomeDailySolvedShot() = ChessPlusTheme {
+	HomeContent(kHomeState.copy(solvedDays = setOf("20261123"), goal = com.chessplus.app.goal.GoalProgress(6, 5)), kNow, {}, {}, {}, {}, {})
+}
+
+/** Réglages avec le rappel de l'objectif activé. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealSettingsGoalShot() = ChessPlusTheme {
+	SettingsContent(Settings(dailyGoal = 10, reminder = true, reminderMinutes = 19 * 60 + 30), {}, "1.0", com.chessplus.app.OfflineBaseInfo(12_400, 48_000_000), {}, {})
+}
+
+/** Accueil d'un nouveau joueur : pas de série, donc pas de flamme. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHomeNoStreakShot() = ChessPlusTheme { HomeContent(kHomeState.copy(dayStreak = 0, survivalBest = null, rushBest = null), kNow, {}, {}, {}, {}, {}) }
+
+/** Accueil avec une police agrandie de 30 % (réglage d'accessibilité du téléphone). */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
+@Composable
+fun RealHomeLargeFontShot() = ChessPlusTheme(inDarkTheme = true) { HomeContent(kHomeState, kNow, {}, {}, {}, {}, {}) }
+
+/** Accueil avec une police agrandie de 30 % et le puzzle du jour résolu (en-tête « ✓ Résolu » le plus long). */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
+@Composable
+fun RealHomeDailySolvedLargeFontShot() = ChessPlusTheme(inDarkTheme = false) {
+	HomeContent(kHomeState.copy(solvedDays = setOf("20261123")), kNow, {}, {}, {}, {}, {})
+}
+
+/** Réglages de la maquette. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealSettingsShot() = ChessPlusTheme { SettingsContent(Settings(), {}, "1.0", com.chessplus.app.OfflineBaseInfo(12_400, 48_000_000), {}, {}) }
+
+/** Réglages avec le thème d'échiquier Bois. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealSettingsWoodShot() = ChessPlusTheme(inBoard = BoardTheme.Wood) {
+	SettingsContent(Settings(boardTheme = BoardTheme.Wood, confirmMoves = true), {}, "1.0", com.chessplus.app.OfflineBaseInfo(12_400, 48_000_000), {}, {})
+}
+
 /** Premier lancement : choix du niveau. */
 @PreviewTest
 @DesignPreviews
 @Composable
 fun RealLevelShot() = ChessPlusTheme { LevelScreen(inFirstLaunch = true, inOnBack = {}, inOnChoose = {}) }
 
-/** Accueil avec un problème en cours. */
-@PreviewTest
-@DesignPreviews
-@Composable
-fun RealHomeShot() = ChessPlusTheme {
-	HomeContent(
-		HomeUiState(
-			solvedCount = 128,
-			rating = 1520,
-			resume = ResumeInfo(piecesOf("q5nr/1ppknQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 1"), Color.White, 2, 2, false, kNow - 3 * 60_000),
-		),
-		kNow, {}, {}, {}, {},
-	)
-}
-
-/** Entraînement ciblé avec deux thèmes choisis. */
+/** Entraînement avec des thèmes choisis. */
 @PreviewTest
 @DesignPreviews
 @Composable
 fun RealTargetedShot() = ChessPlusTheme {
 	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2) + Theme.PawnEndgame + Theme.RookEndgame + Theme.BishopEndgame + Theme.KnightEndgame + Theme.QueenEndgame + Theme.QueenRookEndgame), 1520, 3869), {}, {}, {}, {}, {}, {}, {})
+}
+
+/** Entraînement avec une police agrandie de 30 %. */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
+@Composable
+fun RealTargetedLargeFontShot() = ChessPlusTheme(inDarkTheme = false) {
+	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {}, {})
 }
 
 /** Historique. */
@@ -85,48 +144,4 @@ fun RealHistoryShot() = ChessPlusTheme {
 		),
 		kNow, {}, {},
 	)
-}
-
-/** Statistiques. */
-@PreviewTest
-@DesignPreviews
-@Composable
-fun RealStatsShot() = ChessPlusTheme {
-	val vDay = 24L * 60 * 60_000
-	val vHistory = listOf(1484, 1490, 1478, 1495, 1502, 1497, 1510, 1505, 1499, 1512, 1520, 1514, 1526, 1519, 1532)
-		.mapIndexed { inIndex, inRating -> RatingPoint(kNow - (15 - inIndex) * vDay, inRating.toDouble()) }
-	StatsContent(
-		StatsData(vHistory, listOf(ThemeRate(Theme.Fork, 18, 0.78f), ThemeRate(Theme.MateIn2, 14, 0.71f), ThemeRate(Theme.Pin, 11, 0.64f), ThemeRate(Theme.RookEndgame, 9, 0.52f))),
-		kNow,
-		{},
-	)
-}
-
-/** Réglages. */
-@PreviewTest
-@DesignPreviews
-@Composable
-fun RealSettingsShot() = ChessPlusTheme { SettingsContent(Settings(), {}, "0.1.0", {}, {}) }
-
-/** Accueil avec une police agrandie de 30 % (réglage d'accessibilité du téléphone). */
-@PreviewTest
-@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
-@Composable
-fun RealHomeLargeFontShot() = ChessPlusTheme(inDarkTheme = true) {
-	HomeContent(
-		HomeUiState(
-			solvedCount = 1,
-			rating = 1431,
-			resume = ResumeInfo(piecesOf("q5nr/1ppknQpp/3pB3/1P2p3/4P3/B1PP1b2/6PP/5K2 b - - 0 1"), Color.White, 2, 2, true, kNow - 60 * 60_000),
-		),
-		kNow, {}, {}, {}, {},
-	)
-}
-
-/** Entraînement ciblé avec une police agrandie de 30 %. */
-@PreviewTest
-@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
-@Composable
-fun RealTargetedLargeFontShot() = ChessPlusTheme(inDarkTheme = false) {
-	TargetedContent(TargetedUiState(TrainingCriteria(ThemeSet.of(Theme.Fork, Theme.MateIn2)), 1520, 3869), {}, {}, {}, {}, {}, {}, {})
 }

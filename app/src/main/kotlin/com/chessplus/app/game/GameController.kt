@@ -11,8 +11,12 @@ import com.chessplus.core.puzzle.PuzzleSession
 import com.chessplus.core.puzzle.PuzzleStatus
 import com.chessplus.core.rules.ChessRules
 import com.chessplus.core.rules.GameStatus
+import com.chessplus.core.rules.NumberedMove
+import com.chessplus.core.rules.formatMoveNumber
+import com.chessplus.core.rules.sanLine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +25,7 @@ import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlin.math.roundToInt
 
 /**
  * Logique de l'écran de jeu, indépendante d'Android : enchaînement des problèmes, coups du
@@ -34,10 +39,16 @@ import kotlinx.coroutines.sync.withLock
  * @property puzzles source des problèmes.
  * @property progress enregistrement des résultats et cote.
  * @property sessions sauvegarde du problème en cours.
+ * @property challenges enregistrement des parties de défi.
+ * @property preferences réglages de jeu (confirmation, enchaînement, difficulté).
+ * @property daily puzzles du jour et jours résolus.
  * @property clock horloge (millisecondes).
  * @property opponentDelayMs pause avant la réponse de l'adversaire.
  * @property startDelayMs pause avant le premier coup de l'adversaire.
  * @property wrongMoveDelayMs durée d'affichage d'un mauvais coup avant son annulation.
+ * @property challengeNextDelayMs pause entre un problème de défi réussi et le suivant.
+ * @property solutionDelayMs durée d'affichage du coup attendu après une erreur en Survie.
+ * @property rushDurationMs durée d'une partie de Rush.
  */
 class GameController(
 	private val scope: CoroutineScope,
@@ -46,10 +57,17 @@ class GameController(
 	private val puzzles: PuzzleProvider,
 	private val progress: ProgressStore,
 	private val sessions: SessionStore,
+	private val challenges: ChallengeStore,
 	private val clock: () -> Long,
+	private val preferences: GamePreferences = GamePreferences.kDefault,
+	private val daily: DailyStore = DailyStore.kNone,
 	private val opponentDelayMs: Long = kOpponentDelayMs,
 	private val startDelayMs: Long = kStartDelayMs,
 	private val wrongMoveDelayMs: Long = kWrongMoveDelayMs,
+	private val challengeNextDelayMs: Long = kChallengeNextDelayMs,
+	private val solutionDelayMs: Long = kSolutionDelayMs,
+	private val rushDurationMs: Long = ChallengeRun.kRushDurationMs,
+	private val autoNextDelayMs: Long = kAutoNextDelayMs,
 ) {
 	/** État publié. */
 	private val mutableState = MutableStateFlow(GameUiState())
@@ -71,6 +89,12 @@ class GameController(
 
 	/** Date de début du problème en cours. */
 	private var startedAt = 0L
+
+	/** Moment où le joueur a pu jouer pour la première fois (après le coup de l'adversaire), ou null si inconnu. */
+	private var playerStartedAt: Long? = null
+
+	/** Numéro du coup du joueur où le problème a échoué (première erreur ou premier indice), ou null. */
+	private var failedAtMove: Int? = null
 
 	/** Cote actuelle du joueur. */
 	private var rating = 0.0
@@ -99,6 +123,9 @@ class GameController(
 	/** Dernier retour haptique. */
 	private var haptic: HapticEvent? = null
 
+	/** Dernier son demandé. */
+	private var sound: SoundEvent? = null
+
 	/** Coup de l'adversaire programmé, ou chargement en cours. */
 	private var pending: Job? = null
 
@@ -111,17 +138,91 @@ class GameController(
 	/** Sérialise les écritures (résultat puis sauvegarde). */
 	private val persistMutex = Mutex()
 
+	/** Défi joué, ou null hors défi. */
+	private val challengeKind: ChallengeKind? = (mode as? GameMode.Challenge)?.kind
+
+	/** Partie de défi en cours ou terminée. */
+	private var run: ChallengeRun? = null
+
+	/** Meilleur score du défi (parties terminées comprises), ou null. */
+	private var challengeBest: Int? = null
+
+	/** Bilan de la partie de défi terminée. */
+	private var challengeResult: ChallengeResult? = null
+
+	/** Fin du chronomètre du Rush, ou null s'il n'a pas démarré. */
+	private var endsAt: Long? = null
+
+	/** Fin programmée du Rush. */
+	private var timerJob: Job? = null
+
+	/** Vrai si l'échiquier est retourné par le joueur. */
+	private var flipped = false
+
+	/** Coup en attente de confirmation, ou null. */
+	private var pendingMove: Move? = null
+
+	/** Revue de la solution : nombre de coups affichés, ou null pour la position réelle. */
+	private var reviewPly: Int? = null
+
+	/** Puzzles réussis pendant la session (écran ouvert). */
+	private var sessionSolved = 0
+
+	/** Puzzles ratés pendant la session. */
+	private var sessionFailed = 0
+
+	/** Variation du classement pendant la session. */
+	private var sessionDelta = 0.0
+
+	/** Début de la session (ouverture de l'écran), ou null avant [start]. */
+	private var sessionStartedAt: Long? = null
+
+	/** Somme des durées connues des puzzles terminés pendant la session. */
+	private var sessionTimedMs = 0L
+
+	/** Nombre de puzzles terminés pendant la session dont la durée est connue. */
+	private var sessionTimedCount = 0
+
+	/** Début du chronomètre du puzzle en cours. */
+	private var clockStart: Long? = null
+
+	/** Fin du chronomètre du puzzle en cours (puzzle terminé), ou null. */
+	private var clockEnd: Long? = null
+
+	/** Jour du puzzle du jour affiché, ou null hors puzzle du jour. */
+	private var dailyDay: String? = (mode as? GameMode.Daily)?.day
+
+	/** Jours dont le puzzle du jour a été réussi. */
+	private var dailySolved: Set<String> = emptySet()
+
+	/** Vrai si le mode garde le puzzle en cours pour la reprise (Arcade seulement). */
+	private val keepsSession = mode == GameMode.Continuous
+
 	/**
 	 * Démarre l'écran : en entraînement continu, reprend le problème sauvegardé s'il existe ;
 	 * sinon (ou dans les autres modes) charge un nouveau problème.
 	 */
 	fun start() {
+		sessionStartedAt = clock()
 		busy = true
 		pending = scope.launch {
 			rating = progress.currentRating().rating
+			if (challengeKind != null) {
+				challengeBest = challenges.best(challengeKind)
+				startRun(challengeKind)
+				return@launch
+			}
+			if (mode is GameMode.Daily) {
+				dailySolved = daily.solvedDays()
+			}
 			val vRestored = mode == GameMode.Continuous && restore()
 			if (!vRestored) {
-				val vFirst = (mode as? GameMode.Replay)?.let { puzzles.byId(it.puzzleId) }
+				val vFirstId = when (mode) {
+					is GameMode.Replay -> mode.puzzleId
+					is GameMode.Daily -> mode.puzzleId
+					else -> null
+				}
+				val vFirst = vFirstId?.let { puzzles.byId(it) }
 				if (vFirst != null) {
 					load(vFirst)
 				} else {
@@ -204,14 +305,36 @@ class GameController(
 	}
 
 	/**
-	 * Montre le coup suivant de la solution (le problème compte alors comme échoué).
+	 * Indice : met en surbrillance la pièce à jouer (le puzzle compte alors comme raté).
 	 */
 	fun onHint() {
 		val vSession = session ?: return
-		if (!isInteractive()) {
+		if (!isInteractive() || challengeKind != null || vSession.hintedSquare != null) {
 			return
 		}
+		noteFailure(vSession)
+		val vSquare = vSession.hintPiece()
+		selected = null
+		if (badge?.second == BadgeKind.Error) {
+			badge = null
+		}
+		header = GameHeader.HintPiece(vSession.board.pieceAt(vSquare)?.type ?: PieceType.Pawn)
+		publish()
+		persist()
+	}
+
+	/**
+	 * Solution : joue le coup attendu (le puzzle compte alors comme raté) ; l'adversaire répond.
+	 */
+	fun onSolution() {
+		val vSession = session ?: return
+		if (!isInteractive() || challengeKind != null) {
+			return
+		}
+		noteFailure(vSession)
+		val vRevealCapture = vSession.expectedMove()?.let { isCapture(vSession, it) } ?: false
 		val vMove = vSession.revealNextMove()
+		requestSound(if (vRevealCapture) SoundKind.Capture else SoundKind.Move)
 		showMove(inAnimate = true)
 		badge = null
 		selected = null
@@ -226,17 +349,176 @@ class GameController(
 	}
 
 	/**
+	 * Revue de la solution d'un puzzle terminé : avance ou recule de [inDelta] coups (bornés entre la
+	 * position de départ et le dernier coup ; au dernier, retour à la position réelle).
+	 */
+	fun onSolutionStep(inDelta: Int) {
+		val vSession = session ?: return
+		if (!canReviewSolution()) {
+			return
+		}
+		val vLength = vSession.puzzle.moves.size
+		val vCurrent = reviewPly ?: vLength
+		val vNext = (vCurrent + inDelta).coerceIn(0, vLength)
+		if (vNext == vCurrent) {
+			return
+		}
+		reviewPly = if (vNext == vLength) null else vNext
+		showMove(inAnimate = true)
+		publish()
+	}
+
+	/**
+	 * Revue de la solution : va au début (position du puzzle avant le coup de l'adversaire) ou à la fin.
+	 */
+	fun onSolutionJump(inToEnd: Boolean) {
+		val vLength = session?.puzzle?.moves?.size ?: return
+		onSolutionStep(if (inToEnd) vLength else -vLength)
+	}
+
+	/**
+	 * Indique si la solution peut être revue : puzzle terminé, hors défi, rien en cours.
+	 */
+	private fun canReviewSolution(): Boolean = session?.status == PuzzleStatus.Solved && run == null && !busy
+
+	/**
+	 * Retourne la position après les [inPly] premiers coups de la solution.
+	 */
+	private fun solutionPosition(inSession: PuzzleSession, inPly: Int): Map<Square, Piece> {
+		val vPosition = rules.positionFromFen(inSession.puzzle.fen)
+		inSession.puzzle.moves.take(inPly).forEach { vPosition.play(it) }
+		return Square.kAll.mapNotNull { vSquare -> vPosition.pieceAt(vSquare)?.let { vSquare to it } }.toMap()
+	}
+
+	/**
+	 * Retourne la notation de toute la solution, le coup [inPly] souligné et les suivants atténués.
+	 */
+	private fun solutionNotation(inSession: PuzzleSession, inPly: Int): List<NotationToken> {
+		val vTokens = mutableListOf<NotationToken>()
+		sanLine(rules, inSession.puzzle.fen, inSession.puzzle.moves).forEachIndexed { inIndex, inMove ->
+			val vKind = when {
+				inIndex + 1 == inPly -> NotationKind.Selected
+				inIndex + 1 < inPly -> NotationKind.Current
+				else -> NotationKind.Upcoming
+			}
+			if (inMove.color == com.chessplus.core.model.Color.White || inIndex == 0) {
+				vTokens.add(NotationToken(formatMoveNumber(inMove), if (vKind == NotationKind.Selected) NotationKind.Current else vKind))
+			}
+			vTokens.add(NotationToken(inMove.san, vKind))
+		}
+		return vTokens
+	}
+
+	/**
+	 * Retourne l'échiquier.
+	 */
+	fun onFlip() {
+		flipped = !flipped
+		publish()
+	}
+
+	/**
+	 * Passer : puzzle suivant. Un puzzle non terminé compte comme raté ; en défi, comme une erreur.
+	 */
+	fun onSkip() {
+		if (mode is GameMode.Daily) {
+			return
+		}
+		val vSession = session
+		if (challengeKind != null) {
+			if (vSession != null && run?.end == null && isInteractive()) {
+				busy = true
+				publish()
+				pending = scope.launch { onChallengeMiss(vSession) }
+			}
+			return
+		}
+		if (vSession == null || vSession.status == PuzzleStatus.Solved) {
+			onNext()
+			return
+		}
+		if (!isInteractive()) {
+			return
+		}
+		pending?.cancel()
+		busy = true
+		publish()
+		pending = scope.launch {
+			persistMutex.withLock {
+				if (!resultRecorded) {
+					val vDuration = durationMs()
+					val vRecorded = progress.record(
+						vSession.puzzle, PuzzleResult.Failure, vSession.mistakeCount, vSession.revealedCount, rated,
+						vDuration, failedAtMove ?: (vSession.solutionPly / 2 + 1),
+					)
+					resultRecorded = true
+					countResult(vRecorded, vDuration)
+				}
+			}
+			loadNext(vSession.puzzle.id)
+		}
+	}
+
+	/**
+	 * Puzzle du jour : charge le puzzle d'un autre jour choisi dans le calendrier.
+	 */
+	fun onDailyDay(inDay: String) {
+		if (mode !is GameMode.Daily || header == GameHeader.Loading) {
+			return
+		}
+		pending?.cancel()
+		busy = true
+		publish()
+		pending = scope.launch {
+			val vPuzzle = daily.puzzleFor(inDay)
+			if (vPuzzle == null) {
+				busy = false
+				publish()
+				return@launch
+			}
+			dailyDay = inDay
+			load(vPuzzle)
+		}
+	}
+
+	/**
+	 * Confirme le coup en attente (réglage « Confirmer les coups »).
+	 */
+	fun onConfirmMove() {
+		val vMove = pendingMove ?: return
+		pendingMove = null
+		displayOverride = null
+		submit(vMove, inAnimate = false)
+	}
+
+	/**
+	 * Annule le coup en attente de confirmation.
+	 */
+	fun onCancelMove() {
+		if (pendingMove == null) {
+			return
+		}
+		pendingMove = null
+		displayOverride = null
+		showMove(inAnimate = true)
+		publish()
+	}
+
+	/**
 	 * Recommence le problème depuis la position de départ (un échec reste un échec).
 	 */
 	fun onRestart() {
 		val vSession = session ?: return
-		if (header == GameHeader.Loading) {
+		if (header == GameHeader.Loading || challengeKind != null) {
 			return
 		}
 		pending?.cancel()
 		busy = false
 		displayOverride = null
 		vSession.restart()
+		reviewPly = null
+		clockStart = clock()
+		clockEnd = null
 		showMove(inAnimate = true)
 		selected = null
 		badge = null
@@ -252,7 +534,7 @@ class GameController(
 	 */
 	fun onNext() {
 		val vSession = session
-		if (vSession == null && header != GameHeader.NoPuzzle) {
+		if (challengeKind != null || mode is GameMode.Daily || vSession == null && header != GameHeader.NoPuzzle) {
 			return
 		}
 		if (vSession != null && vSession.status != PuzzleStatus.Solved) {
@@ -263,6 +545,34 @@ class GameController(
 		displayOverride = null
 		publish()
 		pending = scope.launch { loadNext(vSession?.puzzle?.id) }
+	}
+
+	/**
+	 * Défi : abandonne la partie en cours (son score est enregistré).
+	 */
+	fun onAbandon() {
+		if (run?.end == null) {
+			endRun(ChallengeEnd.Abandoned)
+		}
+	}
+
+	/**
+	 * Défi : appelé quand le joueur quitte l'écran ; une partie en cours compte comme abandonnée.
+	 */
+	fun onLeave() = onAbandon()
+
+	/**
+	 * Défi : recommence une partie une fois la précédente terminée.
+	 */
+	fun onPlayAgain() {
+		val vKind = challengeKind ?: return
+		if (run?.end == null) {
+			return
+		}
+		pending?.cancel()
+		busy = true
+		publish()
+		pending = scope.launch { startRun(vKind) }
 	}
 
 	/**
@@ -287,10 +597,16 @@ class GameController(
 		val vSession = runCatching { PuzzleSession.restore(vPuzzle, rules, vSaved.snapshot) }.getOrNull() ?: return false
 		busy = false
 		session = vSession
+		playerStartedAt = null
+		failedAtMove = null
 		rated = vSaved.rated
 		resultRecorded = vSaved.resultRecorded
 		recorded = if (resultRecorded) progress.lastResult(vPuzzle.id) else null
 		startedAt = vSaved.startedAt
+		clockStart = clock()
+		clockEnd = if (vSession.status == PuzzleStatus.Solved) clockStart else null
+		pendingMove = null
+		reviewPly = null
 		showMove(inAnimate = false)
 		when (vSession.status) {
 			PuzzleStatus.Solved -> {
@@ -314,8 +630,11 @@ class GameController(
 	 * Charge le prochain problème du mode et programme le premier coup de l'adversaire.
 	 */
 	private suspend fun loadNext(inExcludeId: String?) {
-		sessions.clear()
-		val vPuzzle: Puzzle? = puzzles.next(rating, inExcludeId, mode)
+		if (keepsSession) {
+			sessions.clear()
+		}
+		val vOffset = if (mode == GameMode.Continuous || mode is GameMode.Daily) preferences.difficultyOffset else 0
+		val vPuzzle: Puzzle? = puzzles.next(rating + vOffset, inExcludeId, mode)
 		if (vPuzzle == null) {
 			busy = false
 			session = null
@@ -330,14 +649,22 @@ class GameController(
 	 * Démarre un problème donné et programme le premier coup de l'adversaire.
 	 */
 	private suspend fun load(inPuzzle: Puzzle) {
-		sessions.clear()
+		if (keepsSession) {
+			sessions.clear()
+		}
 		val vPuzzle = inPuzzle
 		busy = false
 		session = PuzzleSession.start(vPuzzle, rules)
-		rated = mode !is GameMode.Replay && puzzles.isNew(vPuzzle.id)
+		playerStartedAt = null
+		failedAtMove = null
+		rated = mode !is GameMode.Replay && challengeKind == null && puzzles.isNew(vPuzzle.id)
 		resultRecorded = false
 		recorded = null
 		startedAt = clock()
+		clockStart = startedAt
+		clockEnd = null
+		pendingMove = null
+		reviewPly = null
 		selected = null
 		badge = null
 		promotion = null
@@ -363,7 +690,12 @@ class GameController(
 				publish()
 				return@launch
 			}
+			val vOpponentCapture = isCapture(vSession, vSession.puzzle.moves[vSession.solutionPly])
 			vSession.playOpponentMove()
+			requestSound(if (vOpponentCapture) SoundKind.Capture else SoundKind.Move)
+			if (vSession.solutionPly == 1 && playerStartedAt == null && !resultRecorded) {
+				playerStartedAt = clock()
+			}
 			showMove(inAnimate = true)
 			if (header !is GameHeader.Wrong) {
 				badge = null
@@ -385,7 +717,18 @@ class GameController(
 			publish()
 			return
 		}
-		submit(Move(inFrom, inTo), inAnimate)
+		val vMove = Move(inFrom, inTo)
+		if (preferences.confirmMoves) {
+			val vShown = boardPieces(vSession).toMutableMap()
+			vShown.remove(inFrom)?.let { vShown[inTo] = it }
+			displayOverride = vShown
+			pendingMove = vMove
+			selected = null
+			showMove(inAnimate)
+			publish()
+			return
+		}
+		submit(vMove, inAnimate)
 	}
 
 	/**
@@ -394,22 +737,33 @@ class GameController(
 	private fun submit(inMove: Move, inAnimate: Boolean) {
 		val vSession = session ?: return
 		selected = null
+		val vCapture = isCapture(vSession, inMove)
 		when (val vVerdict = vSession.submitMove(inMove)) {
 			MoveVerdict.Illegal -> publish()
 			MoveVerdict.Correct -> {
+				requestSound(if (vCapture) SoundKind.Capture else SoundKind.Move)
 				showMove(inAnimate)
-				badge = inMove.to to BadgeKind.Success
+				badge = null
 				header = GameHeader.Correct(vSession.puzzle.opponentColor)
-				requestHaptic(true)
 				publish()
 				persist()
 				scheduleOpponent(opponentDelayMs)
 			}
 			is MoveVerdict.Solved -> {
+				requestSound(SoundKind.Success)
 				showMove(inAnimate)
+				// Dernier coup trouvé : retour haptique et visuel de réussite, même après une erreur.
 				badge = inMove.to to BadgeKind.Success
-				requestHaptic(vSession.result == PuzzleResult.Success || vVerdict.alternativeMate)
-				finish()
+				requestHaptic(true)
+				val vRun = run
+				if (vRun != null) {
+					vRun.onSolved(vSession.puzzle.rating)
+					recordChallengeResult(vSession, PuzzleResult.Success)
+					header = GameHeader.Solved
+					scheduleNextChallenge(challengeNextDelayMs)
+				} else {
+					finish()
+				}
 			}
 			MoveVerdict.Wrong -> showWrongMove(inMove, inAnimate)
 		}
@@ -421,10 +775,12 @@ class GameController(
 	 */
 	private fun showWrongMove(inMove: Move, inAnimate: Boolean) {
 		val vSession = session ?: return
+		noteFailure(vSession)
 		val vShown = boardPieces(vSession).toMutableMap()
 		vShown.remove(inMove.from)?.let { inPiece -> vShown[inMove.to] = inMove.promotion?.let { Piece(inPiece.color, it) } ?: inPiece }
 		displayOverride = vShown
 		showMove(inAnimate)
+		requestSound(SoundKind.Error)
 		badge = inMove.to to BadgeKind.Error
 		header = GameHeader.Wrong
 		requestHaptic(false)
@@ -436,9 +792,148 @@ class GameController(
 			displayOverride = null
 			badge = null
 			showMove(inAnimate = true)
+			if (run != null) {
+				onChallengeMiss(vSession)
+				return@launch
+			}
 			busy = false
 			publish()
 		}
+	}
+
+	/**
+	 * Démarre une partie de défi et charge son premier problème.
+	 */
+	private suspend fun startRun(inKind: ChallengeKind) {
+		timerJob?.cancel()
+		run = ChallengeRun(inKind, rating.roundToInt(), clock())
+		challengeResult = null
+		endsAt = null
+		nextChallengePuzzle()
+	}
+
+	/**
+	 * Charge le prochain problème de la partie de défi ; démarre le chronomètre du Rush au premier.
+	 */
+	private suspend fun nextChallengePuzzle() {
+		val vRun = run ?: return
+		val vPuzzle = puzzles.challengeNext(vRun.targetRating(), vRun.searchHalfWidth(), vRun.includesSeen(), vRun.playedIds)
+		if (vPuzzle == null) {
+			endRun(ChallengeEnd.NoPuzzle)
+			return
+		}
+		vRun.onServed(vPuzzle.id)
+		if (vRun.kind == ChallengeKind.Rush && endsAt == null) {
+			endsAt = clock() + rushDurationMs
+			timerJob = scope.launch {
+				delay(rushDurationMs)
+				endRun(ChallengeEnd.TimeUp)
+			}
+		}
+		load(vPuzzle)
+	}
+
+	/**
+	 * Programme le problème de défi suivant après une pause.
+	 */
+	private fun scheduleNextChallenge(inDelayMs: Long) {
+		busy = true
+		publish()
+		pending = scope.launch {
+			delay(inDelayMs)
+			nextChallengePuzzle()
+		}
+	}
+
+	/**
+	 * Défi : après un mauvais coup, Survie retire une vie et montre le coup attendu ; Rush passe
+	 * directement au problème suivant.
+	 */
+	private suspend fun onChallengeMiss(inSession: PuzzleSession) {
+		val vRun = run ?: return
+		recordChallengeResult(inSession, PuzzleResult.Failure)
+		val vLost = vRun.onMissed()
+		if (vRun.kind == ChallengeKind.Survival) {
+			val vMove = inSession.revealNextMove()
+			showMove(inAnimate = true)
+			header = GameHeader.Missed(vMove)
+			publish()
+			delay(solutionDelayMs)
+			if (vLost) {
+				endRun(ChallengeEnd.NoLives)
+				return
+			}
+		}
+		nextChallengePuzzle()
+	}
+
+	/**
+	 * Défi : enregistre le puzzle comme une tentative non notée (statistiques, historique, objectif,
+	 * sans effet sur le classement). L'enregistrement survit à la fin de la partie et à la fermeture de l'écran.
+	 */
+	private fun recordChallengeResult(inSession: PuzzleSession, inResult: PuzzleResult) {
+		val vDuration = durationMs()
+		run?.addDuration(vDuration)
+		val vFailedAt = if (inResult == PuzzleResult.Failure) failedAtMove ?: (inSession.solutionPly / 2 + 1) else null
+		val vMistakes = inSession.mistakeCount
+		val vRevealed = inSession.revealedCount
+		val vJob = scope.launch(NonCancellable) {
+			persistMutex.withLock { progress.record(inSession.puzzle, inResult, vMistakes, vRevealed, false, vDuration, vFailedAt, inReviewable = false) }
+		}
+		synchronized(persistJobs) {
+			persistJobs.removeAll { it.isCompleted }
+			persistJobs.add(vJob)
+		}
+	}
+
+	/**
+	 * Termine la partie de défi : bilan, record, enregistrement (qui survit à la fermeture de l'écran).
+	 */
+	private fun endRun(inEnd: ChallengeEnd) {
+		val vRun = run ?: return
+		if (vRun.end != null) {
+			return
+		}
+		vRun.end = inEnd
+		timerJob?.cancel()
+		pending?.cancel()
+		busy = false
+		selected = null
+		promotion = null
+		displayOverride = null
+		val vPrevious = challengeBest ?: 0
+		val vBest = maxOf(vPrevious, vRun.score)
+		challengeBest = vBest
+		challengeResult = ChallengeResult(inEnd, vRun.score, vBest, vRun.score > vPrevious, vRun.bestPuzzleRating, vRun.misses, vRun.averageDurationMs)
+		header = GameHeader.ChallengeOver(inEnd)
+		publish()
+		if (inEnd != ChallengeEnd.Abandoned || vRun.score > 0) {
+			val vDuration = clock() - vRun.startedAt
+			val vJob = scope.launch(NonCancellable) { challenges.save(vRun.kind, vRun.score, vRun.bestPuzzleRating, vDuration) }
+			synchronized(persistJobs) {
+				persistJobs.removeAll { it.isCompleted }
+				persistJobs.add(vJob)
+			}
+		}
+	}
+
+	/**
+	 * Mémorise le coup du joueur où le problème échoue, à la première erreur ou au premier indice.
+	 */
+	private fun noteFailure(inSession: PuzzleSession) {
+		if (failedAtMove == null && !resultRecorded) {
+			failedAtMove = inSession.solutionPly / 2 + 1
+		}
+	}
+
+	/**
+	 * Retourne la durée de résolution, ou null si elle est inconnue ou anormalement longue
+	 * (problème laissé de côté).
+	 */
+	private fun durationMs(): Long? {
+		val vStart = playerStartedAt ?: return null
+		val vDuration = clock() - vStart
+		return vDuration.takeIf { it in 0..kMaxDurationMs }
 	}
 
 	/**
@@ -452,9 +947,29 @@ class GameController(
 	 */
 	private fun finish() {
 		val vSession = session ?: return
+		clockEnd = clock()
 		header = finishedHeader(vSession)
 		publish()
 		persist()
+		if (preferences.autoNext && vSession.result == PuzzleResult.Success && mode !is GameMode.Daily) {
+			pending = scope.launch {
+				delay(autoNextDelayMs)
+				onNext()
+			}
+		}
+	}
+
+	/**
+	 * Compte un résultat enregistré, et sa durée si elle est connue, dans le bilan de la session.
+	 */
+	private fun countResult(inRecorded: RecordedResult, inDurationMs: Long?) {
+		if (inRecorded.result == PuzzleResult.Success) sessionSolved++ else sessionFailed++
+		if (inDurationMs != null) {
+			sessionTimedMs += inDurationMs
+			sessionTimedCount++
+		}
+		sessionDelta += inRecorded.ratingAfter - inRecorded.ratingBefore
+		rating = inRecorded.ratingAfter
 	}
 
 	/**
@@ -463,25 +978,37 @@ class GameController(
 	private fun finishedHeader(inSession: PuzzleSession): GameHeader = GameHeader.Finished(
 		success = inSession.result == PuzzleResult.Success,
 		mate = inSession.board.status() == GameStatus.Checkmate,
-		solutionShown = inSession.revealedCount > 0,
+		hintsUsed = inSession.revealedCount > 0,
 	)
 
 	/**
 	 * Enregistre le résultat dès qu'il est connu (une seule fois), puis sauvegarde le problème.
 	 */
 	private fun persist() {
+		if (challengeKind != null) {
+			return
+		}
 		val vSession = session ?: return
 		val vJob = scope.launch {
 			persistMutex.withLock {
 				val vResult = vSession.result
 				if (!resultRecorded && vResult != null) {
-					val vRecorded = progress.record(vSession.puzzle, vResult, vSession.mistakeCount, vSession.revealedCount, rated)
+					val vDuration = durationMs()
+					val vRecorded = progress.record(
+						vSession.puzzle, vResult, vSession.mistakeCount, vSession.revealedCount, rated,
+						vDuration, if (vResult == PuzzleResult.Failure) failedAtMove else null,
+					)
 					recorded = vRecorded
 					resultRecorded = true
-					rating = vRecorded.ratingAfter
+					countResult(vRecorded, vDuration)
+					if (mode is GameMode.Daily) {
+						dailySolved = daily.solvedDays()
+					}
 					publish()
 				}
-				sessions.save(SavedSession(vSession.snapshot(), rated, resultRecorded, startedAt))
+				if (keepsSession) {
+					sessions.save(SavedSession(vSession.snapshot(), rated, resultRecorded, startedAt))
+				}
 			}
 		}
 		synchronized(persistJobs) {
@@ -499,6 +1026,24 @@ class GameController(
 	}
 
 	/**
+	 * Demande un son.
+	 */
+	private fun requestSound(inKind: SoundKind) {
+		sound = SoundEvent((sound?.id ?: 0) + 1, inKind)
+	}
+
+	/**
+	 * Indique si un coup prend une pièce (prise en passant comprise), avant qu'il soit joué.
+	 */
+	private fun isCapture(inSession: PuzzleSession, inMove: Move): Boolean {
+		if (inSession.board.pieceAt(inMove.to) != null) {
+			return true
+		}
+		val vPiece = inSession.board.pieceAt(inMove.from) ?: return false
+		return vPiece.type == PieceType.Pawn && inMove.from.file != inMove.to.file
+	}
+
+	/**
 	 * Demande un retour haptique.
 	 */
 	private fun requestHaptic(inSuccess: Boolean) {
@@ -510,13 +1055,39 @@ class GameController(
 	 */
 	private fun isInteractive(): Boolean {
 		val vSession = session ?: return false
-		return vSession.status == PuzzleStatus.PlayerToMove && promotion == null && !busy
+		return vSession.status == PuzzleStatus.PlayerToMove && promotion == null && !busy && run?.end == null && pendingMove == null
 	}
 
 	/**
 	 * Retourne les cases d'arrivée possibles d'une pièce.
 	 */
 	private fun targetsOf(inFrom: Square): Set<Square> = session?.board?.legalMovesFrom(inFrom)?.map { it.to }?.toSet() ?: emptySet()
+
+	/**
+	 * Retourne la notation des coups joués depuis la FEN, puis le numéro du coup à trouver et « ? ».
+	 */
+	private fun notationOf(inSession: PuzzleSession): List<NotationToken> {
+		val vLine = sanLine(rules, inSession.puzzle.fen, inSession.playedMoves)
+		val vTokens = mutableListOf<NotationToken>()
+		vLine.forEachIndexed { inIndex, inMove ->
+			if (inMove.color == com.chessplus.core.model.Color.White || inIndex == 0) {
+				vTokens.add(NotationToken(formatMoveNumber(inMove), NotationKind.Past))
+			}
+			vTokens.add(NotationToken(inMove.san, NotationKind.Past))
+		}
+		if (inSession.status == PuzzleStatus.PlayerToMove) {
+			val vLast = vLine.lastOrNull()
+			val vColor = inSession.puzzle.playerColor
+			val vNumber = when {
+				vLast == null -> 1
+				vLast.color == com.chessplus.core.model.Color.Black -> vLast.number + 1
+				else -> vLast.number
+			}
+			vTokens.add(NotationToken(formatMoveNumber(NumberedMove(vNumber, vColor, "")), NotationKind.Current))
+			vTokens.add(NotationToken("?", NotationKind.Pending))
+		}
+		return vTokens
+	}
 
 	/**
 	 * Publie l'état courant.
@@ -540,21 +1111,46 @@ class GameController(
 		}
 		mutableState.value = GameUiState(
 			header = header,
-			pieces = displayOverride ?: vSession?.let { boardPieces(it) } ?: emptyMap(),
-			orientation = vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White,
-			lastMove = vSession?.lastMove,
+			pieces = displayOverride ?: vSession?.let { vReviewed -> reviewPly?.let { solutionPosition(vReviewed, it) } ?: boardPieces(vReviewed) } ?: emptyMap(),
+			orientation = (vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White).let { if (flipped) it.opposite() else it },
+			sideToMove = vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White,
+			puzzleId = vSession?.puzzle?.id,
+			puzzleRating = vSession?.puzzle?.rating,
+			puzzleThemes = vSession?.puzzle?.themes ?: com.chessplus.core.model.ThemeSet.kEmpty,
+			showThemeTag = mode is GameMode.Targeted,
+			notation = vSession?.let { vNoted -> reviewPly?.let { solutionNotation(vNoted, it) } ?: notationOf(vNoted) } ?: emptyList(),
+			solutionPly = reviewPly,
+			solutionLength = if (canReviewSolution()) vSession?.puzzle?.moves?.size ?: 0 else 0,
+			remainingMoves = vSession?.let { it.puzzle.playerMoveCount - it.solutionPly / 2 } ?: 0,
+			clockStart = clockStart,
+			clockEnd = clockEnd,
+			tally = run?.let { SessionTally(it.score, it.misses, null, it.averageDurationMs) }
+				?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt(), if (sessionTimedCount == 0) null else sessionTimedMs / sessionTimedCount),
+			sessionRecap = mode == GameMode.Continuous || mode is GameMode.Targeted || mode == GameMode.Review,
+			isReview = mode == GameMode.Review,
+			keepsPuzzle = keepsSession,
+			sessionStartedAt = sessionStartedAt,
+			pendingConfirm = pendingMove != null,
+			solutionEnabled = isInteractive() && challengeKind == null,
+			skipEnabled = mode !is GameMode.Daily && (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,
+			challengeBest = challengeBest,
+			daily = dailyDay?.let { DailyUi(it, DailyDays.keyOf(clock()), dailySolved) },
+			lastMove = if (vSession != null && reviewPly != null) vSession.puzzle.moves.getOrNull(reviewPly!! - 1) else vSession?.lastMove,
 			moveId = moveId,
 			animateMove = animate,
 			selected = selected,
+			hint = vSession?.hintedSquare,
 			targets = selected?.let { targetsOf(it) } ?: emptySet(),
 			badge = badge,
 			interactive = isInteractive(),
 			rating = kotlin.math.round(rating).toInt(),
-			hintEnabled = isInteractive(),
+			hintEnabled = isInteractive() && challengeKind == null && vSession?.hintedSquare == null,
 			nextEnabled = vSession?.status == PuzzleStatus.Solved || header == GameHeader.NoPuzzle,
 			promotion = promotion,
 			summary = vSummary,
 			haptic = haptic,
+			sound = sound,
+			challenge = run?.let { ChallengeUi(it.kind, it.score, it.lives, endsAt, challengeResult) },
 		)
 	}
 
@@ -567,5 +1163,17 @@ class GameController(
 
 		/** Durée d'affichage d'un mauvais coup avant qu'il soit annulé. */
 		const val kWrongMoveDelayMs = 900L
+
+		/** Durée de résolution au-delà de laquelle elle n'est pas enregistrée (problème laissé de côté). */
+		const val kMaxDurationMs = 15L * 60 * 1000
+
+		/** Pause entre un problème de défi réussi et le suivant. */
+		const val kChallengeNextDelayMs = 500L
+
+		/** Durée d'affichage du coup attendu après une erreur en Survie. */
+		const val kSolutionDelayMs = 1200L
+
+		/** Pause avant le puzzle suivant quand l'enchaînement automatique est activé. */
+		const val kAutoNextDelayMs = 1200L
 	}
 }

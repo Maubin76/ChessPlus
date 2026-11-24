@@ -25,6 +25,17 @@ class ImportFilterTest {
 		assertEquals(RejectReason.Plays, vThresholds.check(row(1500, 95, 80, 249)))
 	}
 
+	/** Vérifie les seuils plus permissifs des problèmes faciles (sous la limite, bornes incluses). */
+	@Test
+	fun lowRatingThresholds() {
+		val vThresholds = QualityThresholds(80, 90, 250, lowRatingLimit = 600, lowMaxRatingDeviation = 100, lowMinPopularity = 85, lowMinPlays = 100)
+		assertNull(vThresholds.check(row(450, 85, 100, 100)))
+		assertEquals(RejectReason.RatingDeviation, vThresholds.check(row(599, 95, 101, 1000)))
+		assertEquals(RejectReason.Popularity, vThresholds.check(row(500, 84, 90, 1000)))
+		assertEquals(RejectReason.Plays, vThresholds.check(row(500, 90, 90, 99)))
+		assertEquals(RejectReason.RatingDeviation, vThresholds.check(row(600, 90, 90, 1000)), "à partir de la limite, les seuils généraux")
+	}
+
 	/** Vérifie les tranches de 200 points. */
 	@Test
 	fun ratingBands() {
