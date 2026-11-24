@@ -84,6 +84,7 @@
 
 	<!-- Écran de jeu : en-tête -->
 	<string name="game_puzzle_number">Puzzle #%1$s</string>
+	<string name="game_puzzle_rating">Classement</string>
 	<string name="game_white_to_move">Trait aux blancs</string>
 	<string name="game_black_to_move">Trait aux noirs</string>
 	<string name="game_side_white">les blancs</string>

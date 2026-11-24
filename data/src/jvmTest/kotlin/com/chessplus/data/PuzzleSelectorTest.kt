@@ -65,6 +65,7 @@ class PuzzleSelectorTest {
 		insert("far" to 1850, "tooFar" to 2200)
 		assertEquals("far", selector.nextPuzzle(1500.0, SelectionCriteria(), null, 0L)?.id)
 		assertEquals(listOf(1400..1600, 1300..1700, 1200..1800, 1100..1900, 1000..2000, 900..2100), selector.candidateRanges(1500, null))
+		assertEquals(listOf(475..525, 375..625, 275..725, 175..825, 75..925, -25..1025), selector.candidateRanges(500, null, 25), "Survie : fenêtre resserrée")
 	}
 
 	/** Vérifie qu'un problème réussi n'est jamais reproposé et qu'un échoué revient après le délai. */

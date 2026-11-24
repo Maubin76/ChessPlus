@@ -25,10 +25,11 @@ interface PuzzleProvider {
 	suspend fun isNew(inId: String): Boolean
 
 	/**
-	 * Retourne un problème de défi autour de la cote [inCenter], hors des problèmes [inExclude]
-	 * déjà vus dans la partie, ou null si aucun ne convient.
+	 * Retourne un problème de défi autour de la cote [inCenter] (première tranche de demi-largeur
+	 * [inHalfWidth], élargie s'il le faut), hors des problèmes [inExclude] déjà vus dans la partie,
+	 * ou null si aucun ne convient.
 	 */
-	suspend fun challengeNext(inCenter: Int, inExclude: Set<String>): Puzzle?
+	suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inExclude: Set<String>): Puzzle?
 }
 
 /**

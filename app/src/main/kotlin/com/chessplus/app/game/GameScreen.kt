@@ -427,7 +427,8 @@ private fun TopChip(inState: GameUiState, inClock: () -> Long) {
 }
 
 /**
- * En-tête du puzzle : numéro et classement, camp au trait, thème principal.
+ * En-tête du puzzle : numéro (ou thème principal en Entraînement) et camp au trait à gauche,
+ * classement du puzzle bien en vue à droite.
  */
 @Composable
 private fun PuzzleHeader(inState: GameUiState) {
@@ -435,22 +436,18 @@ private fun PuzzleHeader(inState: GameUiState) {
 	val vSpacing = ChessPlusTheme.spacing
 	Row(Modifier.fillMaxWidth().padding(start = vSpacing.space4, end = vSpacing.space4, bottom = vSpacing.space3), verticalAlignment = Alignment.Bottom) {
 		Column(Modifier.weight(1f)) {
-			val vId = inState.puzzleId
-			val vRating = inState.puzzleRating
-			Text(
-				buildAnnotatedString {
-					if (vId != null) {
-						append(stringResource(R.string.game_puzzle_number, vId).uppercase(Locale.FRANCE))
-						if (vRating != null) {
-							append(" · ")
-							withStyle(SpanStyle(fontFamily = kMonoFamily)) { append(formatRating(vRating)) }
-						}
-					}
-				},
-				style = ChessPlusTheme.typography.overline,
-				color = vColors.inkMuted,
-				maxLines = 1,
-			)
+			// Le thème n'est montré qu'en Entraînement, où il a été choisi : ailleurs, ce serait un indice.
+			val vTheme = if (inState.showThemeTag) mainTheme(inState.puzzleThemes) else null
+			if (vTheme != null) {
+				Tag(stringResource(themeLabel(vTheme)))
+			} else {
+				Text(
+					inState.puzzleId?.let { stringResource(R.string.game_puzzle_number, it).uppercase(Locale.FRANCE) } ?: "",
+					style = ChessPlusTheme.typography.overline,
+					color = vColors.inkMuted,
+					maxLines = 1,
+				)
+			}
 			Row(verticalAlignment = Alignment.CenterVertically) {
 				val vWhite = inState.sideToMove == Color.White
 				Box(Modifier.size(kSideSquare.dp).background(if (vWhite) vColors.pieceWhite else vColors.pieceBlack).border(1.5.dp, vColors.pieceBlack))
@@ -463,9 +460,13 @@ private fun PuzzleHeader(inState: GameUiState) {
 				)
 			}
 		}
-		// Le thème n'est montré qu'en Entraînement, où il a été choisi : ailleurs, ce serait un indice.
-		if (inState.showThemeTag) {
-			mainTheme(inState.puzzleThemes)?.let { Tag(stringResource(themeLabel(it))) }
+		// Classement du puzzle, bien en vue dans tous les modes.
+		inState.puzzleRating?.let { inRating ->
+			Spacer(Modifier.width(vSpacing.space3))
+			Column(horizontalAlignment = Alignment.End) {
+				Text(stringResource(R.string.game_puzzle_rating).uppercase(Locale.FRANCE), style = ChessPlusTheme.typography.overline, color = vColors.inkMuted, maxLines = 1)
+				Text(formatRating(inRating), style = ChessPlusTheme.typography.heading.copy(fontFamily = kMonoFamily), color = vColors.ink, maxLines = 1)
+			}
 		}
 	}
 }

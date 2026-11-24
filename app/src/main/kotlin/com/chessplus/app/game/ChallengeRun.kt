@@ -80,11 +80,21 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 	var end: ChallengeEnd? = null
 
 	/**
-	 * Retourne la cote visée pour le prochain problème : croissante en Survie, celle du joueur en Rush.
+	 * Retourne la cote visée pour le prochain problème : en Survie, de [kSurvivalStart] puis
+	 * [kSurvivalStep] de plus à chaque problème, quel que soit le joueur ; en Rush, celle du joueur.
 	 */
 	fun targetRating(): Int = when (kind) {
-		ChallengeKind.Survival -> maxOf(kMinRating, playerRating + kSurvivalStartOffset + served * kSurvivalStep)
+		ChallengeKind.Survival -> kSurvivalStart + served * kSurvivalStep
 		ChallengeKind.Rush -> playerRating
+	}
+
+	/**
+	 * Retourne la demi-largeur de la première tranche de recherche autour de la cote visée :
+	 * resserrée en Survie pour que la difficulté monte régulièrement.
+	 */
+	fun searchHalfWidth(): Int = when (kind) {
+		ChallengeKind.Survival -> kSurvivalHalfWidth
+		ChallengeKind.Rush -> kRushHalfWidth
 	}
 
 	/**
@@ -132,13 +142,16 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 		/** Durée d'une partie de Rush : 3 minutes. */
 		const val kRushDurationMs = 3L * 60 * 1000
 
-		/** Écart entre la cote du joueur et le premier problème de Survie. */
-		const val kSurvivalStartOffset = -300
+		/** Cote visée du premier problème de Survie. */
+		const val kSurvivalStart = 400
 
 		/** Hausse de la cote visée à chaque problème de Survie. */
-		const val kSurvivalStep = 25
+		const val kSurvivalStep = 50
 
-		/** Cote visée minimale. */
-		const val kMinRating = 400
+		/** Demi-largeur de la première tranche de recherche en Survie (élargie s'il le faut). */
+		const val kSurvivalHalfWidth = 25
+
+		/** Demi-largeur de la première tranche de recherche en Rush. */
+		const val kRushHalfWidth = 100
 	}
 }

@@ -116,9 +116,10 @@ class AppContainer(private val context: Context) {
 		override suspend fun isNew(inId: String): Boolean = ready().second.userDao().getState(inId) == null
 
 		/** Tire un problème de défi autour de la cote visée, hors des problèmes déjà vus dans la partie. */
-		override suspend fun challengeNext(inCenter: Int, inExclude: Set<String>): Puzzle? {
+		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inExclude: Set<String>): Puzzle? {
 			val (vPuzzles, vUser) = ready()
-			return PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao()).nextPuzzle(inCenter.toDouble(), SelectionCriteria(), null, System.currentTimeMillis(), inExclude)
+			return PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao())
+				.nextPuzzle(inCenter.toDouble(), SelectionCriteria(initialHalfWidth = inHalfWidth), null, System.currentTimeMillis(), inExclude)
 		}
 	}
 

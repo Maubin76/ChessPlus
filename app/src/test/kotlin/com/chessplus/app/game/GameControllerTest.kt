@@ -67,9 +67,13 @@ class GameControllerTest {
 		/** Cotes visées des problèmes de défi demandés, dans l'ordre. */
 		val centers = mutableListOf<Int>()
 
+		/** Demi-largeurs de recherche des problèmes de défi demandés, dans l'ordre. */
+		val halfWidths = mutableListOf<Int>()
+
 		/** Premier problème pas encore vu dans la partie. */
-		override suspend fun challengeNext(inCenter: Int, inExclude: Set<String>): Puzzle? {
+		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inExclude: Set<String>): Puzzle? {
 			centers.add(inCenter)
+			halfWidths.add(inHalfWidth)
 			return list.firstOrNull { it.id !in inExclude }
 		}
 	}
@@ -506,7 +510,7 @@ class GameControllerTest {
 		assertNull(vSessions.saved, "le puzzle en cours de l'Arcade n'est pas touché")
 	}
 
-	/** Vérifie la Survie : difficulté croissante, une vie par erreur, fin à zéro vie, rien dans la progression. */
+	/** Vérifie la Survie : difficulté croissante à partir de 400, une vie par erreur, fin à zéro vie, rien sur le classement. */
 	@Test
 	fun survival() = runBlocking<Unit> {
 		val vPuzzles = FakePuzzles(mateCopies(4))
@@ -523,7 +527,8 @@ class GameControllerTest {
 		vController.tapMove("a2", "e6")
 		vController.tapMove("f7", "f8")
 		assertEquals(1, vController.state.value.challenge?.score)
-		assertEquals(listOf(1200, 1225), vPuzzles.centers)
+		assertEquals(listOf(400, 450), vPuzzles.centers, "de 400 en montant de 50, quel que soit le classement")
+		assertEquals(listOf(25, 25), vPuzzles.halfWidths)
 		vController.tapMove("f7", "f6")
 		assertEquals(2, vController.state.value.challenge?.lives)
 		assertEquals(3, vPuzzles.centers.size)

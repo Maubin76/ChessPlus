@@ -13,10 +13,12 @@ import kotlin.random.Random
  *
  * @property themes thèmes acceptés (au moins un en commun) ; vide pour tous les thèmes.
  * @property ratingRange tranche de difficulté imposée, ou null pour suivre la cote du joueur.
+ * @property initialHalfWidth demi-largeur de la première tranche autour de la cote visée (sans tranche imposée).
  */
 data class SelectionCriteria(
 	val themes: ThemeSet = ThemeSet.kEmpty,
 	val ratingRange: IntRange? = null,
+	val initialHalfWidth: Int = PuzzleSelector.kInitialHalfWidth,
 )
 
 /**
@@ -48,7 +50,7 @@ class PuzzleSelector(
 	 * @param inExcludeIds autres problèmes à ne pas proposer (déjà vus dans une partie de défi).
 	 */
 	suspend fun nextPuzzle(inPlayerRating: Double, inCriteria: SelectionCriteria, inExcludeId: String?, inNow: Long, inExcludeIds: Set<String> = emptySet()): Puzzle? {
-		for (vRange in candidateRanges(inPlayerRating.roundToInt(), inCriteria.ratingRange)) {
+		for (vRange in candidateRanges(inPlayerRating.roundToInt(), inCriteria.ratingRange, inCriteria.initialHalfWidth)) {
 			val vCount = puzzleDao.countInRange(vRange.first, vRange.last, inCriteria.themes.low, inCriteria.themes.high)
 			if (vCount == 0) {
 				continue
@@ -66,13 +68,13 @@ class PuzzleSelector(
 
 	/**
 	 * Retourne les tranches de cote à essayer dans l'ordre : la tranche imposée seule, ou des
-	 * tranches de plus en plus larges autour de la cote du joueur.
+	 * tranches de plus en plus larges autour de la cote du joueur, à partir de [inInitialHalfWidth].
 	 */
-	internal fun candidateRanges(inCenter: Int, inImposed: IntRange?): List<IntRange> {
+	internal fun candidateRanges(inCenter: Int, inImposed: IntRange?, inInitialHalfWidth: Int = kInitialHalfWidth): List<IntRange> {
 		if (inImposed != null) {
 			return listOf(inImposed)
 		}
-		return (kInitialHalfWidth..kMaxHalfWidth step kHalfWidthStep).map { inHalfWidth -> (inCenter - inHalfWidth)..(inCenter + inHalfWidth) }
+		return (inInitialHalfWidth..kMaxHalfWidth step kHalfWidthStep).map { inHalfWidth -> (inCenter - inHalfWidth)..(inCenter + inHalfWidth) }
 	}
 
 	/**

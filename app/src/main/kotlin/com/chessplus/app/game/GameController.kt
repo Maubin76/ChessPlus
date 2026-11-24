@@ -817,7 +817,7 @@ class GameController(
 	 */
 	private suspend fun nextChallengePuzzle() {
 		val vRun = run ?: return
-		val vPuzzle = puzzles.challengeNext(vRun.targetRating(), vRun.playedIds)
+		val vPuzzle = puzzles.challengeNext(vRun.targetRating(), vRun.searchHalfWidth(), vRun.playedIds)
 		if (vPuzzle == null) {
 			endRun(ChallengeEnd.NoPuzzle)
 			return

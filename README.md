@@ -64,7 +64,7 @@ répond tout seul.
 | **Entraînement** | Choisis tes thèmes parmi 73 (fourchette, clouage, mat en 2…) et ta difficulté |
 | **Révision** | Tes puzzles ratés reviennent après 1, 3, 7, 14 puis 30 jours, jusqu'à ce qu'ils soient acquis |
 | **Rush** | Un maximum de puzzles en 3 minutes ; une erreur fait passer au suivant |
-| **Survie** | Une difficulté qui monte à chaque puzzle, et seulement trois vies |
+| **Survie** | Seulement trois vies, et une difficulté qui part de 400 et monte de 50 à chaque puzzle |
 | **Puzzle du jour** | Un nouveau puzzle chaque jour, avec le calendrier des jours résolus |
 
 Rush et Survie ont leurs propres records et ne touchent pas à ton classement. Chaque
