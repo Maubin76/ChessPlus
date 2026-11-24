@@ -18,7 +18,14 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import android.Manifest
+import android.content.pm.PackageManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.TimePicker
+import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -35,7 +42,9 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -43,12 +52,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chessplus.app.OfflineBaseInfo
 import com.chessplus.app.R
+import com.chessplus.app.goal.DailyGoal
 import com.chessplus.app.ui.components.FloatingNavBar
 import com.chessplus.app.ui.components.LinkRow
 import com.chessplus.app.ui.components.ListGroup
 import com.chessplus.app.ui.components.ListRow
 import com.chessplus.app.ui.components.NavTab
 import com.chessplus.app.ui.components.PageTitle
+import com.chessplus.app.ui.components.PrimaryButton
 import com.chessplus.app.ui.components.RowTexts
 import com.chessplus.app.ui.components.Section
 import com.chessplus.app.ui.components.SecondaryButton
@@ -86,6 +97,12 @@ private enum class SettingsDialog {
 	/** Style des pièces. */
 	Pieces,
 
+	/** Objectif quotidien. */
+	Goal,
+
+	/** Heure du rappel. */
+	ReminderTime,
+
 	/** Base hors ligne. */
 	Base,
 }
@@ -104,7 +121,21 @@ fun SettingsScreen(
 	val vSettings by inStore.settings.collectAsStateWithLifecycle()
 	var vBaseInfo by remember { mutableStateOf<OfflineBaseInfo?>(null) }
 	LaunchedEffect(Unit) { vBaseInfo = inLoadBaseInfo() }
-	SettingsContent(vSettings, inStore::update, inVersion, vBaseInfo, inOnLevel, inOnTab)
+	val vContext = LocalContext.current
+	// Activer le rappel demande d'abord l'autorisation d'envoyer des notifications ; refusée, le rappel reste désactivé.
+	val vPermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { inGranted ->
+		if (inGranted) {
+			inStore.update { it.copy(reminder = true) }
+		}
+	}
+	val vOnReminderChange: (Boolean) -> Unit = { inOn ->
+		if (inOn && vContext.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+			vPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+		} else {
+			inStore.update { it.copy(reminder = inOn) }
+		}
+	}
+	SettingsContent(vSettings, inStore::update, inVersion, vBaseInfo, inOnLevel, inOnTab, vOnReminderChange)
 }
 
 /**
@@ -118,6 +149,7 @@ fun SettingsContent(
 	inBaseInfo: OfflineBaseInfo?,
 	inOnLevel: () -> Unit,
 	inOnTab: (NavTab) -> Unit,
+	inOnReminderChange: (Boolean) -> Unit = { inOn -> inOnUpdate { it.copy(reminder = inOn) } },
 ) {
 	val vColors = ChessPlusTheme.colors
 	var vDialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
@@ -174,6 +206,16 @@ fun SettingsContent(
 					),
 				)
 			}
+				Section(stringResource(R.string.set_section_goal)) {
+				val vRows = mutableListOf<@Composable () -> Unit>(
+					{ LinkRow(stringResource(R.string.set_goal), "${inSettings.dailyGoal}", { vDialog = SettingsDialog.Goal }) },
+					{ ToggleRow(stringResource(R.string.set_reminder), stringResource(R.string.set_reminder_detail), inSettings.reminder, inOnReminderChange) },
+				)
+				if (inSettings.reminder) {
+					vRows.add { LinkRow(stringResource(R.string.set_reminder_time), DailyGoal.formatTime(inSettings.reminderMinutes), { vDialog = SettingsDialog.ReminderTime }) }
+				}
+				ListGroup(inRows = vRows)
+			}
 			Section(stringResource(R.string.set_section_appearance)) {
 				SegmentedControl(
 					listOf(stringResource(R.string.set_theme_system), stringResource(R.string.set_theme_light), stringResource(R.string.set_theme_dark)),
@@ -203,6 +245,8 @@ fun SettingsContent(
 	when (vDialog) {
 		SettingsDialog.Pieces -> PiecesDialog { vDialog = null }
 		SettingsDialog.Base -> InfoDialog(stringResource(R.string.set_base_dialog_title), baseDialogText(inBaseInfo), inOnDismiss = { vDialog = null })
+		SettingsDialog.Goal -> GoalDialog(inSettings.dailyGoal, { inGoal -> inOnUpdate { it.copy(dailyGoal = inGoal) } }) { vDialog = null }
+		SettingsDialog.ReminderTime -> ReminderTimeDialog(inSettings.reminderMinutes, { inMinutes -> inOnUpdate { it.copy(reminderMinutes = inMinutes) } }) { vDialog = null }
 		null -> Unit
 	}
 }
@@ -306,6 +350,60 @@ private fun InfoDialog(inTitle: String, inText: String, inOnDismiss: () -> Unit,
 			Text(inText, style = ChessPlusTheme.typography.small, color = ChessPlusTheme.colors.inkMuted)
 			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
 			SecondaryButton(stringResource(R.string.set_close), inOnDismiss, Modifier.fillMaxWidth())
+		}
+	}
+}
+
+/**
+ * Choix de l'objectif quotidien : liste des objectifs proposés, le choix actif en `accentSoft`.
+ */
+@Composable
+private fun GoalDialog(inGoal: Int, inOnChoose: (Int) -> Unit, inOnDismiss: () -> Unit) {
+	val vColors = ChessPlusTheme.colors
+	Dialog(onDismissRequest = inOnDismiss) {
+		SurfaceCard {
+			Text(stringResource(R.string.set_goal), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Text(stringResource(R.string.set_goal_detail), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space3))
+			ListGroup(
+				inRows = DailyGoal.kGoalOptions.map { vOption ->
+					{
+						val vOn = vOption == inGoal
+						ListRow(Modifier.background(if (vOn) vColors.accentSoft else vColors.surfaceRaised), inOnClick = {
+							inOnChoose(vOption)
+							inOnDismiss()
+						}) {
+							Text(pluralStringResource(R.plurals.set_goal_option, vOption, vOption), style = ChessPlusTheme.typography.body, color = if (vOn) vColors.accent else vColors.ink, modifier = Modifier.weight(1f))
+							if (vOn) {
+								Icon(painterResource(R.drawable.ic_ln_check), contentDescription = null, tint = vColors.accent, modifier = Modifier.size(kIconSize))
+							}
+						}
+					}
+				},
+			)
+		}
+	}
+}
+
+/**
+ * Choix de l'heure du rappel : sélecteur d'heure Material sur 24 heures, puis « Annuler » / « Valider ».
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReminderTimeDialog(inMinutes: Int, inOnChoose: (Int) -> Unit, inOnDismiss: () -> Unit) {
+	val vState = rememberTimePickerState(initialHour = inMinutes / 60, initialMinute = inMinutes % 60, is24Hour = true)
+	Dialog(onDismissRequest = inOnDismiss) {
+		SurfaceCard {
+			Text(stringResource(R.string.set_reminder_time), style = ChessPlusTheme.typography.heading, color = ChessPlusTheme.colors.ink)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			TimePicker(vState, Modifier.align(Alignment.CenterHorizontally))
+			Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
+				SecondaryButton(stringResource(R.string.set_cancel), inOnDismiss, Modifier.weight(1f))
+				PrimaryButton(stringResource(R.string.set_validate), {
+					inOnChoose(vState.hour * 60 + vState.minute)
+					inOnDismiss()
+				}, Modifier.weight(1f))
+			}
 		}
 	}
 }

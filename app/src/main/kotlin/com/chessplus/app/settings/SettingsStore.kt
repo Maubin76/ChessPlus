@@ -1,6 +1,7 @@
 package com.chessplus.app.settings
 
 import android.content.Context
+import com.chessplus.app.goal.DailyGoal
 import com.chessplus.app.ui.theme.BoardTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -41,6 +42,9 @@ enum class PuzzleDifficulty(val offset: Int) {
  * @property confirmMoves un coup doit être confirmé avant d'être joué.
  * @property difficulty difficulté des puzzles Arcade.
  * @property autoNext puzzle suivant automatiquement après une réussite.
+ * @property dailyGoal objectif quotidien : nombre de puzzles à réussir.
+ * @property reminder rappel par notification si l'objectif n'est pas atteint à l'heure choisie.
+ * @property reminderMinutes heure du rappel, en minutes depuis minuit.
  */
 data class Settings(
 	val themeMode: ThemeMode = ThemeMode.System,
@@ -50,6 +54,9 @@ data class Settings(
 	val confirmMoves: Boolean = false,
 	val difficulty: PuzzleDifficulty = PuzzleDifficulty.Normal,
 	val autoNext: Boolean = true,
+	val dailyGoal: Int = DailyGoal.kDefaultGoal,
+	val reminder: Boolean = false,
+	val reminderMinutes: Int = DailyGoal.kDefaultReminderMinutes,
 )
 
 /**
@@ -80,6 +87,9 @@ class SettingsStore(context: Context) {
 			.putBoolean(kConfirmKey, vNew.confirmMoves)
 			.putString(kDifficultyKey, vNew.difficulty.name)
 			.putBoolean(kAutoNextKey, vNew.autoNext)
+			.putInt(kGoalKey, vNew.dailyGoal)
+			.putBoolean(kReminderKey, vNew.reminder)
+			.putInt(kReminderMinutesKey, vNew.reminderMinutes)
 			.apply()
 		mutableSettings.value = vNew
 	}
@@ -97,6 +107,9 @@ class SettingsStore(context: Context) {
 			confirmMoves = preferences.getBoolean(kConfirmKey, vDefaults.confirmMoves),
 			difficulty = runCatching { PuzzleDifficulty.valueOf(preferences.getString(kDifficultyKey, null) ?: "") }.getOrDefault(vDefaults.difficulty),
 			autoNext = preferences.getBoolean(kAutoNextKey, vDefaults.autoNext),
+			dailyGoal = preferences.getInt(kGoalKey, vDefaults.dailyGoal),
+			reminder = preferences.getBoolean(kReminderKey, vDefaults.reminder),
+			reminderMinutes = preferences.getInt(kReminderMinutesKey, vDefaults.reminderMinutes),
 		)
 	}
 
@@ -124,5 +137,14 @@ class SettingsStore(context: Context) {
 
 		/** Clé de l'enchaînement automatique. */
 		private const val kAutoNextKey = "autoNext"
+
+		/** Clé de l'objectif quotidien. */
+		private const val kGoalKey = "dailyGoal"
+
+		/** Clé du rappel. */
+		private const val kReminderKey = "reminder"
+
+		/** Clé de l'heure du rappel. */
+		private const val kReminderMinutesKey = "reminderMinutes"
 	}
 }

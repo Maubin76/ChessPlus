@@ -6,6 +6,8 @@ import com.chessplus.app.game.ChallengeStore
 import com.chessplus.app.game.DailyDays
 import com.chessplus.app.game.DailyStore
 import com.chessplus.app.game.GameMode
+import com.chessplus.app.goal.DailyGoal
+import com.chessplus.app.goal.GoalProgress
 import com.chessplus.app.game.ProgressStore
 import com.chessplus.app.game.PuzzleProvider
 import com.chessplus.app.game.RecordedResult
@@ -140,6 +142,16 @@ class AppContainer(private val context: Context) {
 	private fun legacyDailyId(inDay: String): String? {
 		val vPreferences = context.getSharedPreferences(kDailyFile, Context.MODE_PRIVATE)
 		return vPreferences.getString(kDailyIdKey, null).takeIf { vPreferences.getString(kDailyDayKey, null) == inDay }
+	}
+
+	/**
+	 * Retourne l'avancement de l'objectif quotidien : puzzles réussis aujourd'hui (tous modes, défis
+	 * compris) et objectif des réglages.
+	 */
+	suspend fun goalProgress(inNow: Long = System.currentTimeMillis()): GoalProgress {
+		val vDao = ready().second.userDao()
+		val vFrom = DailyGoal.dayStart(inNow)
+		return GoalProgress(vDao.countSuccessesSince(vFrom) + vDao.sumChallengeScoresSince(vFrom), settingsStore.settings.value.dailyGoal)
 	}
 
 	/**

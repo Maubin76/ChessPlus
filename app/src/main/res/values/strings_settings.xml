@@ -47,4 +47,17 @@
 	<string name="set_credits">Crédits</string>
 	<string name="set_credits_detail">Puzzles : base Lichess (CC0). Pièces : cburnett, Colin M.L. Burnett (BSD). Polices : Space Grotesk, Inter, JetBrains Mono (OFL).</string>
 	<string name="set_close">Fermer</string>
+	<!-- Objectif quotidien -->
+	<string name="set_section_goal">Objectif quotidien</string>
+	<string name="set_goal">Puzzles par jour</string>
+	<string name="set_goal_detail">Nombre de puzzles à réussir chaque jour, tous modes confondus.</string>
+	<plurals name="set_goal_option">
+		<item quantity="one">%d puzzle</item>
+		<item quantity="other">%d puzzles</item>
+	</plurals>
+	<string name="set_reminder">Rappel</string>
+	<string name="set_reminder_detail">Notification si l’objectif n’est pas atteint</string>
+	<string name="set_reminder_time">Heure du rappel</string>
+	<string name="set_cancel">Annuler</string>
+	<string name="set_validate">Valider</string>
 </resources>

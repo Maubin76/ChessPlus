@@ -1,6 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Manifeste de ChessPlus : aucune permission, l'application fonctionne hors connexion. -->
+<!-- Manifeste de ChessPlus : hors connexion ; seules permissions, le rappel de l'objectif quotidien
+     (notification, et reprogrammation de l'alarme au démarrage du téléphone). -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+	<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+	<uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
 
 	<application
 		android:name=".ChessPlusApplication"
@@ -19,6 +23,19 @@
 				<category android:name="android.intent.category.LAUNCHER" />
 			</intent-filter>
 		</activity>
+		<receiver
+			android:name=".goal.GoalReminderReceiver"
+			android:exported="false" />
+		<receiver
+			android:name=".goal.GoalReminderRescheduler"
+			android:exported="false">
+			<intent-filter>
+				<action android:name="android.intent.action.BOOT_COMPLETED" />
+				<action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+				<action android:name="android.intent.action.TIME_SET" />
+				<action android:name="android.intent.action.TIMEZONE_CHANGED" />
+			</intent-filter>
+		</receiver>
 	</application>
 
 </manifest>

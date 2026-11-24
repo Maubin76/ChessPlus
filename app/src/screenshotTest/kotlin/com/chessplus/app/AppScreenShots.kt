@@ -48,6 +48,7 @@ private val kHomeState = HomeUiState(
 	survivalBest = 41,
 	rushBest = 28,
 	offlineCount = 12_400,
+	goal = com.chessplus.app.goal.GoalProgress(3, 5),
 )
 
 /** Accueil. */
@@ -56,11 +57,21 @@ private val kHomeState = HomeUiState(
 @Composable
 fun RealHomeShot() = ChessPlusTheme { HomeContent(kHomeState, kNow, {}, {}, {}, {}, {}) }
 
-/** Accueil : puzzle du jour déjà résolu, à rejouer. */
+/** Accueil : puzzle du jour déjà résolu, à rejouer, et objectif atteint. */
 @PreviewTest
 @DesignPreviews
 @Composable
-fun RealHomeDailySolvedShot() = ChessPlusTheme { HomeContent(kHomeState.copy(solvedDays = setOf("20261123")), kNow, {}, {}, {}, {}, {}) }
+fun RealHomeDailySolvedShot() = ChessPlusTheme {
+	HomeContent(kHomeState.copy(solvedDays = setOf("20261123"), goal = com.chessplus.app.goal.GoalProgress(6, 5)), kNow, {}, {}, {}, {}, {})
+}
+
+/** Réglages avec le rappel de l'objectif activé. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealSettingsGoalShot() = ChessPlusTheme {
+	SettingsContent(Settings(dailyGoal = 10, reminder = true, reminderMinutes = 19 * 60 + 30), {}, "1.0", com.chessplus.app.OfflineBaseInfo(12_400, 48_000_000), {}, {})
+}
 
 /** Accueil d'un nouveau joueur : pas de série, donc pas de flamme. */
 @PreviewTest

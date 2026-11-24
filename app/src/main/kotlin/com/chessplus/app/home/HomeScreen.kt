@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -43,6 +44,7 @@ import com.chessplus.app.AppContainer
 import com.chessplus.app.R
 import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.DailyDays
+import com.chessplus.app.goal.GoalProgress
 import com.chessplus.app.stats.StatsCalculator
 import com.chessplus.app.ui.components.Chip
 import com.chessplus.app.ui.components.FloatingNavBar
@@ -53,6 +55,7 @@ import com.chessplus.app.ui.components.NavTab
 import com.chessplus.app.ui.components.Overline
 import com.chessplus.app.ui.components.PageTitle
 import com.chessplus.app.ui.components.PrimaryButton
+import com.chessplus.app.ui.components.ProgressBar
 import com.chessplus.app.ui.components.SecondaryButton
 import com.chessplus.app.ui.components.SurfaceCard
 import com.chessplus.app.ui.components.formatRating
@@ -69,6 +72,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -111,6 +115,7 @@ data class DailyInfo(val day: String, val puzzleId: String, val pieces: Map<Squa
  * @property rushBest record en Rush, ou null.
  * @property offlineCount nombre de puzzles de la base hors ligne, ou null pendant le chargement.
  * @property solvedDays jours dont le puzzle du jour a été réussi.
+ * @property goal avancement de l'objectif quotidien, ou null pendant le chargement.
  */
 data class HomeUiState(
 	val rating: Int = 0,
@@ -120,6 +125,7 @@ data class HomeUiState(
 	val rushBest: Int? = null,
 	val offlineCount: Int? = null,
 	val solvedDays: Set<String> = emptySet(),
+	val goal: GoalProgress? = null,
 ) {
 	/** Vrai si le puzzle du jour affiché a déjà été réussi. */
 	val dailySolved: Boolean
@@ -160,6 +166,11 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 				}
 			}
 			launch {
+				// L'objectif se recalcule à chaque résultat (tentative ou partie de défi) et à chaque changement d'objectif.
+				combine(vDao.observeAllAttempts(), vDao.observeChallengeRunCount(), container.settingsStore.settings) { _, _, _ -> }
+					.collect { refreshGoal() }
+			}
+			launch {
 				vDao.observeSolvedDailyDays().collect { inDays -> mutableState.update { it.copy(solvedDays = inDays.toSet()) } }
 			}
 			launch {
@@ -170,9 +181,18 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 	}
 
 	/**
-	 * Relit le puzzle du jour (à chaque affichage de l'accueil : il change à minuit).
+	 * Relit l'avancement de l'objectif quotidien.
+	 */
+	private suspend fun refreshGoal() {
+		val vGoal = container.goalProgress()
+		mutableState.update { it.copy(goal = vGoal) }
+	}
+
+	/**
+	 * Relit le puzzle du jour et l'objectif (à chaque affichage de l'accueil : ils changent à minuit).
 	 */
 	fun refresh() {
+		viewModelScope.launch { refreshGoal() }
 		viewModelScope.launch {
 			val vDay = DailyDays.keyOf(System.currentTimeMillis())
 			val vPuzzle = container.dailyStore.puzzleFor(vDay) ?: return@launch
@@ -252,6 +272,7 @@ fun HomeContent(
 				}
 			}
 			DailyCard(inState.daily, inState.dailySolved, inOnDaily)
+			inState.goal?.let { GoalCard(it) }
 			Column(verticalArrangement = Arrangement.spacedBy(vSpacing.space2)) {
 				Overline(stringResource(R.string.home_modes))
 				ListGroup(
@@ -332,6 +353,29 @@ private fun DailyCard(inDaily: DailyInfo?, inSolved: Boolean, inOnDaily: (DailyI
 				}
 			}
 		}
+	}
+}
+
+/**
+ * Objectif du jour : puzzles réussis sur l'objectif en mono, barre de progression (`success` une fois
+ * atteint), puzzles restants.
+ */
+@Composable
+private fun GoalCard(inGoal: GoalProgress) {
+	val vColors = ChessPlusTheme.colors
+	SurfaceCard {
+		Row(verticalAlignment = Alignment.CenterVertically) {
+			Overline(stringResource(R.string.goal_title), Modifier.weight(1f))
+			Text(stringResource(R.string.goal_value, inGoal.done, inGoal.target), style = ChessPlusTheme.typography.moves, color = if (inGoal.reached) vColors.success else vColors.ink)
+		}
+		Spacer(Modifier.height(ChessPlusTheme.spacing.space2))
+		ProgressBar(inGoal.fraction, inColor = if (inGoal.reached) vColors.success else vColors.accent)
+		Spacer(Modifier.height(ChessPlusTheme.spacing.space2))
+		Text(
+			if (inGoal.reached) stringResource(R.string.goal_reached) else pluralStringResource(R.plurals.goal_remaining, inGoal.remaining, inGoal.remaining),
+			style = ChessPlusTheme.typography.small,
+			color = if (inGoal.reached) vColors.success else vColors.inkMuted,
+		)
 	}
 }
 

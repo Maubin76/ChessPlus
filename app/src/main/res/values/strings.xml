@@ -48,6 +48,22 @@
 	<string name="game_title_daily">Puzzle du jour</string>
 	<string name="game_title_daily_past">Puzzle du %1$s</string>
 
+	<!-- Objectif quotidien -->
+	<string name="goal_title">Objectif du jour</string>
+	<string name="goal_value">%1$d/%2$d</string>
+	<string name="goal_reached">Objectif atteint.</string>
+	<plurals name="goal_remaining">
+		<item quantity="one">Encore %d puzzle à réussir.</item>
+		<item quantity="other">Encore %d puzzles à réussir.</item>
+	</plurals>
+	<string name="goal_channel">Rappel de l’objectif</string>
+	<string name="goal_channel_detail">Un rappel à l’heure choisie si l’objectif du jour n’est pas atteint.</string>
+	<string name="goal_notification_title">Objectif du jour</string>
+	<plurals name="goal_notification_text">
+		<item quantity="one">Encore %1$d puzzle pour atteindre ton objectif (%2$d/%3$d).</item>
+		<item quantity="other">Encore %1$d puzzles pour atteindre ton objectif (%2$d/%3$d).</item>
+	</plurals>
+
 	<!-- Calendrier des puzzles du jour -->
 	<string name="daily_calendar">Puzzles du jour</string>
 	<string name="daily_calendar_hint">Touche un jour pour résoudre son puzzle.</string>
