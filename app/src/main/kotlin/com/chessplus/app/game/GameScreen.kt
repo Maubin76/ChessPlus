@@ -250,11 +250,12 @@ fun GameContent(
 			ExitStep.None -> Unit
 		}
 		val vResult = inState.challenge?.result
-		if (inState.challenge?.kind == ChallengeKind.Survival && vResult != null) {
-			// Récapitulatif à la fin d'une Survie, une fois par partie ; fermé, l'écran garde Accueil / Rejouer.
+		val vKind = inState.challenge?.kind
+		if (vKind != null && vResult != null) {
+			// Récapitulatif à la fin d'une Survie ou d'un Rush, une fois par partie ; fermé, l'écran garde Accueil / Rejouer.
 			var vRecapOpen by remember(vResult) { mutableStateOf(true) }
 			if (vRecapOpen) {
-				SurvivalRecapDialog(vResult, { vRecapOpen = false }, inOnPlayAgain)
+				ChallengeRecapDialog(vKind, vResult, { vRecapOpen = false }, inOnPlayAgain)
 			}
 		}
 	}
@@ -336,19 +337,24 @@ private fun sessionDuration(inMs: Long): String {
 }
 
 /**
- * Récapitulatif d'une partie de Survie : puzzles réussis et ratés, temps moyen, record absolu.
+ * Récapitulatif d'une partie de Survie ou de Rush : puzzles réussis et ratés, temps moyen, record absolu.
  */
 @Composable
-private fun SurvivalRecapDialog(inResult: ChallengeResult, inOnClose: () -> Unit, inOnPlayAgain: () -> Unit) {
+private fun ChallengeRecapDialog(inKind: ChallengeKind, inResult: ChallengeResult, inOnClose: () -> Unit, inOnPlayAgain: () -> Unit) {
 	val vColors = ChessPlusTheme.colors
 	Dialog(onDismissRequest = inOnClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
 		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
-			Text(stringResource(R.string.recap_title), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Text(
+				stringResource(if (inKind == ChallengeKind.Survival) R.string.recap_title else R.string.recap_title_rush),
+				style = ChessPlusTheme.typography.heading,
+				color = vColors.ink,
+			)
 			Text(
 				stringResource(
 					when {
 						inResult.newRecord -> R.string.recap_new_record
 						inResult.end == ChallengeEnd.NoPuzzle -> R.string.recap_no_puzzle
+						inKind == ChallengeKind.Rush -> R.string.recap_subtitle_rush
 						else -> R.string.recap_subtitle
 					}
 				),

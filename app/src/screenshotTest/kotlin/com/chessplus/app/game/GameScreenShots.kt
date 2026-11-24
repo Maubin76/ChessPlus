@@ -246,6 +246,23 @@ fun RealGameSurvivalRecapShot() = Shot(
 	"Survie",
 )
 
+/** Fin de Rush : récapitulatif, nouveau record. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameRushRecapShot() = Shot(
+	kMockupState.copy(
+		header = GameHeader.ChallengeOver(ChallengeEnd.TimeUp),
+		selected = null,
+		targets = emptySet(),
+		interactive = false,
+		challenge = ChallengeUi(ChallengeKind.Rush, 31, 3, kClock - 1, ChallengeResult(ChallengeEnd.TimeUp, 31, 31, true, 1890, failed = 4, averageDurationMs = 5_000L)),
+		challengeBest = 31,
+		tally = SessionTally(31, 4, null, 5_000L),
+	),
+	"Rush",
+)
+
 /** Joueur noir : échiquier retourné, trait aux noirs. */
 @PreviewTest
 @DesignPreviews

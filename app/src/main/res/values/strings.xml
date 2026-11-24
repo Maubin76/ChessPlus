@@ -152,6 +152,8 @@
 	<!-- Récapitulatif de fin de Survie -->
 	<string name="recap_title">Survie terminée</string>
 	<string name="recap_subtitle">Trois erreurs, la partie s’arrête.</string>
+	<string name="recap_title_rush">Rush terminé</string>
+	<string name="recap_subtitle_rush">Les 3 minutes sont écoulées.</string>
 	<string name="recap_new_record">Nouveau record.</string>
 	<string name="recap_no_puzzle">Plus de puzzles disponibles.</string>
 	<string name="recap_solved">Réussis</string>
