@@ -169,6 +169,29 @@ fun RealGameDailyShot() = Shot(
 	"Puzzle du jour",
 )
 
+/** Revue de la solution d'un puzzle résolu : coup 3 sur 4 affiché. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameSolutionReviewShot() = Shot(
+	kMockupState.copy(
+		header = GameHeader.Finished(success = true, mate = false, hintsUsed = false),
+		selected = null,
+		targets = emptySet(),
+		interactive = false,
+		clockEnd = kClock,
+		summary = GameSummary(PuzzleResult.Success, 0, 0, 1630.0, 1642.0, true, 1580, ThemeSet.parse("fork middlegame short")),
+		solutionPly = 3,
+		solutionLength = 4,
+		notation = listOf(
+			NotationToken("8…", NotationKind.Current), NotationToken("Bg4", NotationKind.Current),
+			NotationToken("9.", NotationKind.Current), NotationToken("Nxe5", NotationKind.Current),
+			NotationToken("Bxd1", NotationKind.Selected),
+			NotationToken("10.", NotationKind.Upcoming), NotationToken("Bxf7+", NotationKind.Upcoming),
+		),
+	)
+)
+
 /** Réglage « Confirmer les coups » : coup en attente. */
 @PreviewTest
 @DesignPreviews

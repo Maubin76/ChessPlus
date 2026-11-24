@@ -159,6 +159,9 @@ class GameController(
 	/** Coup en attente de confirmation, ou null. */
 	private var pendingMove: Move? = null
 
+	/** Revue de la solution : nombre de coups affichés, ou null pour la position réelle. */
+	private var reviewPly: Int? = null
+
 	/** Puzzles réussis pendant la session (écran ouvert). */
 	private var sessionSolved = 0
 
@@ -341,6 +344,67 @@ class GameController(
 	}
 
 	/**
+	 * Revue de la solution d'un puzzle terminé : avance ou recule de [inDelta] coups (bornés entre la
+	 * position de départ et le dernier coup ; au dernier, retour à la position réelle).
+	 */
+	fun onSolutionStep(inDelta: Int) {
+		val vSession = session ?: return
+		if (!canReviewSolution()) {
+			return
+		}
+		val vLength = vSession.puzzle.moves.size
+		val vCurrent = reviewPly ?: vLength
+		val vNext = (vCurrent + inDelta).coerceIn(0, vLength)
+		if (vNext == vCurrent) {
+			return
+		}
+		reviewPly = if (vNext == vLength) null else vNext
+		showMove(inAnimate = true)
+		publish()
+	}
+
+	/**
+	 * Revue de la solution : va au début (position du puzzle avant le coup de l'adversaire) ou à la fin.
+	 */
+	fun onSolutionJump(inToEnd: Boolean) {
+		val vLength = session?.puzzle?.moves?.size ?: return
+		onSolutionStep(if (inToEnd) vLength else -vLength)
+	}
+
+	/**
+	 * Indique si la solution peut être revue : puzzle terminé, hors défi, rien en cours.
+	 */
+	private fun canReviewSolution(): Boolean = session?.status == PuzzleStatus.Solved && run == null && !busy
+
+	/**
+	 * Retourne la position après les [inPly] premiers coups de la solution.
+	 */
+	private fun solutionPosition(inSession: PuzzleSession, inPly: Int): Map<Square, Piece> {
+		val vPosition = rules.positionFromFen(inSession.puzzle.fen)
+		inSession.puzzle.moves.take(inPly).forEach { vPosition.play(it) }
+		return Square.kAll.mapNotNull { vSquare -> vPosition.pieceAt(vSquare)?.let { vSquare to it } }.toMap()
+	}
+
+	/**
+	 * Retourne la notation de toute la solution, le coup [inPly] souligné et les suivants atténués.
+	 */
+	private fun solutionNotation(inSession: PuzzleSession, inPly: Int): List<NotationToken> {
+		val vTokens = mutableListOf<NotationToken>()
+		sanLine(rules, inSession.puzzle.fen, inSession.puzzle.moves).forEachIndexed { inIndex, inMove ->
+			val vKind = when {
+				inIndex + 1 == inPly -> NotationKind.Selected
+				inIndex + 1 < inPly -> NotationKind.Current
+				else -> NotationKind.Upcoming
+			}
+			if (inMove.color == com.chessplus.core.model.Color.White || inIndex == 0) {
+				vTokens.add(NotationToken(formatMoveNumber(inMove), if (vKind == NotationKind.Selected) NotationKind.Current else vKind))
+			}
+			vTokens.add(NotationToken(inMove.san, vKind))
+		}
+		return vTokens
+	}
+
+	/**
 	 * Retourne l'échiquier.
 	 */
 	fun onFlip() {
@@ -447,6 +511,7 @@ class GameController(
 		busy = false
 		displayOverride = null
 		vSession.restart()
+		reviewPly = null
 		clockStart = clock()
 		clockEnd = null
 		showMove(inAnimate = true)
@@ -536,6 +601,7 @@ class GameController(
 		clockStart = clock()
 		clockEnd = if (vSession.status == PuzzleStatus.Solved) clockStart else null
 		pendingMove = null
+		reviewPly = null
 		showMove(inAnimate = false)
 		when (vSession.status) {
 			PuzzleStatus.Solved -> {
@@ -593,6 +659,7 @@ class GameController(
 		clockStart = startedAt
 		clockEnd = null
 		pendingMove = null
+		reviewPly = null
 		selected = null
 		badge = null
 		promotion = null
@@ -1015,14 +1082,16 @@ class GameController(
 		}
 		mutableState.value = GameUiState(
 			header = header,
-			pieces = displayOverride ?: vSession?.let { boardPieces(it) } ?: emptyMap(),
+			pieces = displayOverride ?: vSession?.let { vReviewed -> reviewPly?.let { solutionPosition(vReviewed, it) } ?: boardPieces(vReviewed) } ?: emptyMap(),
 			orientation = (vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White).let { if (flipped) it.opposite() else it },
 			sideToMove = vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White,
 			puzzleId = vSession?.puzzle?.id,
 			puzzleRating = vSession?.puzzle?.rating,
 			puzzleThemes = vSession?.puzzle?.themes ?: com.chessplus.core.model.ThemeSet.kEmpty,
 			showThemeTag = mode is GameMode.Targeted,
-			notation = vSession?.let { notationOf(it) } ?: emptyList(),
+			notation = vSession?.let { vNoted -> reviewPly?.let { solutionNotation(vNoted, it) } ?: notationOf(vNoted) } ?: emptyList(),
+			solutionPly = reviewPly,
+			solutionLength = if (canReviewSolution()) vSession?.puzzle?.moves?.size ?: 0 else 0,
 			remainingMoves = vSession?.let { it.puzzle.playerMoveCount - it.solutionPly / 2 } ?: 0,
 			clockStart = clockStart,
 			clockEnd = clockEnd,
@@ -1037,7 +1106,7 @@ class GameController(
 			skipEnabled = mode !is GameMode.Daily && (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,
 			challengeBest = challengeBest,
 			daily = dailyDay?.let { DailyUi(it, DailyDays.keyOf(clock()), dailySolved) },
-			lastMove = vSession?.lastMove,
+			lastMove = if (vSession != null && reviewPly != null) vSession.puzzle.moves.getOrNull(reviewPly!! - 1) else vSession?.lastMove,
 			moveId = moveId,
 			animateMove = animate,
 			selected = selected,

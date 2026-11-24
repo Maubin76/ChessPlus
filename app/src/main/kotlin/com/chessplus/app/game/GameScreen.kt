@@ -156,6 +156,8 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		inExitStep = vExitStep,
 		inOnExitStep = { vExitStep = it },
 		inOnLeave = vBack,
+		inOnSolutionStep = vController::onSolutionStep,
+		inOnSolutionJump = vController::onSolutionJump,
 	)
 }
 
@@ -185,6 +187,8 @@ fun GameContent(
 	inExitStep: ExitStep = ExitStep.None,
 	inOnExitStep: (ExitStep) -> Unit = {},
 	inOnLeave: () -> Unit = inOnBack,
+	inOnSolutionStep: (Int) -> Unit = {},
+	inOnSolutionJump: (Boolean) -> Unit = {},
 	inClock: () -> Long = System::currentTimeMillis,
 ) {
 	val vColors = ChessPlusTheme.colors
@@ -222,6 +226,7 @@ fun GameContent(
 					verticalArrangement = Arrangement.spacedBy(vSpacing.space3),
 				) {
 					FeedbackCard(feedbackOf(inState))
+					SolutionNavigator(inState, inOnSolutionStep, inOnSolutionJump)
 					DailyCalendar(vDaily, inOnDailyDay)
 				}
 				Row(Modifier.fillMaxWidth().padding(start = vSpacing.space4, end = vSpacing.space4, bottom = vSpacing.space4), horizontalArrangement = Arrangement.spacedBy(vSpacing.space2)) {
@@ -236,6 +241,7 @@ fun GameContent(
 						SessionLine(inState)
 					}
 					Spacer(Modifier.weight(1f))
+					SolutionNavigator(inState, inOnSolutionStep, inOnSolutionJump)
 					Actions(inState, inOnBack, inOnHint, inOnSolution, inOnFlip, inOnSkip, inOnConfirm, inOnCancel, inOnPlayAgain)
 				}
 			}
@@ -468,17 +474,47 @@ private fun PuzzleHeader(inState: GameUiState) {
 private fun Notation(inTokens: List<NotationToken>) {
 	val vColors = ChessPlusTheme.colors
 	FlowRow(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space3)) {
-		for (vToken in inTokens.takeLast(kMaxNotationTokens)) {
+		// En revue de la solution, toute la ligne ; sinon, les derniers coups seulement.
+		val vReviewing = inTokens.any { it.kind == NotationKind.Selected || it.kind == NotationKind.Upcoming }
+		for (vToken in if (vReviewing) inTokens else inTokens.takeLast(kMaxNotationTokens)) {
 			Text(
 				vToken.text,
 				style = ChessPlusTheme.typography.moves,
-				color = if (vToken.kind == NotationKind.Past) vColors.inkMuted else vColors.ink,
-				modifier = if (vToken.kind == NotationKind.Pending) Modifier.drawBehind {
+				color = when (vToken.kind) {
+					NotationKind.Past -> vColors.inkMuted
+					NotationKind.Upcoming -> vColors.inkMuted.copy(alpha = 0.5f)
+					else -> vColors.ink
+				},
+				modifier = if (vToken.kind == NotationKind.Pending || vToken.kind == NotationKind.Selected) Modifier.drawBehind {
 					val vStroke = 2.dp.toPx()
 					drawLine(vColors.accent, Offset(0f, size.height - vStroke / 2), Offset(size.width, size.height - vStroke / 2), vStroke)
 				} else Modifier,
 			)
 		}
+	}
+}
+
+/**
+ * Revue de la solution d'un puzzle terminé : début, coup précédent, coup suivant, fin, et numéro du
+ * coup affiché. Absente tant que la revue n'est pas disponible.
+ */
+@Composable
+private fun SolutionNavigator(inState: GameUiState, inOnStep: (Int) -> Unit, inOnJump: (Boolean) -> Unit) {
+	val vLength = inState.solutionLength
+	if (vLength == 0) {
+		return
+	}
+	val vColors = ChessPlusTheme.colors
+	val vPly = inState.solutionPly ?: vLength
+	Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
+		Column(Modifier.weight(1f)) {
+			Text(stringResource(R.string.solution_title), style = ChessPlusTheme.typography.small, color = vColors.inkMuted, maxLines = 1)
+			Text(stringResource(R.string.solution_ply, vPly, vLength), style = ChessPlusTheme.typography.moves, color = vColors.ink, maxLines = 1)
+		}
+		IconButtonOutlined(R.drawable.ic_ln_first, stringResource(R.string.solution_first), { inOnJump(false) }, inEnabled = vPly > 0)
+		IconButtonOutlined(R.drawable.ic_ln_back, stringResource(R.string.solution_previous), { inOnStep(-1) }, inEnabled = vPly > 0)
+		IconButtonOutlined(R.drawable.ic_ln_chevron, stringResource(R.string.solution_next), { inOnStep(1) }, inEnabled = vPly < vLength)
+		IconButtonOutlined(R.drawable.ic_ln_last, stringResource(R.string.solution_last), { inOnJump(true) }, inEnabled = vPly < vLength)
 	}
 }
 

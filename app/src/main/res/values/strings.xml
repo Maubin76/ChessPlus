@@ -167,6 +167,14 @@
 	<string name="recap_best">Record</string>
 	<string name="recap_close">Fermer</string>
 
+	<!-- Revue de la solution -->
+	<string name="solution_title">Solution</string>
+	<string name="solution_ply">Coup %1$d/%2$d</string>
+	<string name="solution_first">Début de la solution</string>
+	<string name="solution_previous">Coup précédent</string>
+	<string name="solution_next">Coup suivant</string>
+	<string name="solution_last">Fin de la solution</string>
+
 	<!-- Écran de jeu : actions -->
 	<string name="action_hint">Indice</string>
 	<string name="action_solution">Solution</string>

@@ -2,6 +2,7 @@ package com.chessplus.app.game
 
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Move
+import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
 import com.chessplus.core.model.Square
 import com.chessplus.core.model.ThemeSet
@@ -337,6 +338,32 @@ class GameControllerTest {
 		assertTrue(vController.state.value.keepsPuzzle)
 		assertEquals(42L, vController.state.value.sessionStartedAt, "début de la session à l'ouverture de l'écran")
 		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
+	}
+
+	/** Vérifie la revue de la solution : indisponible pendant le puzzle, puis coup par coup une fois terminé. */
+	@Test
+	fun solutionReview() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2, kShort)))
+		vController.start()
+		vController.awaitIdle()
+		vController.onSolutionStep(-1)
+		assertNull(vController.state.value.solutionPly, "pas de revue avant la fin du puzzle")
+		assertEquals(0, vController.state.value.solutionLength)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		assertEquals(4, vController.state.value.solutionLength)
+		vController.onSolutionStep(-1)
+		assertEquals(3, vController.state.value.solutionPly)
+		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		assertEquals(Piece(Color.White, PieceType.Queen), vController.state.value.pieces[sq("f7")], "la dame n'a pas encore joué f8")
+		assertEquals(NotationKind.Selected, vController.state.value.notation.first { it.text == "Kd8" }.kind)
+		vController.onSolutionJump(false)
+		assertEquals(0, vController.state.value.solutionPly)
+		assertNull(vController.state.value.lastMove)
+		assertEquals(Piece(Color.Black, PieceType.King), vController.state.value.pieces[sq("e8")], "position avant le coup de l'adversaire")
+		vController.onSolutionJump(true)
+		assertNull(vController.state.value.solutionPly, "à la fin, retour à la position réelle")
+		assertEquals(Move.fromUci("f7f8"), vController.state.value.lastMove)
 	}
 
 	/** Vérifie Passer : un puzzle non terminé compte comme raté, puis le suivant arrive. */

@@ -130,6 +130,12 @@ enum class NotationKind {
 
 	/** Coup à trouver (« ? » souligné). */
 	Pending,
+
+	/** Revue de la solution : coup affiché sur l'échiquier (souligné). */
+	Selected,
+
+	/** Revue de la solution : coup à venir (atténué). */
+	Upcoming,
 }
 
 /**
@@ -224,6 +230,8 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property sessionRecap vrai en Arcade et en Entraînement : quitter demande confirmation et affiche le récapitulatif de la session.
  * @property keepsPuzzle vrai si le puzzle en cours est gardé pour la reprise (Arcade seulement).
  * @property isReview vrai en Révision (message propre quand il n'y a plus rien à réviser).
+ * @property solutionPly revue de la solution : nombre de coups de la solution affichés, ou null pour la position réelle.
+ * @property solutionLength nombre de coups de la solution, ou 0 si la revue n'est pas disponible (puzzle non terminé, défi).
  * @property sessionStartedAt début de la session (ouverture de l'écran, millisecondes), ou null avant le démarrage.
  */
 data class GameUiState(
@@ -263,5 +271,7 @@ data class GameUiState(
 	val sessionRecap: Boolean = false,
 	val keepsPuzzle: Boolean = false,
 	val isReview: Boolean = false,
+	val solutionPly: Int? = null,
+	val solutionLength: Int = 0,
 	val sessionStartedAt: Long? = null,
 )
