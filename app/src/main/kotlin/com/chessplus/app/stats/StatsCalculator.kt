@@ -448,7 +448,7 @@ class StatsCalculator(private val zone: TimeZone = TimeZone.getDefault()) {
 		const val kBandWidth = 200
 
 		/** Nombre de semaines du calendrier d'activité. */
-		const val kCalendarWeeks = 17
+		const val kCalendarWeeks = 12
 
 		/** Nombre de semaines du graphique de volume. */
 		const val kVolumeWeeks = 8

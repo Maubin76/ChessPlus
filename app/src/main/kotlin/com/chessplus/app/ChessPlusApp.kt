@@ -48,8 +48,7 @@ import com.chessplus.app.stats.ThemeStatsScreen
 import com.chessplus.app.stats.ThemeStatsViewModel
 import com.chessplus.app.training.TargetedScreen
 import com.chessplus.app.training.TargetedViewModel
-import com.chessplus.app.ui.theme.ChessType
-import com.chessplus.app.ui.theme.kLocalChessColors
+import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.core.model.ThemeSet
 import kotlinx.coroutines.launch
 
@@ -69,8 +68,8 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 	}
 	val vEntry = vNavigation.backStack.lastOrNull()
 	if (vEntry == null) {
-		Box(Modifier.fillMaxSize().background(kLocalChessColors.current.background), contentAlignment = Alignment.Center) {
-			Text(stringResource(R.string.loading), style = ChessType.kBody, color = kLocalChessColors.current.muted)
+		Box(Modifier.fillMaxSize().background(ChessPlusTheme.colors.surface), contentAlignment = Alignment.Center) {
+			Text(stringResource(R.string.loading), style = ChessPlusTheme.typography.body, color = ChessPlusTheme.colors.inkMuted)
 		}
 		return
 	}
@@ -101,21 +100,22 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 					)
 					Destination.Home -> HomeScreen(
 						inViewModel = viewModel(factory = HomeViewModel.factory(inContainer)),
-						inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
-						inOnTargeted = { vNavigation.navigate(Destination.Targeted) },
-						inOnSettings = { vNavigation.navigate(Destination.Settings) },
-						inOnTab = vNavigation::selectTab,
+						inOnDaily = { vNavigation.navigate(Destination.Game(GameMode.Daily(it))) },
+						inOnArcade = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
+						inOnTraining = { vNavigation.navigate(Destination.Targeted) },
 						inOnChallenge = { vNavigation.navigate(Destination.Game(GameMode.Challenge(it))) },
+						inOnTab = vNavigation::selectTab,
 					)
 					Destination.History -> HistoryScreen(
 						inViewModel = viewModel(factory = HistoryViewModel.factory(inContainer)),
 						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
-						inOnTab = vNavigation::selectTab,
+						inOnBack = vBack,
 					)
 					Destination.Stats -> StatsScreen(
 						inViewModel = viewModel(factory = StatsViewModel.factory(inContainer)),
 						inOnTheme = { vNavigation.navigate(Destination.ThemeStats(it)) },
 						inOnTrainThemes = { vNavigation.navigate(Destination.Game(GameMode.Targeted(TrainingCriteria(themes = ThemeSet.of(it))))) },
+						inOnHistory = { vNavigation.navigate(Destination.History) },
 						inOnTab = vNavigation::selectTab,
 					)
 					is Destination.ThemeStats -> ThemeStatsScreen(
@@ -125,7 +125,13 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inOnTrain = { vNavigation.navigate(Destination.Game(GameMode.Targeted(TrainingCriteria(themes = ThemeSet.of(vDestination.theme))))) },
 						inOnReplay = { vNavigation.navigate(Destination.Game(GameMode.Replay(it))) },
 					)
-					Destination.Settings -> SettingsScreen(inContainer.settingsStore, inVersion, vBack) { vNavigation.navigate(Destination.Level(firstLaunch = false)) }
+					Destination.Settings -> SettingsScreen(
+						inStore = inContainer.settingsStore,
+						inVersion = inVersion,
+						inLoadBaseInfo = inContainer::offlineBaseInfo,
+						inOnLevel = { vNavigation.navigate(Destination.Level(firstLaunch = false)) },
+						inOnTab = vNavigation::selectTab,
+					)
 					Destination.Targeted -> TargetedScreen(
 						inViewModel = viewModel(factory = TargetedViewModel.factory(inContainer)),
 						inOnBack = vBack,
@@ -138,6 +144,7 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 								GameMode.Continuous -> R.string.game_title
 								is GameMode.Targeted -> R.string.game_title_targeted
 								is GameMode.Replay -> R.string.game_title_replay
+								is GameMode.Daily -> R.string.game_title_daily
 								is GameMode.Challenge -> when (vDestination.mode.kind) {
 									ChallengeKind.Survival -> R.string.game_title_survival
 									ChallengeKind.Rush -> R.string.game_title_rush

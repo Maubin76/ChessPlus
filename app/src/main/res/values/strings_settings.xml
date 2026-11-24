@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes de l'écran Réglages (design system chessplus-design/reglages). -->
+<resources>
+	<string name="set_title">Réglages</string>
+
+	<!-- Échiquier -->
+	<string name="set_section_board">Échiquier</string>
+	<string name="set_board_sage">Sauge</string>
+	<string name="set_board_wood">Bois</string>
+	<string name="set_board_slate">Ardoise</string>
+	<string name="set_board_grey">Gris</string>
+	<string name="set_pieces">Style des pièces</string>
+	<string name="set_pieces_classic">Classique</string>
+	<string name="set_pieces_dialog_detail">Jeu cburnett, de Colin M.L. Burnett, sous licence BSD.</string>
+	<string name="set_coordinates">Coordonnées</string>
+	<string name="set_confirm">Confirmer les coups</string>
+	<string name="set_confirm_detail">Évite les coups joués par erreur</string>
+	<string name="set_vibration">Vibration</string>
+	<string name="set_vibration_detail">Courte vibration à chaque coup</string>
+
+	<!-- Puzzles -->
+	<string name="set_section_puzzles">Puzzles</string>
+	<string name="set_difficulty_easier">Plus facile</string>
+	<string name="set_difficulty_normal">Normal</string>
+	<string name="set_difficulty_harder">Plus dur</string>
+	<string name="set_auto_next">Enchaîner automatiquement</string>
+	<string name="set_auto_next_detail">Puzzle suivant après une réussite</string>
+	<string name="set_level">Classement de départ</string>
+	<string name="set_level_detail">Choisis à nouveau ton niveau</string>
+	<string name="set_base">Base hors ligne</string>
+	<string name="set_base_detail">%1$s puzzles · %2$s · à jour</string>
+	<string name="set_base_loading">Lecture de la base…</string>
+	<string name="set_base_size">%1$s Mo</string>
+	<string name="set_base_manage">Gérer</string>
+	<string name="set_base_dialog_title">Base hors ligne</string>
+	<string name="set_base_dialog_detail">%1$s puzzles, %2$s. Source : base de puzzles Lichess, sous licence CC0. Elle est embarquée dans l’app : aucun téléchargement n’est nécessaire.</string>
+
+	<!-- Apparence -->
+	<string name="set_section_appearance">Apparence</string>
+	<string name="set_theme_system">Système</string>
+	<string name="set_theme_light">Clair</string>
+	<string name="set_theme_dark">Sombre</string>
+
+	<!-- À propos -->
+	<string name="set_section_about">À propos</string>
+	<string name="set_version">Version</string>
+	<string name="set_credits">Crédits</string>
+	<string name="set_credits_detail">Puzzles : base Lichess (CC0). Pièces : cburnett, Colin M.L. Burnett (BSD). Polices : Space Grotesk, Inter, JetBrains Mono (OFL).</string>
+	<string name="set_close">Fermer</string>
+</resources>

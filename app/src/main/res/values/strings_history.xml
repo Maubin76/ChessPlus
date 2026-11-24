@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Textes de l'historique (écran secondaire ouvert depuis les statistiques). -->
+<resources>
+	<string name="hist_title">Historique</string>
+	<string name="hist_all">Tous</string>
+	<string name="hist_solved">Réussis</string>
+	<string name="hist_failed">Ratés</string>
+	<string name="hist_today">Aujourd’hui</string>
+	<string name="hist_yesterday">Hier</string>
+	<string name="hist_empty">Aucun puzzle joué pour l’instant.</string>
+	<string name="hist_replay_note">Touche un puzzle pour le rejouer, sans effet sur ton classement.</string>
+	<string name="hist_success">Réussi</string>
+	<string name="hist_failure">Raté</string>
+</resources>

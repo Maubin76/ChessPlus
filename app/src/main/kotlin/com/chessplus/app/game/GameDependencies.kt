@@ -32,6 +32,29 @@ interface PuzzleProvider {
 }
 
 /**
+ * Réglages qui modifient le déroulement d'un puzzle, lus à chaque usage.
+ */
+interface GamePreferences {
+	/** Vrai si un coup doit être confirmé avant d'être joué. */
+	val confirmMoves: Boolean
+
+	/** Vrai pour passer au puzzle suivant après une réussite. */
+	val autoNext: Boolean
+
+	/** Écart entre la difficulté visée en Arcade et le classement du joueur. */
+	val difficultyOffset: Int
+
+	companion object {
+		/** Réglages neutres : ni confirmation, ni enchaînement, difficulté normale. */
+		val kDefault = object : GamePreferences {
+			override val confirmMoves = false
+			override val autoNext = false
+			override val difficultyOffset = 0
+		}
+	}
+}
+
+/**
  * Enregistrement des parties de défi.
  */
 interface ChallengeStore {

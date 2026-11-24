@@ -51,6 +51,10 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 	var served = 0
 		private set
 
+	/** Nombre de problèmes manqués ou passés. */
+	var misses = 0
+		private set
+
 	/** Cote du problème le plus difficile réussi, ou null. */
 	var bestPuzzleRating: Int? = null
 		private set
@@ -93,6 +97,7 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 	 * Note un problème manqué ; retourne vrai si la partie est perdue (Survie sans vie).
 	 */
 	fun onMissed(): Boolean {
+		misses++
 		if (kind == ChallengeKind.Survival) {
 			lives = maxOf(0, lives - 1)
 			return lives == 0
@@ -104,8 +109,8 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 		/** Vies au début d'une partie de Survie. */
 		const val kLives = 3
 
-		/** Durée d'une partie de Rush : 5 minutes. */
-		const val kRushDurationMs = 5L * 60 * 1000
+		/** Durée d'une partie de Rush : 3 minutes. */
+		const val kRushDurationMs = 3L * 60 * 1000
 
 		/** Écart entre la cote du joueur et le premier problème de Survie. */
 		const val kSurvivalStartOffset = -300

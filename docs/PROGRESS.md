@@ -135,6 +135,8 @@ Fonctionnement des releases : chaque mise à jour de `main` publie une nouvelle 
 
 Branches (décision de Mathieu le 2026-11-23) : le développement après la V1 se fait sur `road-to-v2`, qui ne déclenche pas la CI ; `main` reste sur la v1.0 (`206d6f7`) jusqu'à ce que Mathieu demande de fusionner. L'icône Halo et la palette verte sont sur `road-to-v2` uniquement.
 
+Refonte graphique (design system fourni par Mathieu le 2026-11-23, dossier local `chessplus-design/` non versionné) : tous les écrans repris sur `road-to-v2` ; nouvelles fonctions déduites des maquettes (puzzle du jour, Solution, Retourner, Passer, confirmation des coups, enchaînement automatique, difficulté, thèmes d'échiquier, notation SAN dans `:core`). Captures à faire valider ; détail et écarts dans `docs/DESIGN.md`.
+
 Modes de jeu (demandés par Mathieu le 2026-11-23) : accueil en groupes Entraînement (Arcade, Ciblé) et Défis (Survie, Rush), défis sans effet sur la cote, records enregistrés (base utilisateur v3). Indice en deux temps (pièce, puis coup). Implémentés sur `road-to-v2`, maquettes à faire valider ; détail dans `docs/DESIGN.md`.
 
 Statistiques (demandées par Mathieu le 2026-11-23, toutes les suggestions retenues) : implémentées sur `road-to-v2` (écran en sections, fiche par thème, tuiles de l'accueil, base utilisateur v2 avec durée et coup de l'échec, migration testée). Maquettes à faire valider par Mathieu (captures `StatsScreenShotsKt`) ; détail dans `docs/DESIGN.md`.

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Textes de ChessPlus (docs/DESIGN.md). -->
+<!-- Textes de ChessPlus : français, tutoiement, phrases courtes (chessplus-design/README.md). -->
 <resources>
 	<string name="app_name">ChessPlus</string>
 
-	<string name="loading">Préparation…</string>
+	<string name="loading">Chargement…</string>
 
 	<!-- Durées écoulées -->
 	<string name="elapsed_now">à l’instant</string>
@@ -14,185 +14,115 @@
 
 	<!-- Navigation -->
 	<string name="nav_home">Accueil</string>
-	<string name="nav_history">Historique</string>
-	<string name="nav_stats">Statistiques</string>
+	<string name="nav_stats">Stats</string>
+	<string name="nav_settings">Réglages</string>
 	<string name="action_back">Retour</string>
 
 	<!-- Accueil -->
-	<string name="home_solved">Problèmes résolus</string>
-	<string name="home_solved_short">Résolus</string>
-	<string name="home_rating">Votre cote : %1$s</string>
-	<string name="home_resume">Reprendre</string>
-	<string name="home_resume_move">Coup %1$d sur %2$d</string>
-	<string name="home_resume_finished">Terminé</string>
-
-	<!-- Choix du niveau -->
-	<string name="level_welcome">BIENVENUE</string>
-	<string name="level_title">Quel est votre niveau ?</string>
-	<string name="level_detail">Votre cote de départ s’ajustera ensuite après chaque problème.</string>
-	<string name="level_beginner">Débutant</string>
-	<string name="level_beginner_detail">Je connais les règles</string>
-	<string name="level_intermediate">Intermédiaire</string>
-	<string name="level_intermediate_detail">Je joue de temps en temps</string>
-	<string name="level_confirmed">Confirmé</string>
-	<string name="level_confirmed_detail">Je joue régulièrement</string>
-	<string name="level_advanced">Avancé</string>
-	<string name="level_advanced_detail">Je joue en club ou en ligne</string>
-	<string name="level_custom">Je connais ma cote</string>
-	<string name="level_custom_hint">ex. 1 650</string>
-	<string name="level_custom_invalid">La cote doit être comprise entre %1$d et %2$d</string>
-	<string name="level_start">Commencer</string>
-
-	<!-- Entraînement ciblé -->
-	<string name="targeted_title">Entraînement ciblé</string>
-	<string name="targeted_difficulty">Difficulté</string>
-	<string name="targeted_easier">Plus facile</string>
-	<string name="targeted_level">Mon niveau</string>
-	<string name="targeted_harder">Plus difficile</string>
-	<string name="targeted_range">Tranche précise</string>
-	<string name="targeted_range_value">De %1$s à %2$s</string>
-	<string name="targeted_themes">Thèmes</string>
-	<string name="targeted_all_themes">Tous les thèmes</string>
-	<string name="targeted_family_all">Tout sélectionner</string>
-	<string name="targeted_family_none">Tout désélectionner</string>
-	<string name="targeted_counting">Calcul…</string>
-	<plurals name="targeted_count">
-		<item quantity="one">%1$s problème correspond</item>
-		<item quantity="other">%1$s problèmes correspondent</item>
-	</plurals>
-	<string name="targeted_start">Commencer</string>
-
-	<!-- Historique -->
-	<string name="history_all">Tous</string>
-	<string name="history_solved">Réussis</string>
-	<string name="history_failed">Échoués</string>
-	<string name="history_today">Aujourd’hui</string>
-	<string name="history_yesterday">Hier</string>
-	<string name="history_empty">Aucun problème joué pour l’instant</string>
-	<string name="history_replay_note">Touchez un problème pour le rejouer (sans effet sur la cote)</string>
-
-	<!-- Statistiques -->
-	<string name="stats_tab_7">7 jours</string>
-	<string name="stats_tab_30">30 jours</string>
-	<string name="stats_tab_all">Tout</string>
-	<string name="stats_empty">Résolvez un premier problème pour voir vos statistiques</string>
-
-	<!-- Réglages -->
-	<string name="settings_title">Réglages</string>
-	<string name="settings_theme">Thème</string>
-	<string name="settings_theme_system">Système</string>
-	<string name="settings_theme_light">Clair</string>
-	<string name="settings_theme_dark">Sombre</string>
-	<string name="settings_vibration">Vibration</string>
-	<string name="settings_vibration_detail">Courte vibration à chaque coup</string>
-	<string name="settings_sounds">Sons</string>
-	<string name="settings_sounds_detail">Bientôt disponible</string>
-	<string name="settings_coordinates">Coordonnées</string>
-	<string name="settings_coordinates_detail">Lettres et chiffres dans les cases</string>
-	<string name="settings_level">Changer de niveau</string>
-	<string name="settings_credits">Crédits</string>
-	<string name="settings_credits_detail">Problèmes : base Lichess (CC0). Pièces : cburnett, Colin M.L. Burnett (GPLv2+). Police : Inter (OFL). Icônes : Material Symbols (Apache 2.0).</string>
-	<string name="settings_version">ChessPlus %1$s</string>
-
-	<!-- Écran de jeu : barre -->
-	<string name="game_title">Arcade</string>
-	<string name="game_title_targeted">Entraînement ciblé</string>
-	<string name="game_title_replay">Rejouer</string>
-
-	<!-- Écran de jeu : messages -->
-	<string name="game_loading">Préparation…</string>
-	<string name="game_loading_detail">Chargement des problèmes</string>
-	<string name="game_white_to_move">Les blancs jouent</string>
-	<string name="game_black_to_move">Les noirs jouent</string>
-	<string name="game_find_best">Trouvez le meilleur coup</string>
-	<string name="game_find_next">Continuez : trouvez le coup suivant</string>
-	<string name="game_correct">Bon coup !</string>
-	<string name="game_white_thinking">Les blancs réfléchissent…</string>
-	<string name="game_black_thinking">Les noirs réfléchissent…</string>
-	<string name="game_wrong">Pas ce coup-là</string>
-	<string name="game_wrong_detail">Réessayez, ou demandez un indice</string>
-	<string name="game_wrong_note">Le problème compte comme échoué, mais vous pouvez le terminer</string>
-	<string name="game_hint">Indice</string>
-	<string name="game_hint_detail">Coup joué : %1$s → %2$s</string>
-	<string name="game_hint_king">Jouez le roi en surbrillance</string>
-	<string name="game_hint_queen">Jouez la dame en surbrillance</string>
-	<string name="game_hint_rook">Jouez la tour en surbrillance</string>
-	<string name="game_hint_bishop">Jouez le fou en surbrillance</string>
-	<string name="game_hint_knight">Jouez le cavalier en surbrillance</string>
-	<string name="game_hint_pawn">Jouez le pion en surbrillance</string>
-	<string name="game_hint_again">Touchez encore Indice pour voir le coup</string>
-	<string name="game_mate">Mat !</string>
-	<string name="game_finished">Problème terminé</string>
-	<string name="game_hints_used">Terminé avec l’aide des indices</string>
-	<string name="game_touch_help">Touchez une pièce puis sa case, ou faites-la glisser</string>
-	<string name="game_no_puzzle">Aucun problème disponible</string>
-	<string name="game_no_puzzle_detail">Tous les problèmes de votre niveau ont été résolus</string>
-
-	<!-- Accueil : modes de jeu -->
-	<string name="home_section_training">Entraînement</string>
-	<string name="home_section_challenges">Défis</string>
+	<string name="home_streak_chip">%1$d\u202Fj</string>
+	<string name="home_streak_description">Série de %1$d jours</string>
+	<string name="home_daily">Puzzle du jour</string>
+	<string name="home_daily_default">Puzzle</string>
+	<string name="home_daily_solve">Résoudre</string>
+	<string name="home_daily_side_white">Trait aux blancs</string>
+	<string name="home_daily_side_black">Trait aux noirs</string>
+	<string name="home_modes">Modes de jeu</string>
+	<string name="home_offline">Hors ligne · %1$s puzzles disponibles</string>
 	<string name="mode_arcade">Arcade</string>
-	<string name="mode_arcade_detail">Adapté à votre cote</string>
-	<string name="mode_targeted">Ciblé</string>
-	<string name="mode_targeted_detail">Thèmes au choix</string>
-	<string name="mode_survival">Survie</string>
-	<string name="mode_survival_detail">3 vies, de plus en plus dur</string>
+	<string name="mode_arcade_detail">Puzzles adaptés à ton classement</string>
 	<string name="mode_rush">Rush</string>
-	<string name="mode_rush_detail">5 minutes chrono</string>
-	<string name="mode_record">Record %1$d</string>
+	<string name="mode_rush_detail">3 minutes, un maximum de puzzles</string>
+	<string name="mode_survival">Survie</string>
+	<string name="mode_survival_detail">Trois erreurs et c’est terminé</string>
+	<string name="mode_training">Entraînement</string>
+	<string name="mode_training_detail">Fourchette, clouage, mat en 2…</string>
 
-	<!-- Défis Survie et Rush -->
+
+
+	<!-- Écran de jeu : titres -->
+	<string name="game_title">Arcade</string>
+	<string name="game_title_targeted">Entraînement</string>
+	<string name="game_title_replay">Rejouer</string>
+	<string name="game_title_daily">Puzzle du jour</string>
 	<string name="game_title_survival">Survie</string>
 	<string name="game_title_rush">Rush</string>
-	<string name="challenge_solved_title">Réussi !</string>
-	<string name="challenge_next">Problème suivant…</string>
-	<string name="challenge_life_lost">Une vie en moins</string>
-	<string name="challenge_missed_detail">Il fallait jouer %1$s → %2$s</string>
-	<string name="challenge_over_lives">Plus de vies</string>
-	<string name="challenge_over_time">Temps écoulé</string>
-	<string name="challenge_over_abandoned">Partie terminée</string>
-	<string name="challenge_over_no_puzzle">Plus de problèmes</string>
-	<string name="challenge_over_survival">Partie de Survie terminée</string>
-	<string name="challenge_over_rush">Partie de Rush terminée</string>
-	<string name="challenge_new_record">Nouveau record !</string>
-	<string name="challenge_record">Record : %1$d</string>
-	<string name="challenge_best_puzzle">Problème le plus difficile réussi : %1$s</string>
-	<plurals name="challenge_solved">
-		<item quantity="one">problème résolu</item>
-		<item quantity="other">problèmes résolus</item>
+
+	<!-- Écran de jeu : en-tête -->
+	<string name="game_puzzle_number">Puzzle #%1$s</string>
+	<string name="game_white_to_move">Trait aux blancs</string>
+	<string name="game_black_to_move">Trait aux noirs</string>
+	<string name="game_side_white">les blancs</string>
+	<string name="game_side_black">les noirs</string>
+
+	<!-- Écran de jeu : retours -->
+	<string name="game_loading">Chargement des puzzles…</string>
+	<string name="game_find_best">Trouve le meilleur coup pour %1$s.</string>
+	<string name="game_good_move">Bon coup.</string>
+	<plurals name="game_moves_left">
+		<item quantity="one">Continue, il reste un coup.</item>
+		<item quantity="other">Continue, il reste %d coups.</item>
 	</plurals>
-	<plurals name="challenge_lives">
-		<item quantity="one">%d vie restante</item>
-		<item quantity="other">%d vies restantes</item>
+	<string name="game_white_thinking">Les blancs répondent…</string>
+	<string name="game_black_thinking">Les noirs répondent…</string>
+	<string name="game_wrong">Pas ce coup.</string>
+	<string name="game_wrong_detail">Réessaie, ou demande un indice.</string>
+	<string name="game_hint">Indice.</string>
+	<string name="game_hint_king">Joue le roi.</string>
+	<string name="game_hint_queen">Joue la dame.</string>
+	<string name="game_hint_rook">Joue la tour.</string>
+	<string name="game_hint_bishop">Joue le fou.</string>
+	<string name="game_hint_knight">Joue le cavalier.</string>
+	<string name="game_hint_pawn">Joue le pion.</string>
+	<string name="game_solution">Solution.</string>
+	<string name="game_solution_detail">Il fallait jouer %1$s → %2$s.</string>
+	<string name="game_solved">Résolu.</string>
+	<string name="game_failed">Raté.</string>
+	<string name="game_saving">Enregistrement…</string>
+	<string name="game_unrated">Déjà joué : classement inchangé.</string>
+	<string name="game_rating_after">Classement %1$s (%2$s).</string>
+	<string name="game_no_puzzle">Aucun puzzle.</string>
+	<string name="game_no_puzzle_detail">Tous les puzzles de ton niveau sont résolus.</string>
+
+	<!-- Écran de jeu : bilan de la session -->
+	<string name="game_tally_session">Session</string>
+	<string name="game_tally_run">Partie</string>
+	<plurals name="game_tally_solved">
+		<item quantity="one">%d réussi</item>
+		<item quantity="other">%d réussis</item>
 	</plurals>
-	<string name="action_abandon">Abandonner</string>
+	<plurals name="game_tally_failed">
+		<item quantity="one">%d raté</item>
+		<item quantity="other">%d ratés</item>
+	</plurals>
+	<string name="game_tally_record">Record %1$d</string>
+
+	<!-- Défis Survie et Rush -->
+	<string name="challenge_next">Puzzle suivant…</string>
+	<string name="challenge_life_lost">Une vie en moins.</string>
+	<string name="challenge_missed_detail">Il fallait jouer %1$s → %2$s.</string>
+	<string name="challenge_over_lives">Plus de vies.</string>
+	<string name="challenge_over_time">Temps écoulé.</string>
+	<string name="challenge_over_abandoned">Partie terminée.</string>
+	<string name="challenge_over_no_puzzle">Plus de puzzles.</string>
+	<plurals name="challenge_score">
+		<item quantity="one">%d puzzle résolu</item>
+		<item quantity="other">%d puzzles résolus</item>
+	</plurals>
+	<string name="challenge_new_record">%1$s · nouveau record</string>
+	<string name="challenge_record">%1$s · record %2$d</string>
+
+	<!-- Écran de jeu : actions -->
+	<string name="action_hint">Indice</string>
+	<string name="action_solution">Solution</string>
+	<string name="action_flip">Retourner</string>
+	<string name="action_skip">Passer</string>
+	<string name="action_next">Puzzle suivant</string>
+	<string name="action_confirm">Confirmer</string>
+	<string name="action_cancel">Annuler</string>
 	<string name="action_play_again">Rejouer</string>
 	<string name="action_home">Accueil</string>
 
-	<!-- Écran de jeu : commandes -->
-	<string name="action_restart">Recommencer</string>
-	<string name="action_hint">Indice</string>
-	<string name="action_next">Suivant</string>
-
 	<!-- Promotion -->
 	<string name="promotion_title">Promotion</string>
-	<string name="promotion_detail">Choisissez la nouvelle pièce</string>
-
-	<!-- Bilan -->
-	<string name="summary_success">Problème réussi</string>
-	<string name="summary_failure">Problème échoué</string>
-	<string name="summary_clean">Trouvé du premier coup, sans indice</string>
-	<plurals name="summary_mistakes">
-		<item quantity="one">%d erreur</item>
-		<item quantity="other">%d erreurs</item>
-	</plurals>
-	<plurals name="summary_hints">
-		<item quantity="one">%d indice</item>
-		<item quantity="other">%d indices</item>
-	</plurals>
-	<string name="summary_unrated">Déjà joué : sans effet sur la cote</string>
-	<string name="summary_unrated_short">inchangée</string>
-	<string name="summary_my_rating">Ma cote</string>
-	<string name="summary_puzzle_rating">Cote du problème</string>
-	<string name="summary_themes">Thèmes</string>
+	<string name="promotion_detail">Choisis la nouvelle pièce</string>
 </resources>

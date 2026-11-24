@@ -32,7 +32,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
+import kotlin.random.Random
 
 /**
  * Dépendances de l'application, créées une fois pour toutes (injection manuelle).
@@ -103,6 +107,32 @@ class AppContainer(private val context: Context) {
 			val (vPuzzles, vUser) = ready()
 			return PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao()).nextPuzzle(inCenter.toDouble(), SelectionCriteria(), null, System.currentTimeMillis(), inExclude)
 		}
+	}
+
+	/**
+	 * Retourne le puzzle du jour : tiré une fois par jour (graine = date), autour du classement du
+	 * joueur, puis mémorisé pour que le choix ne change pas dans la journée.
+	 */
+	suspend fun dailyPuzzle(inNow: Long = System.currentTimeMillis()): Puzzle? {
+		val vDay = SimpleDateFormat(kDayPattern, Locale.FRANCE).format(Date(inNow))
+		val vPreferences = context.getSharedPreferences(kDailyFile, Context.MODE_PRIVATE)
+		val (vPuzzles, vUser) = ready()
+		if (vPreferences.getString(kDailyDayKey, null) == vDay) {
+			vPreferences.getString(kDailyIdKey, null)?.let { inId -> vPuzzles.puzzleDao().getById(inId)?.let { return it.toPuzzle() } }
+		}
+		val vRating = ProgressRepository(vUser, ratingSystem).currentRating().rating
+		val vPuzzle = PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao(), Random(vDay.toLong())).nextPuzzle(vRating, SelectionCriteria(), null, inNow) ?: return null
+		vPreferences.edit().putString(kDailyDayKey, vDay).putString(kDailyIdKey, vPuzzle.id).apply()
+		return vPuzzle
+	}
+
+	/**
+	 * Retourne l'état de la base de puzzles hors ligne : nombre de puzzles et taille du fichier.
+	 */
+	suspend fun offlineBaseInfo(): OfflineBaseInfo {
+		val vCount = ready().first.puzzleDao().count()
+		val vSize = withContext(Dispatchers.IO) { context.getDatabasePath(PuzzleDatabase.kFileName).length() }
+		return OfflineBaseInfo(vCount, vSize)
 	}
 
 	/** Parties des défis Survie et Rush. */
@@ -190,3 +220,23 @@ class AppContainer(private val context: Context) {
 		private const val kReplayCandidates = 50
 	}
 }
+
+/** Fichier des préférences du puzzle du jour. */
+private const val kDailyFile = "daily"
+
+/** Clé du jour du puzzle mémorisé. */
+private const val kDailyDayKey = "day"
+
+/** Clé de l'identifiant du puzzle mémorisé. */
+private const val kDailyIdKey = "id"
+
+/** Format du jour, aussi graine du tirage. */
+private const val kDayPattern = "yyyyMMdd"
+
+/**
+ * État de la base de puzzles embarquée.
+ *
+ * @property puzzleCount nombre de puzzles.
+ * @property sizeBytes taille du fichier de la base.
+ */
+data class OfflineBaseInfo(val puzzleCount: Int, val sizeBytes: Long)

@@ -5,10 +5,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.tools.screenshot.PreviewTest
 import com.chessplus.app.design.preview.DesignPreviews
-import com.chessplus.app.home.HomeContent
-import com.chessplus.app.home.HomeUiState
 import com.chessplus.app.stats.StatsCalculator
 import com.chessplus.app.stats.StatsContent
+import com.chessplus.app.stats.StatsData
 import com.chessplus.app.stats.ThemeStatsContent
 import com.chessplus.app.stats.ThemeStatsState
 import com.chessplus.app.ui.theme.ChessPlusTheme
@@ -115,7 +114,7 @@ private val kAttempts by lazy { fakeAttempts() }
 @DesignPreviews
 @Composable
 fun StatsTopShot() = ChessPlusTheme {
-	StatsContent(kCalculator.report(kAttempts, kNow), kNow, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41), kNow, {}, {}, {}, {})
 }
 
 /** Statistiques, écran entier (clair). */
@@ -123,7 +122,7 @@ fun StatsTopShot() = ChessPlusTheme {
 @Preview(name = "ClairLong", device = kTallDevice, showSystemUi = false, uiMode = Configuration.UI_MODE_NIGHT_NO or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 fun StatsFullLightShot() = ChessPlusTheme(inDarkTheme = false) {
-	StatsContent(kCalculator.report(kAttempts, kNow), kNow, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41), kNow, {}, {}, {}, {})
 }
 
 /** Statistiques, écran entier (sombre). */
@@ -131,7 +130,7 @@ fun StatsFullLightShot() = ChessPlusTheme(inDarkTheme = false) {
 @Preview(name = "SombreLong", device = kTallDevice, showSystemUi = false, uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 fun StatsFullDarkShot() = ChessPlusTheme(inDarkTheme = true) {
-	StatsContent(kCalculator.report(kAttempts, kNow), kNow, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41), kNow, {}, {}, {}, {})
 }
 
 /** Statistiques sans aucune tentative. */
@@ -139,7 +138,7 @@ fun StatsFullDarkShot() = ChessPlusTheme(inDarkTheme = true) {
 @DesignPreviews
 @Composable
 fun StatsEmptyShot() = ChessPlusTheme {
-	StatsContent(kCalculator.report(emptyList(), kNow), kNow, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(emptyList(), kNow)), kNow, {}, {}, {}, {})
 }
 
 /** Fiche du thème « Finale de tours », entière. */
@@ -149,13 +148,4 @@ fun StatsEmptyShot() = ChessPlusTheme {
 @Composable
 fun ThemeStatsShot() = ChessPlusTheme {
 	ThemeStatsContent(Theme.RookEndgame, ThemeStatsState(kCalculator.themeDetail(kAttempts, Theme.RookEndgame)), kNow, {}, {}, {})
-}
-
-/** Accueil avec les tuiles série et réussite. */
-@PreviewTest
-@DesignPreviews
-@Composable
-fun HomeWithStatsShot() = ChessPlusTheme {
-	val vReport = kCalculator.report(kAttempts, kNow)
-	HomeContent(HomeUiState(solvedCount = vReport.successes, rating = vReport.currentRating ?: 0, dayStreak = vReport.dayStreak, successRate = vReport.successRate), kNow, {}, {}, {}, {})
 }

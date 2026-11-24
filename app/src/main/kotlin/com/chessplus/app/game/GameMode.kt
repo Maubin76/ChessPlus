@@ -66,6 +66,9 @@ sealed interface GameMode {
 	/** Rejeu d'un problème de l'historique (sans effet sur la cote), puis des autres problèmes non réussis. */
 	data class Replay(val puzzleId: String) : GameMode
 
+	/** Puzzle du jour, puis les puzzles de l'Arcade. */
+	data class Daily(val puzzleId: String) : GameMode
+
 	/** Défi Survie ou Rush : score à part, sans effet sur la cote ni sur l'historique. */
 	data class Challenge(val kind: ChallengeKind) : GameMode
 }

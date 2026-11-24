@@ -6,7 +6,7 @@ import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.TextStyle
@@ -14,157 +14,149 @@ import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontVariation
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.chessplus.app.R
 
-/**
- * Couleurs de ChessPlus (palette « Accent pleine largeur », version B verte, de docs/DESIGN.md).
+/*
+ * Thème de ChessPlus d'après le design system (chessplus-design/, docs/DESIGN.md) : couleurs générées
+ * dans ChessPlusTokens.kt, trois familles de polices embarquées, espacements et rayons.
  */
-@Immutable
-data class ChessColors(
-	val background: Color,
-	val surface: Color,
-	val text: Color,
-	val muted: Color,
-	val primary: Color,
-	val onPrimary: Color,
-	val success: Color,
-	val error: Color,
-	val track: Color,
-	val scrim: Color,
-	val squareLight: Color,
-	val squareDark: Color,
-	val lastMove: Color,
-	val selected: Color,
-	val dot: Color,
-	val coordOnLight: Color,
-	val coordOnDark: Color,
-	val chartGood: Color,
-	val chartHint: Color,
-	val chartBad: Color,
-)
-
-/** Palette claire. */
-val kLightChessColors = ChessColors(
-	background = Color(0xFFF4F5F6),
-	surface = Color(0xFFFFFFFF),
-	text = Color(0xFF111111),
-	muted = Color(0xFF8A8E95),
-	primary = Color(0xFF2F7D4F),
-	onPrimary = Color(0xFFFFFFFF),
-	success = Color(0xFF3E8E5A),
-	error = Color(0xFFC2483D),
-	track = Color(0xFFE3E5E8),
-	scrim = Color(0x55000000),
-	squareLight = Color(0xFFE7EFE4),
-	squareDark = Color(0xFF7FA98A),
-	lastMove = Color(0x80F2E66B),
-	selected = Color(0x3D111111),
-	dot = Color(0x45111111),
-	coordOnLight = Color(0x80557A61),
-	coordOnDark = Color(0xB3FFFFFF),
-	chartGood = Color(0xFF3E8E5A),
-	chartHint = Color(0xFF3D6FB6),
-	chartBad = Color(0xFFC2483D),
-)
-
-/** Palette sombre. */
-val kDarkChessColors = ChessColors(
-	background = Color(0xFF0F1011),
-	surface = Color(0xFF1C1D1F),
-	text = Color(0xFFF2F3F4),
-	muted = Color(0xFF8A8E95),
-	primary = Color(0xFF5DB37C),
-	onPrimary = Color(0xFF0F1011),
-	success = Color(0xFF5DB37C),
-	error = Color(0xFFE0675C),
-	track = Color(0xFF2A2C2F),
-	scrim = Color(0x77000000),
-	squareLight = Color(0xFFA9C2AE),
-	squareDark = Color(0xFF5F8768),
-	lastMove = Color(0x80E8D85C),
-	selected = Color(0x50FFFFFF),
-	dot = Color(0x50111111),
-	coordOnLight = Color(0x80405C49),
-	coordOnDark = Color(0x99FFFFFF),
-	chartGood = Color(0xFF4FA06B),
-	chartHint = Color(0xFF6D8FD8),
-	chartBad = Color(0xFFE0675C),
-)
-
-/** Couleurs courantes. */
-val kLocalChessColors = staticCompositionLocalOf { kLightChessColors }
 
 /**
- * Crée une graisse de la police variable Inter.
+ * Thème d'échiquier choisi dans les réglages : couleurs des cases en clair et en sombre.
+ *
+ * @property light cases claires, thème clair.
+ * @property dark cases foncées, thème clair.
+ * @property lightNight cases claires, thème sombre.
+ * @property darkNight cases foncées, thème sombre.
  */
-private fun interWeight(inWeight: Int): Font =
-	Font(R.font.inter, FontWeight(inWeight), variationSettings = FontVariation.Settings(FontVariation.weight(inWeight)))
+enum class BoardTheme(val light: Color, val dark: Color, val lightNight: Color, val darkNight: Color) {
+	/** Sauge : valeurs du design system. */
+	Sage(Color(0xFFE9E4D8), Color(0xFF8FA094), Color(0xFFC9C3B5), Color(0xFF6F7D72)),
 
-/** Police Inter (variable), graisses 400 à 800. */
-val kInter: FontFamily = FontFamily(listOf(400, 500, 600, 700, 800).map { interWeight(it) })
+	/** Bois ; variante sombre assombrie dans les mêmes proportions que la sauge. */
+	Wood(Color(0xFFECE6DA), Color(0xFFB58863), Color(0xFFCAC5BA), Color(0xFF8C6A4D)),
 
-/**
- * Styles de texte de ChessPlus (tableau « Typographie » de docs/DESIGN.md).
- */
-object ChessType {
-	/** Très grand nombre. */
-	val kNumber = style(44, 800)
+	/** Ardoise. */
+	Slate(Color(0xFFDEE3E6), Color(0xFF8CA2AD), Color(0xFFBEC2C5), Color(0xFF6D7E86)),
 
-	/** Titre d'écran. */
-	val kScreenTitle = style(28, 800)
-
-	/** Message de retour (« Bon coup ! »). */
-	val kFeedback = style(26, 800)
-
-	/** Titre de section ou de carte. */
-	val kSection = style(17, 700)
-
-	/** Titre de barre et boutons principaux. */
-	val kBarTitle = style(16, 600)
-
-	/** Corps de texte. */
-	val kBody = style(14, 400)
-
-	/** Corps de texte appuyé. */
-	val kBodyStrong = style(14, 600)
-
-	/** Cote du joueur. */
-	val kRating = style(14, 700)
-
-	/** Libellés des commandes. */
-	val kLabel = style(11, 600)
-
-	/** Petites mentions. */
-	val kCaption = style(12, 500)
-
-	/** Coordonnées dans les cases. */
-	val kCoordinate = style(9, 600)
-
-	/**
-	 * Crée un style Inter de taille et de graisse données.
-	 */
-	private fun style(inSize: Int, inWeight: Int): TextStyle =
-		TextStyle(fontFamily = kInter, fontSize = inSize.sp, fontWeight = FontWeight(inWeight))
+	/** Gris. */
+	Grey(Color(0xFFF0F0F0), Color(0xFF9A9A9A), Color(0xFFCDCDCD), Color(0xFF787878)),
 }
 
 /**
- * Thème Compose de ChessPlus, clair ou sombre selon le système. [inColors] remplace la palette
- * (comparaison de palettes dans les captures).
+ * Crée les graisses d'une police variable.
+ */
+private fun variableFamily(inFont: Int, inWeights: List<Int>): FontFamily =
+	FontFamily(inWeights.map { Font(inFont, FontWeight(it), variationSettings = FontVariation.Settings(FontVariation.weight(it))) })
+
+/** Space Grotesk : titres. */
+val kDisplayFamily: FontFamily = variableFamily(R.font.space_grotesk, listOf(500, 600, 700))
+
+/** Inter : texte. */
+val kSansFamily: FontFamily = variableFamily(R.font.inter, listOf(400, 500, 600))
+
+/** JetBrains Mono : chiffres, coups, chronos. */
+val kMonoFamily: FontFamily = variableFamily(R.font.jetbrains_mono, listOf(500, 600))
+
+/**
+ * Styles de texte du design system.
+ */
+object ChessPlusTypography {
+	/** Grand chiffre de classement. */
+	val display = TextStyle(fontFamily = kDisplayFamily, fontWeight = FontWeight(700), fontSize = 40.sp, lineHeight = 44.sp, letterSpacing = (-0.02).em)
+
+	/** Titre de page. */
+	val title = TextStyle(fontFamily = kDisplayFamily, fontWeight = FontWeight(600), fontSize = 24.sp, lineHeight = 30.sp, letterSpacing = (-0.01).em)
+
+	/** Titre de carte ou de mode. */
+	val heading = TextStyle(fontFamily = kDisplayFamily, fontWeight = FontWeight(600), fontSize = 17.sp, lineHeight = 24.sp)
+
+	/** Titre de ligne de mode (heading réduit des maquettes). */
+	val headingSmall = heading.copy(fontSize = 15.sp, lineHeight = 20.sp)
+
+	/** Texte courant. */
+	val body = TextStyle(fontFamily = kSansFamily, fontWeight = FontWeight(400), fontSize = 15.sp, lineHeight = 22.sp)
+
+	/** Texte de bouton. */
+	val button = TextStyle(fontFamily = kSansFamily, fontWeight = FontWeight(600), fontSize = 14.sp, lineHeight = 14.sp)
+
+	/** Descriptions sous un titre. */
+	val small = TextStyle(fontFamily = kSansFamily, fontWeight = FontWeight(400), fontSize = 13.sp, lineHeight = 18.sp)
+
+	/** En-têtes de section, à écrire en capitales. */
+	val overline = TextStyle(fontFamily = kSansFamily, fontWeight = FontWeight(600), fontSize = 11.sp, lineHeight = 16.sp, letterSpacing = 0.08.em)
+
+	/** Étiquette de thème, à écrire en capitales. */
+	val tag = TextStyle(fontFamily = kSansFamily, fontWeight = FontWeight(600), fontSize = 11.sp, lineHeight = 14.sp, letterSpacing = 0.04.em)
+
+	/** Notation des coups, chronos, classements en ligne. */
+	val moves = TextStyle(fontFamily = kMonoFamily, fontWeight = FontWeight(500), fontSize = 14.sp, lineHeight = 20.sp)
+
+	/** Chiffres en ligne de petite taille (valeurs des modes, pourcentages). */
+	val movesSmall = moves.copy(fontSize = 12.sp, lineHeight = 16.sp)
+
+	/** Valeurs des tuiles de statistiques. */
+	val stat = TextStyle(fontFamily = kMonoFamily, fontWeight = FontWeight(600), fontSize = 22.sp, lineHeight = 28.sp)
+
+	/** Coordonnées de l'échiquier. */
+	val coordinate = TextStyle(fontFamily = kMonoFamily, fontWeight = FontWeight(600), fontSize = 8.sp, lineHeight = 8.sp)
+}
+
+/** Couleurs courantes, fournies par [ChessPlusTheme]. */
+val kLocalChessPlusColors = staticCompositionLocalOf { LightChessPlusColors }
+
+/** Vrai en thème sombre, fourni par [ChessPlusTheme]. */
+val kLocalDarkTheme = staticCompositionLocalOf { false }
+
+/**
+ * Accès au thème courant : couleurs, typographie, espacements et rayons.
+ */
+object ChessPlusTheme {
+	/** Couleurs du thème courant. */
+	val colors: ChessPlusColors
+		@Composable
+		@ReadOnlyComposable
+		get() = kLocalChessPlusColors.current
+
+	/** Styles de texte. */
+	val typography = ChessPlusTypography
+
+	/** Espacements. */
+	val spacing = ChessPlusSpacing
+
+	/** Rayons. */
+	val radius = ChessPlusRadius
+}
+
+/**
+ * Thème Compose de ChessPlus, clair ou sombre, avec le thème d'échiquier choisi. Un `MaterialTheme`
+ * minimal dérivé garde les composants Material cohérents.
  */
 @Composable
 fun ChessPlusTheme(
 	inDarkTheme: Boolean = isSystemInDarkTheme(),
-	inColors: ChessColors? = null,
+	inBoard: BoardTheme = BoardTheme.Sage,
 	inContent: @Composable () -> Unit,
 ) {
-	val vColors = inColors ?: if (inDarkTheme) kDarkChessColors else kLightChessColors
+	val vBase = if (inDarkTheme) DarkChessPlusColors else LightChessPlusColors
+	val vColors = vBase.copy(
+		boardLight = if (inDarkTheme) inBoard.lightNight else inBoard.light,
+		boardDark = if (inDarkTheme) inBoard.darkNight else inBoard.dark,
+	)
 	val vScheme = if (inDarkTheme) {
-		darkColorScheme(background = vColors.background, surface = vColors.surface, primary = vColors.primary, onPrimary = vColors.onPrimary, onSurface = vColors.text)
+		darkColorScheme(
+			primary = vColors.accent, onPrimary = vColors.accentInk, background = vColors.surface, surface = vColors.surfaceRaised,
+			onSurface = vColors.ink, onBackground = vColors.ink, outline = vColors.lineStrong, error = vColors.danger,
+		)
 	} else {
-		lightColorScheme(background = vColors.background, surface = vColors.surface, primary = vColors.primary, onPrimary = vColors.onPrimary, onSurface = vColors.text)
+		lightColorScheme(
+			primary = vColors.accent, onPrimary = vColors.accentInk, background = vColors.surface, surface = vColors.surfaceRaised,
+			onSurface = vColors.ink, onBackground = vColors.ink, outline = vColors.lineStrong, error = vColors.danger,
+		)
 	}
-	CompositionLocalProvider(kLocalChessColors provides vColors) {
+	CompositionLocalProvider(kLocalChessPlusColors provides vColors, kLocalDarkTheme provides inDarkTheme) {
 		MaterialTheme(colorScheme = vScheme, content = inContent)
 	}
 }

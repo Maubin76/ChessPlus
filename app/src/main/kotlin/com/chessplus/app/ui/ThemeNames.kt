@@ -3,6 +3,7 @@ package com.chessplus.app.ui
 import androidx.annotation.StringRes
 import com.chessplus.app.R
 import com.chessplus.core.model.Theme
+import com.chessplus.core.model.ThemeSet
 
 /**
  * Famille de thèmes, pour les regroupements des filtres (docs/DESIGN.md).
@@ -108,4 +109,20 @@ fun themeFamily(inTheme: Theme): ThemeFamily = when (inTheme) {
 	Theme.Opening, Theme.Middlegame, Theme.Endgame -> ThemeFamily.Phase
 	Theme.OneMove, Theme.Short, Theme.Long, Theme.VeryLong -> ThemeFamily.Length
 	Theme.Advantage, Theme.Crushing, Theme.Equality, Theme.Master, Theme.MasterVsMaster, Theme.SuperGM -> ThemeFamily.Evaluation
+}
+
+/** Mats en N coups, du plus court au plus long : thème principal prioritaire. */
+private val kMateInThemes = listOf(Theme.MateIn1, Theme.MateIn2, Theme.MateIn3, Theme.MateIn4, Theme.MateIn5)
+
+/**
+ * Retourne le thème principal d'un puzzle, pour son étiquette et son titre : mat en N, sinon le
+ * premier motif tactique, sinon un mat particulier, sinon une finale ; null si aucun ne convient.
+ */
+fun mainTheme(inThemes: ThemeSet): Theme? {
+	val vThemes = inThemes.toList()
+	return kMateInThemes.firstOrNull { it in inThemes }
+		?: vThemes.firstOrNull { themeFamily(it) == ThemeFamily.Tactics }
+		?: vThemes.firstOrNull { themeFamily(it) == ThemeFamily.Mates && it != Theme.Mate }
+		?: vThemes.firstOrNull { themeFamily(it) == ThemeFamily.Endgames }
+		?: vThemes.firstOrNull { it == Theme.Mate }
 }

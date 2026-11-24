@@ -2,6 +2,22 @@
 
 Ce document fait foi pour l'implémentation des écrans (phase 5). Il ne contient que des choix validés par Mathieu ; les propositions en attente sont dans `docs/PROGRESS.md`.
 
+## Design system ChessPlus (fourni par Mathieu le 2026-11-23, maquettes à valider sur l'appareil)
+
+Source : dossier local `chessplus-design/` (non versionné, exclu par `.git/info/exclude`) : README, captures `screens/`, consignes `guidelines/`, jetons `tokens/tokens.json`, maquettes HTML `mockups/`. Il remplace l'ambiance « Calm », la direction « Accent pleine largeur », la palette verte B, la typographie Inter seule et les icônes Material Symbols décrites plus bas, qui restent comme historique.
+
+- **Jetons** : `ui/theme/ChessPlusTokens.kt` est le fichier Kotlin généré du design system, repris tel quel (seul le paquet change ; il ne suit donc pas les conventions de nommage du projet). `ChessPlusTheme.colors / .typography / .spacing / .radius` ; aucun écran n'écrit de couleur en dur.
+- **Rayons** : `tokens.json` (3 / 6 / 10 / 20 dp) fait foi. Les captures `screens/*.png` ont été rendues avec un `tokens.css` périmé (cartes à 4 px, barre de navigation sans arrondi, couleur `streak` absente) : l'application suit `tokens.json`.
+- **Polices embarquées** (OFL) : Space Grotesk (titres), Inter (texte), JetBrains Mono (chiffres, coups, chronos) ; polices variables dans `res/font/`.
+- **Icônes au trait** 1,6 sur grille 24 (`res/drawable/ic_ln_*.xml`), converties des tracés `kIcons` des maquettes ; check, close et rejouer dessinées dans le même style.
+- **Navigation** : barre flottante à trois onglets, Accueil, Stats, Réglages. L'historique n'est plus un onglet : il s'ouvre depuis les statistiques (ligne « Historique »).
+- **Ton** : tutoiement, « puzzle » au lieu de « problème », « classement » au lieu de « cote », retours factuels sans point d'exclamation.
+- **Accueil** (maquette) : date, série de jours (flamme), puzzle du jour, liste des modes Arcade, Rush (3 minutes, comme la maquette), Survie, Entraînement (ex-ciblé ; valeur à droite : nombre de thèmes, 73), mention hors ligne. La carte « Reprendre » et le tableau de bord disparaissent : l'Arcade reprend le puzzle en cours.
+- **Puzzle du jour** : tiré une fois par jour autour du classement (graine = date), mémorisé ; noté s'il n'a jamais été joué ; « Puzzle suivant » enchaîne ensuite sur l'Arcade.
+- **Jeu** (maquette) : chrono du puzzle (Arcade, Entraînement, rejeu), compte à rebours (Rush) ou vies (Survie) en chip ; numéro et classement du puzzle ; camp au trait ; étiquette du thème principal **visible pendant le puzzle** (la maquette le montre, alors que les thèmes étaient masqués jusqu'ici) ; notation SAN ; carte de retour à bordure `success` / `danger` ; bilan de la session (réussis, ratés, variation du classement) ; actions Indice (pièce à jouer cerclée d'`accent`), Solution (joue le coup), Retourner, Passer (un puzzle non terminé compte comme raté). « Recommencer » et le volet de bilan disparaissent ; une fois le puzzle terminé, bouton principal « Puzzle suivant ». Pas d'indice ni de solution en défi ; Passer y compte comme une erreur.
+- **Réglages** (maquette) : thèmes d'échiquier Sauge, Bois, Ardoise, Gris (variantes sombres assombries dans les proportions de la sauge), style des pièces (cburnett seul), coordonnées, confirmer les coups (Confirmer / Annuler avant de jouer), difficulté de l'Arcade (± 200 points), enchaîner automatiquement (1,2 s après une réussite), base hors ligne et « Gérer » (informations), apparence. Ajoutés dans la même charte : vibration, classement de départ, À propos. Le réglage Sons est retiré.
+- **Statistiques** (maquette) : classement et variation sur 30 jours, courbe sans bande d'incertitude, périodes 7 j / 30 j / 1 an / Tout, tuiles Résolus, Réussite, Série, Chrono record (record du Rush), activité sur 12 semaines, réussite par thème ; les autres sections suivent dans la même charte.
+
 ## Contexte d'usage (validé le 2026-11-20)
 
 - Usage à **une main**, au pouce, dans les transports : commandes en bas de l'écran, échiquier juste au-dessus.

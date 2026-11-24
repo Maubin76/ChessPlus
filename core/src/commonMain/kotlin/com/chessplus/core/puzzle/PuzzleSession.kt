@@ -116,6 +116,10 @@ class PuzzleSession private constructor(
 	val board: PositionView
 		get() = position
 
+	/** Coups joués sur l'échiquier depuis la FEN de départ, pour la notation. */
+	val playedMoves: List<Move>
+		get() = position.history
+
 	/** Dernier coup joué sur l'échiquier, pour le surlignage, ou null au départ. */
 	val lastMove: Move?
 		get() = position.history.lastOrNull()

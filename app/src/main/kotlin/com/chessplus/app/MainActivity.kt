@@ -36,7 +36,7 @@ class MainActivity : ComponentActivity() {
 				val vStyle = if (vDark) SystemBarStyle.dark(Color.TRANSPARENT) else SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT)
 				enableEdgeToEdge(statusBarStyle = vStyle, navigationBarStyle = vStyle)
 			}
-			ChessPlusTheme(inDarkTheme = vDark) {
+			ChessPlusTheme(inDarkTheme = vDark, inBoard = vSettings.boardTheme) {
 				ChessPlusApp(vContainer, vVersion, inOnExit = { finish() })
 			}
 		}

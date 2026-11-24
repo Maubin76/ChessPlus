@@ -58,7 +58,7 @@ class StatsCalculatorTest {
 		assertNull(vReport.currentRating)
 		assertEquals(0, vReport.dayStreak)
 		assertEquals(Theme.entries.size, vReport.unseenThemes.size)
-		assertEquals(StatsCalculator.kCalendarWeeks * 7 - 6, vReport.calendar.size)
+		assertEquals(12 * 7 - 6, vReport.calendar.size, "12 semaines, du lundi le plus ancien à aujourd’hui (un lundi)")
 	}
 
 	/** Vérifie les totaux, la cote, les séries et les records. */

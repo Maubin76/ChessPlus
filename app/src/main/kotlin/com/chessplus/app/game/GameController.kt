@@ -11,6 +11,9 @@ import com.chessplus.core.puzzle.PuzzleSession
 import com.chessplus.core.puzzle.PuzzleStatus
 import com.chessplus.core.rules.ChessRules
 import com.chessplus.core.rules.GameStatus
+import com.chessplus.core.rules.NumberedMove
+import com.chessplus.core.rules.formatMoveNumber
+import com.chessplus.core.rules.sanLine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
@@ -37,6 +40,7 @@ import kotlin.math.roundToInt
  * @property progress enregistrement des résultats et cote.
  * @property sessions sauvegarde du problème en cours.
  * @property challenges enregistrement des parties de défi.
+ * @property preferences réglages de jeu (confirmation, enchaînement, difficulté).
  * @property clock horloge (millisecondes).
  * @property opponentDelayMs pause avant la réponse de l'adversaire.
  * @property startDelayMs pause avant le premier coup de l'adversaire.
@@ -54,12 +58,14 @@ class GameController(
 	private val sessions: SessionStore,
 	private val challenges: ChallengeStore,
 	private val clock: () -> Long,
+	private val preferences: GamePreferences = GamePreferences.kDefault,
 	private val opponentDelayMs: Long = kOpponentDelayMs,
 	private val startDelayMs: Long = kStartDelayMs,
 	private val wrongMoveDelayMs: Long = kWrongMoveDelayMs,
 	private val challengeNextDelayMs: Long = kChallengeNextDelayMs,
 	private val solutionDelayMs: Long = kSolutionDelayMs,
 	private val rushDurationMs: Long = ChallengeRun.kRushDurationMs,
+	private val autoNextDelayMs: Long = kAutoNextDelayMs,
 ) {
 	/** État publié. */
 	private val mutableState = MutableStateFlow(GameUiState())
@@ -145,6 +151,27 @@ class GameController(
 	/** Fin programmée du Rush. */
 	private var timerJob: Job? = null
 
+	/** Vrai si l'échiquier est retourné par le joueur. */
+	private var flipped = false
+
+	/** Coup en attente de confirmation, ou null. */
+	private var pendingMove: Move? = null
+
+	/** Puzzles réussis pendant la session (écran ouvert). */
+	private var sessionSolved = 0
+
+	/** Puzzles ratés pendant la session. */
+	private var sessionFailed = 0
+
+	/** Variation du classement pendant la session. */
+	private var sessionDelta = 0.0
+
+	/** Début du chronomètre du puzzle en cours. */
+	private var clockStart: Long? = null
+
+	/** Fin du chronomètre du puzzle en cours (puzzle terminé), ou null. */
+	private var clockEnd: Long? = null
+
 	/**
 	 * Démarre l'écran : en entraînement continu, reprend le problème sauvegardé s'il existe ;
 	 * sinon (ou dans les autres modes) charge un nouveau problème.
@@ -160,7 +187,12 @@ class GameController(
 			}
 			val vRestored = mode == GameMode.Continuous && restore()
 			if (!vRestored) {
-				val vFirst = (mode as? GameMode.Replay)?.let { puzzles.byId(it.puzzleId) }
+				val vFirstId = when (mode) {
+					is GameMode.Replay -> mode.puzzleId
+					is GameMode.Daily -> mode.puzzleId
+					else -> null
+				}
+				val vFirst = vFirstId?.let { puzzles.byId(it) }
 				if (vFirst != null) {
 					load(vFirst)
 				} else {
@@ -243,26 +275,33 @@ class GameController(
 	}
 
 	/**
-	 * Indice en deux temps (le problème compte alors comme échoué) : le premier appui met en
-	 * surbrillance la pièce à jouer, le second joue le coup de la solution.
+	 * Indice : met en surbrillance la pièce à jouer (le puzzle compte alors comme raté).
 	 */
 	fun onHint() {
+		val vSession = session ?: return
+		if (!isInteractive() || challengeKind != null || vSession.hintedSquare != null) {
+			return
+		}
+		noteFailure(vSession)
+		val vSquare = vSession.hintPiece()
+		selected = null
+		if (badge?.second == BadgeKind.Error) {
+			badge = null
+		}
+		header = GameHeader.HintPiece(vSession.board.pieceAt(vSquare)?.type ?: PieceType.Pawn)
+		publish()
+		persist()
+	}
+
+	/**
+	 * Solution : joue le coup attendu (le puzzle compte alors comme raté) ; l'adversaire répond.
+	 */
+	fun onSolution() {
 		val vSession = session ?: return
 		if (!isInteractive() || challengeKind != null) {
 			return
 		}
 		noteFailure(vSession)
-		if (vSession.hintedSquare == null) {
-			val vSquare = vSession.hintPiece()
-			selected = null
-			if (badge?.second == BadgeKind.Error) {
-				badge = null
-			}
-			header = GameHeader.HintPiece(vSession.board.pieceAt(vSquare)?.type ?: PieceType.Pawn)
-			publish()
-			persist()
-			return
-		}
 		val vMove = vSession.revealNextMove()
 		showMove(inAnimate = true)
 		badge = null
@@ -275,6 +314,75 @@ class GameController(
 			persist()
 			scheduleOpponent(opponentDelayMs)
 		}
+	}
+
+	/**
+	 * Retourne l'échiquier.
+	 */
+	fun onFlip() {
+		flipped = !flipped
+		publish()
+	}
+
+	/**
+	 * Passer : puzzle suivant. Un puzzle non terminé compte comme raté ; en défi, comme une erreur.
+	 */
+	fun onSkip() {
+		val vSession = session
+		if (challengeKind != null) {
+			if (vSession != null && run?.end == null && isInteractive()) {
+				busy = true
+				publish()
+				pending = scope.launch { onChallengeMiss(vSession) }
+			}
+			return
+		}
+		if (vSession == null || vSession.status == PuzzleStatus.Solved) {
+			onNext()
+			return
+		}
+		if (!isInteractive()) {
+			return
+		}
+		pending?.cancel()
+		busy = true
+		publish()
+		pending = scope.launch {
+			persistMutex.withLock {
+				if (!resultRecorded) {
+					val vRecorded = progress.record(
+						vSession.puzzle, PuzzleResult.Failure, vSession.mistakeCount, vSession.revealedCount, rated,
+						durationMs(), failedAtMove ?: (vSession.solutionPly / 2 + 1),
+					)
+					resultRecorded = true
+					countResult(vRecorded)
+				}
+			}
+			loadNext(vSession.puzzle.id)
+		}
+	}
+
+	/**
+	 * Confirme le coup en attente (réglage « Confirmer les coups »).
+	 */
+	fun onConfirmMove() {
+		val vMove = pendingMove ?: return
+		pendingMove = null
+		displayOverride = null
+		submit(vMove, inAnimate = false)
+	}
+
+	/**
+	 * Annule le coup en attente de confirmation.
+	 */
+	fun onCancelMove() {
+		if (pendingMove == null) {
+			return
+		}
+		pendingMove = null
+		displayOverride = null
+		showMove(inAnimate = true)
+		publish()
 	}
 
 	/**
@@ -373,6 +481,9 @@ class GameController(
 		resultRecorded = vSaved.resultRecorded
 		recorded = if (resultRecorded) progress.lastResult(vPuzzle.id) else null
 		startedAt = vSaved.startedAt
+		clockStart = clock()
+		clockEnd = if (vSession.status == PuzzleStatus.Solved) clockStart else null
+		pendingMove = null
 		showMove(inAnimate = false)
 		when (vSession.status) {
 			PuzzleStatus.Solved -> {
@@ -397,7 +508,8 @@ class GameController(
 	 */
 	private suspend fun loadNext(inExcludeId: String?) {
 		sessions.clear()
-		val vPuzzle: Puzzle? = puzzles.next(rating, inExcludeId, mode)
+		val vOffset = if (mode == GameMode.Continuous || mode is GameMode.Daily) preferences.difficultyOffset else 0
+		val vPuzzle: Puzzle? = puzzles.next(rating + vOffset, inExcludeId, mode)
 		if (vPuzzle == null) {
 			busy = false
 			session = null
@@ -424,6 +536,9 @@ class GameController(
 		resultRecorded = false
 		recorded = null
 		startedAt = clock()
+		clockStart = startedAt
+		clockEnd = null
+		pendingMove = null
 		selected = null
 		badge = null
 		promotion = null
@@ -474,7 +589,18 @@ class GameController(
 			publish()
 			return
 		}
-		submit(Move(inFrom, inTo), inAnimate)
+		val vMove = Move(inFrom, inTo)
+		if (preferences.confirmMoves) {
+			val vShown = boardPieces(vSession).toMutableMap()
+			vShown.remove(inFrom)?.let { vShown[inTo] = it }
+			displayOverride = vShown
+			pendingMove = vMove
+			selected = null
+			showMove(inAnimate)
+			publish()
+			return
+		}
+		submit(vMove, inAnimate)
 	}
 
 	/**
@@ -668,9 +794,25 @@ class GameController(
 	 */
 	private fun finish() {
 		val vSession = session ?: return
+		clockEnd = clock()
 		header = finishedHeader(vSession)
 		publish()
 		persist()
+		if (preferences.autoNext && vSession.result == PuzzleResult.Success) {
+			pending = scope.launch {
+				delay(autoNextDelayMs)
+				onNext()
+			}
+		}
+	}
+
+	/**
+	 * Compte un résultat enregistré dans le bilan de la session.
+	 */
+	private fun countResult(inRecorded: RecordedResult) {
+		if (inRecorded.result == PuzzleResult.Success) sessionSolved++ else sessionFailed++
+		sessionDelta += inRecorded.ratingAfter - inRecorded.ratingBefore
+		rating = inRecorded.ratingAfter
 	}
 
 	/**
@@ -700,7 +842,7 @@ class GameController(
 					)
 					recorded = vRecorded
 					resultRecorded = true
-					rating = vRecorded.ratingAfter
+					countResult(vRecorded)
 					publish()
 				}
 				sessions.save(SavedSession(vSession.snapshot(), rated, resultRecorded, startedAt))
@@ -732,13 +874,39 @@ class GameController(
 	 */
 	private fun isInteractive(): Boolean {
 		val vSession = session ?: return false
-		return vSession.status == PuzzleStatus.PlayerToMove && promotion == null && !busy && run?.end == null
+		return vSession.status == PuzzleStatus.PlayerToMove && promotion == null && !busy && run?.end == null && pendingMove == null
 	}
 
 	/**
 	 * Retourne les cases d'arrivée possibles d'une pièce.
 	 */
 	private fun targetsOf(inFrom: Square): Set<Square> = session?.board?.legalMovesFrom(inFrom)?.map { it.to }?.toSet() ?: emptySet()
+
+	/**
+	 * Retourne la notation des coups joués depuis la FEN, puis le numéro du coup à trouver et « ? ».
+	 */
+	private fun notationOf(inSession: PuzzleSession): List<NotationToken> {
+		val vLine = sanLine(rules, inSession.puzzle.fen, inSession.playedMoves)
+		val vTokens = mutableListOf<NotationToken>()
+		vLine.forEachIndexed { inIndex, inMove ->
+			if (inMove.color == com.chessplus.core.model.Color.White || inIndex == 0) {
+				vTokens.add(NotationToken(formatMoveNumber(inMove), NotationKind.Past))
+			}
+			vTokens.add(NotationToken(inMove.san, NotationKind.Past))
+		}
+		if (inSession.status == PuzzleStatus.PlayerToMove) {
+			val vLast = vLine.lastOrNull()
+			val vColor = inSession.puzzle.playerColor
+			val vNumber = when {
+				vLast == null -> 1
+				vLast.color == com.chessplus.core.model.Color.Black -> vLast.number + 1
+				else -> vLast.number
+			}
+			vTokens.add(NotationToken(formatMoveNumber(NumberedMove(vNumber, vColor, "")), NotationKind.Current))
+			vTokens.add(NotationToken("?", NotationKind.Pending))
+		}
+		return vTokens
+	}
 
 	/**
 	 * Publie l'état courant.
@@ -763,7 +931,20 @@ class GameController(
 		mutableState.value = GameUiState(
 			header = header,
 			pieces = displayOverride ?: vSession?.let { boardPieces(it) } ?: emptyMap(),
-			orientation = vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White,
+			orientation = (vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White).let { if (flipped) it.opposite() else it },
+			sideToMove = vSession?.puzzle?.playerColor ?: com.chessplus.core.model.Color.White,
+			puzzleId = vSession?.puzzle?.id,
+			puzzleRating = vSession?.puzzle?.rating,
+			puzzleThemes = vSession?.puzzle?.themes ?: com.chessplus.core.model.ThemeSet.kEmpty,
+			notation = vSession?.let { notationOf(it) } ?: emptyList(),
+			remainingMoves = vSession?.let { it.puzzle.playerMoveCount - it.solutionPly / 2 } ?: 0,
+			clockStart = clockStart,
+			clockEnd = clockEnd,
+			tally = run?.let { SessionTally(it.score, it.misses, null) } ?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt()),
+			pendingConfirm = pendingMove != null,
+			solutionEnabled = isInteractive() && challengeKind == null,
+			skipEnabled = (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,
+			challengeBest = challengeBest,
 			lastMove = vSession?.lastMove,
 			moveId = moveId,
 			animateMove = animate,
@@ -773,7 +954,7 @@ class GameController(
 			badge = badge,
 			interactive = isInteractive(),
 			rating = kotlin.math.round(rating).toInt(),
-			hintEnabled = isInteractive() && challengeKind == null,
+			hintEnabled = isInteractive() && challengeKind == null && vSession?.hintedSquare == null,
 			nextEnabled = vSession?.status == PuzzleStatus.Solved || header == GameHeader.NoPuzzle,
 			promotion = promotion,
 			summary = vSummary,
@@ -800,5 +981,8 @@ class GameController(
 
 		/** Durée d'affichage du coup attendu après une erreur en Survie. */
 		const val kSolutionDelayMs = 1200L
+
+		/** Pause avant le puzzle suivant quand l'enchaînement automatique est activé. */
+		const val kAutoNextDelayMs = 1200L
 	}
 }

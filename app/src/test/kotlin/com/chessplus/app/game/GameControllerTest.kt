@@ -50,9 +50,13 @@ class GameControllerTest {
 		/** Modes demandés, dans l'ordre. */
 		val modes = mutableListOf<GameMode>()
 
+		/** Cotes visées des problèmes demandés, dans l'ordre. */
+		val ratings = mutableListOf<Double>()
+
 		/** Premier problème différent de l'exclu. */
 		override suspend fun next(inRating: Double, inExcludeId: String?, inMode: GameMode): Puzzle? {
 			modes.add(inMode)
+			ratings.add(inRating)
 			return list.firstOrNull { it.id != inExcludeId }
 		}
 
@@ -147,10 +151,21 @@ class GameControllerTest {
 		inMode: GameMode = GameMode.Continuous,
 		inChallenges: ChallengeStore = FakeChallenges(),
 		inRushDurationMs: Long = ChallengeRun.kRushDurationMs,
+		inPreferences: GamePreferences = GamePreferences.kDefault,
 	) = GameController(
-		this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, inChallenges, clock = { 42L },
+		this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, inChallenges, clock = { 42L }, preferences = inPreferences,
 		opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0, challengeNextDelayMs = 0, solutionDelayMs = 0, rushDurationMs = inRushDurationMs,
+		autoNextDelayMs = 0,
 	)
+
+	/**
+	 * Réglages de jeu modifiables pour les tests.
+	 */
+	private class FakePreferences(
+		override var confirmMoves: Boolean = false,
+		override var autoNext: Boolean = false,
+		override var difficultyOffset: Int = 0,
+	) : GamePreferences
 
 	/**
 	 * Retourne des copies de [kMateIn2] d'identifiants différents, pour enchaîner les problèmes d'un défi.
@@ -275,6 +290,9 @@ class GameControllerTest {
 		assertTrue(vController.state.value.interactive)
 		assertEquals(PuzzleResult.Failure, vProgress.records.single().second)
 		vController.onHint()
+		assertEquals(sq("a2"), vController.state.value.hint, "un second Indice ne fait rien")
+		assertFalse(vController.state.value.hintEnabled)
+		vController.onSolution()
 		assertIs<GameHeader.Hint>(vController.state.value.header)
 		assertNull(vController.state.value.hint)
 		vController.awaitIdle()
@@ -286,6 +304,84 @@ class GameControllerTest {
 		assertNull(vController.state.value.hint)
 		assertEquals(2, vController.state.value.summary?.revealed)
 		assertEquals(1, vProgress.records.size)
+	}
+
+	/** Vérifie la notation (« 17… Kd7 18. ? ») et le bilan de la session. */
+	@Test
+	fun notationAndTally() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2, kShort)))
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(listOf("17…", "Kd7", "18.", "?"), vController.state.value.notation.map { it.text })
+		assertEquals(listOf(NotationKind.Past, NotationKind.Past, NotationKind.Current, NotationKind.Pending), vController.state.value.notation.map { it.kind })
+		assertEquals(2, vController.state.value.remainingMoves)
+		vController.tapMove("a2", "e6")
+		assertEquals(listOf("17…", "Kd7", "18.", "Be6+", "Kd8", "19.", "?"), vController.state.value.notation.map { it.text })
+		vController.tapMove("f7", "f8")
+		assertEquals(SessionTally(1, 0, vController.state.value.tally.ratingDelta), vController.state.value.tally)
+		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
+	}
+
+	/** Vérifie Passer : un puzzle non terminé compte comme raté, puis le suivant arrive. */
+	@Test
+	fun skipRecordsFailure() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vController = controller(FakePuzzles(listOf(kMateIn2, kShort)), vProgress)
+		vController.start()
+		vController.awaitIdle()
+		vController.onSkip()
+		vController.awaitIdle()
+		assertEquals(listOf(Triple("00sHx", PuzzleResult.Failure, true)), vProgress.records)
+		assertEquals("00sO1", vController.state.value.puzzleId)
+		assertEquals(SessionTally(0, 1, vController.state.value.tally.ratingDelta), vController.state.value.tally)
+	}
+
+	/** Vérifie Retourner : l'orientation change, pas le camp au trait. */
+	@Test
+	fun flip() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2)))
+		vController.start()
+		vController.awaitIdle()
+		vController.onFlip()
+		assertEquals(Color.Black, vController.state.value.orientation)
+		assertEquals(Color.White, vController.state.value.sideToMove)
+	}
+
+	/** Vérifie la confirmation des coups : rien n'est joué avant « Confirmer », « Annuler » rend la main. */
+	@Test
+	fun confirmMoves() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vController = controller(FakePuzzles(listOf(kMateIn2)), vProgress, inPreferences = FakePreferences(confirmMoves = true))
+		vController.start()
+		vController.awaitIdle()
+		vController.tapMove("f7", "f6")
+		assertTrue(vController.state.value.pendingConfirm)
+		assertFalse(vController.state.value.interactive)
+		assertTrue(vProgress.records.isEmpty())
+		vController.onCancelMove()
+		assertFalse(vController.state.value.pendingConfirm)
+		assertTrue(vController.state.value.interactive)
+		vController.tapMove("a2", "e6")
+		vController.onConfirmMove()
+		vController.awaitIdle()
+		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
+		assertTrue(vProgress.records.isEmpty())
+	}
+
+	/** Vérifie l'enchaînement automatique après une réussite et la difficulté de l'Arcade. */
+	@Test
+	fun autoNextAndDifficulty() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(listOf(kMateIn2, kShort))
+		val vController = controller(vPuzzles, inPreferences = FakePreferences(autoNext = true, difficultyOffset = 200))
+		vController.start()
+		vController.awaitIdle()
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		vController.awaitIdle()
+		assertEquals("00sO1", vController.state.value.puzzleId, "puzzle suivant sans appui")
+		assertEquals(2, vPuzzles.ratings.size)
+		assertEquals(1700.0, vPuzzles.ratings[0], "classement 1 500 + 200 (plus dur)")
+		assertTrue(vPuzzles.ratings[1] > 1700.0, "le classement a monté après la réussite")
 	}
 
 	/** Vérifie la Survie : difficulté croissante, une vie par erreur, fin à zéro vie, rien dans la progression. */

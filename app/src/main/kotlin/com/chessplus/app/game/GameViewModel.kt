@@ -24,6 +24,14 @@ class GameViewModel(inContainer: AppContainer, inMode: GameMode) : ViewModel() {
 		progress = inContainer.progressStore,
 		sessions = inContainer.sessionStore,
 		challenges = inContainer.challengeStore,
+		preferences = object : GamePreferences {
+			override val confirmMoves: Boolean
+				get() = inContainer.settingsStore.settings.value.confirmMoves
+			override val autoNext: Boolean
+				get() = inContainer.settingsStore.settings.value.autoNext
+			override val difficultyOffset: Int
+				get() = inContainer.settingsStore.settings.value.difficulty.offset
+		},
 		clock = System::currentTimeMillis,
 	)
 

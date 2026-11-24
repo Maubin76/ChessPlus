@@ -109,6 +109,37 @@ data class GameSummary(
 )
 
 /**
+ * Rôle d'un élément de la notation des coups.
+ */
+enum class NotationKind {
+	/** Coup déjà joué (atténué). */
+	Past,
+
+	/** Numéro du coup à trouver. */
+	Current,
+
+	/** Coup à trouver (« ? » souligné). */
+	Pending,
+}
+
+/**
+ * Élément de la notation affichée sous l'échiquier (« 8… », « Bg4 », « 9. », « ? »).
+ *
+ * @property text texte.
+ * @property kind rôle.
+ */
+data class NotationToken(val text: String, val kind: NotationKind)
+
+/**
+ * Bilan de la session de jeu (ou de la partie de défi).
+ *
+ * @property solved puzzles réussis.
+ * @property failed puzzles ratés.
+ * @property ratingDelta variation du classement, ou null en défi.
+ */
+data class SessionTally(val solved: Int, val failed: Int, val ratingDelta: Int?)
+
+/**
  * Retour haptique ponctuel demandé à l'interface.
  *
  * @property id identifiant croissant, pour ne déclencher chaque retour qu'une fois.
@@ -137,6 +168,19 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property summary bilan de fin de problème, affiché sous l'échiquier.
  * @property haptic dernier retour haptique demandé.
  * @property challenge partie de défi en cours, ou null hors défi.
+ * @property sideToMove camp du joueur, au trait.
+ * @property puzzleId identifiant Lichess du puzzle, ou null.
+ * @property puzzleRating classement du puzzle, ou null.
+ * @property puzzleThemes thèmes du puzzle.
+ * @property notation coups joués et coup à trouver.
+ * @property remainingMoves coups du joueur restant à trouver.
+ * @property clockStart début du chronomètre du puzzle, ou null.
+ * @property clockEnd fin du chronomètre (puzzle terminé), ou null.
+ * @property tally bilan de la session.
+ * @property pendingConfirm vrai si un coup attend d'être confirmé.
+ * @property solutionEnabled vrai si « Solution » est disponible.
+ * @property skipEnabled vrai si « Passer » est disponible.
+ * @property challengeBest record du défi, ou null.
  */
 data class GameUiState(
 	val header: GameHeader = GameHeader.Loading,
@@ -157,4 +201,17 @@ data class GameUiState(
 	val summary: GameSummary? = null,
 	val haptic: HapticEvent? = null,
 	val challenge: ChallengeUi? = null,
+	val sideToMove: Color = Color.White,
+	val puzzleId: String? = null,
+	val puzzleRating: Int? = null,
+	val puzzleThemes: ThemeSet = ThemeSet.kEmpty,
+	val notation: List<NotationToken> = emptyList(),
+	val remainingMoves: Int = 0,
+	val clockStart: Long? = null,
+	val clockEnd: Long? = null,
+	val tally: SessionTally = SessionTally(0, 0, 0),
+	val pendingConfirm: Boolean = false,
+	val solutionEnabled: Boolean = false,
+	val skipEnabled: Boolean = false,
+	val challengeBest: Int? = null,
 )

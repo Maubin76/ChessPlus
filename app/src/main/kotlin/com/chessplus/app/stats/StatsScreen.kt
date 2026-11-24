@@ -1,6 +1,7 @@
 package com.chessplus.app.stats
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -9,15 +10,14 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -27,9 +27,10 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModel
@@ -40,25 +41,31 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chessplus.app.AppContainer
 import com.chessplus.app.R
+import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.ui.ThemeFamily
 import com.chessplus.app.ui.charts.BarRow
 import com.chessplus.app.ui.charts.CalendarHeatmap
 import com.chessplus.app.ui.charts.ColumnChart
 import com.chessplus.app.ui.charts.ColumnItem
-import com.chessplus.app.ui.charts.HeatmapLegend
 import com.chessplus.app.ui.charts.LineChart
 import com.chessplus.app.ui.charts.StackSegment
 import com.chessplus.app.ui.charts.StackedBar
-import com.chessplus.app.ui.components.BottomNavBar
+import com.chessplus.app.ui.components.FloatingNavBar
+import com.chessplus.app.ui.components.LinkRow
+import com.chessplus.app.ui.components.ListGroup
+import com.chessplus.app.ui.components.ListRow
+import com.chessplus.app.ui.components.RowTexts
 import com.chessplus.app.ui.components.NavTab
+import com.chessplus.app.ui.components.Overline
+import com.chessplus.app.ui.components.PageTitle
 import com.chessplus.app.ui.components.PrimaryButton
-import com.chessplus.app.ui.components.ScreenTopBar
+import com.chessplus.app.ui.components.Section
 import com.chessplus.app.ui.components.SegmentedControl
-import com.chessplus.app.ui.components.SurfaceCard
+import com.chessplus.app.ui.components.StatTiles
 import com.chessplus.app.ui.components.formatDelta
 import com.chessplus.app.ui.components.formatRating
-import com.chessplus.app.ui.theme.ChessType
-import com.chessplus.app.ui.theme.kLocalChessColors
+import com.chessplus.app.ui.components.kThinSpace
+import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.app.ui.themeFamily
 import com.chessplus.app.ui.themeLabel
 import com.chessplus.core.model.Theme
@@ -73,48 +80,83 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Nombre minimal de tentatives pour qu'un thème figure dans « Forces et faiblesses ». */
+/** Nombre minimal de tentatives pour qu'un thème figure dans « Réussite par thème ». */
 private const val kMinAttemptsPerTheme = 3
 
 /** Nombre de thèmes affichés avant « Voir tous les thèmes ». */
-private const val kThemesPreview = 6
+private const val kThemesPreview = 4
 
 /** Nombre de thèmes jamais rencontrés affichés. */
-private const val kUnseenPreview = 14
-
-/** Rapport largeur / hauteur du calendrier d'activité (17 semaines de 7 jours, espaces compris). */
-private const val kHeatmapRatio = 2.35f
+private const val kUnseenPreview = 12
 
 /** Nombre minimal de tentatives pour afficher une tranche de difficulté. */
 private const val kMinAttemptsPerBand = 3
 
-/** Familles comparées dans « Par famille » (la longueur a sa propre carte, l'évaluation n'est pas un motif). */
+/** Hauteur de la courbe du classement et du calendrier d'activité (maquette). */
+private const val kChartHeight = 96
+
+/** Hauteur des graphiques en colonnes. */
+private const val kColumnsHeight = 110
+
+/** Familles comparées dans « Par famille » (la longueur a sa propre section, l'évaluation n'est pas un motif). */
 private val kComparedFamilies = setOf(ThemeFamily.Tactics, ThemeFamily.Mates, ThemeFamily.Endgames, ThemeFamily.Phase)
 
 /** Durée d'un jour en millisecondes. */
 private const val kDayMs = 24L * 60 * 60 * 1000
 
 /**
- * ViewModel des statistiques : recalcule le rapport à chaque nouvelle tentative.
+ * Données de l'écran : rapport calculé et records des défis.
+ *
+ * @property report rapport des tentatives.
+ * @property rushBest meilleur score en Rush, ou null.
+ * @property survivalBest meilleur score en Survie, ou null.
+ */
+data class StatsData(val report: StatsReport, val rushBest: Int? = null, val survivalBest: Int? = null)
+
+/**
+ * ViewModel des statistiques : recalcule le rapport à chaque nouvelle tentative et suit les records
+ * des défis.
  *
  * @property container dépendances de l'application.
  */
 class StatsViewModel(private val container: AppContainer) : ViewModel() {
-	/** Rapport publié, ou null pendant le chargement. */
-	private val mutableReport = MutableStateFlow<StatsReport?>(null)
+	/** Données publiées, ou null pendant le chargement. */
+	private val mutableData = MutableStateFlow<StatsData?>(null)
 
-	/** Rapport de l'écran. */
-	val report: StateFlow<StatsReport?> = mutableReport.asStateFlow()
+	/** Données de l'écran. */
+	val data: StateFlow<StatsData?> = mutableData.asStateFlow()
 
 	/** Calcul des statistiques. */
 	private val calculator = StatsCalculator()
 
+	/** Records des défis, par clé de défi. */
+	private var bests: Map<String, Int> = emptyMap()
+
+	/** Dernier rapport calculé. */
+	private var report: StatsReport? = null
+
 	init {
 		viewModelScope.launch {
-			container.ready().second.userDao().observeAllAttempts().collect { inAttempts ->
-				mutableReport.value = withContext(Dispatchers.Default) { calculator.report(inAttempts, System.currentTimeMillis()) }
+			val vDao = container.ready().second.userDao()
+			launch {
+				vDao.observeChallengeBests().collect { inBests ->
+					bests = inBests.associate { it.kind to it.score }
+					publish()
+				}
+			}
+			vDao.observeAllAttempts().collect { inAttempts ->
+				report = withContext(Dispatchers.Default) { calculator.report(inAttempts, System.currentTimeMillis()) }
+				publish()
 			}
 		}
+	}
+
+	/**
+	 * Publie les données dès que le rapport est prêt.
+	 */
+	private fun publish() {
+		val vReport = report ?: return
+		mutableData.value = StatsData(vReport, bests[ChallengeKind.Rush.key], bests[ChallengeKind.Survival.key])
 	}
 
 	companion object {
@@ -126,243 +168,224 @@ class StatsViewModel(private val container: AppContainer) : ViewModel() {
 }
 
 /**
- * Écran Statistiques.
+ * Écran Statistiques (onglet).
  */
 @Composable
-fun StatsScreen(inViewModel: StatsViewModel, inOnTheme: (Theme) -> Unit, inOnTrainThemes: (Set<Theme>) -> Unit, inOnTab: (NavTab) -> Unit) {
-	val vReport by inViewModel.report.collectAsStateWithLifecycle()
-	StatsContent(vReport, System.currentTimeMillis(), inOnTheme, inOnTrainThemes, inOnTab)
+fun StatsScreen(
+	inViewModel: StatsViewModel,
+	inOnTheme: (Theme) -> Unit,
+	inOnTrainThemes: (Set<Theme>) -> Unit,
+	inOnHistory: () -> Unit = {},
+	inOnTab: (NavTab) -> Unit,
+) {
+	val vData by inViewModel.data.collectAsStateWithLifecycle()
+	StatsContent(vData, System.currentTimeMillis(), inOnTheme, inOnTrainThemes, inOnHistory, inOnTab)
 }
 
 /**
- * Contenu des statistiques, sans état métier (prévisualisable). [inReport] vaut null pendant le chargement.
+ * Contenu des statistiques, sans état métier (prévisualisable). [inData] vaut null pendant le
+ * chargement. La colonne défile, la barre de navigation reste fixe.
  */
 @Composable
-fun StatsContent(inReport: StatsReport?, inNow: Long, inOnTheme: (Theme) -> Unit, inOnTrainThemes: (Set<Theme>) -> Unit, inOnTab: (NavTab) -> Unit) {
-	val vColors = kLocalChessColors.current
-	Column(Modifier.fillMaxSize().background(vColors.background).statusBarsPadding()) {
-		ScreenTopBar(stringResource(R.string.nav_stats))
-		if (inReport != null && inReport.attempts == 0) {
-			Box(Modifier.weight(1f).fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-				Text(stringResource(R.string.stats_empty), style = ChessType.kBody, color = vColors.muted, textAlign = TextAlign.Center)
+fun StatsContent(
+	inData: StatsData?,
+	inNow: Long,
+	inOnTheme: (Theme) -> Unit,
+	inOnTrainThemes: (Set<Theme>) -> Unit,
+	inOnHistory: () -> Unit,
+	inOnTab: (NavTab) -> Unit,
+) {
+	val vColors = ChessPlusTheme.colors
+	val vSpacing = ChessPlusTheme.spacing
+	Column(Modifier.fillMaxSize().background(vColors.surface).statusBarsPadding()) {
+		Column(
+			Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(horizontal = vSpacing.space4).padding(top = vSpacing.space2, bottom = vSpacing.space4),
+			verticalArrangement = Arrangement.spacedBy(20.dp),
+		) {
+			PageTitle(stringResource(R.string.stats_page_title))
+			val vReport = inData?.report
+			if (vReport != null && vReport.attempts == 0) {
+				Text(stringResource(R.string.stats_none), style = ChessPlusTheme.typography.body, color = vColors.inkMuted)
+			} else if (inData != null && vReport != null) {
+				RatingSection(vReport, inNow)
+				SummaryTiles(inData)
+				ActivitySection(vReport)
+				ThemesSection(vReport, inOnTheme)
+				WeakSection(vReport, inOnTheme, inOnTrainThemes)
+				VolumeSection(vReport)
+				FamiliesSection(vReport)
+				DifficultySection(vReport)
+				ProfileSection(vReport)
+				LengthSection(vReport)
+				DayPartsSection(vReport)
+				TimeSection(vReport)
+				ErrorsSection(vReport)
+				RecordsSection(inData)
+				CoverageSection(vReport)
 			}
-		} else if (inReport != null) {
-			LazyColumn(Modifier.weight(1f).padding(horizontal = 20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-				item { SummaryTiles(inReport) }
-				item { RatingCard(inReport, inNow) }
-				item { ActivityCard(inReport) }
-				item { VolumeCard(inReport) }
-				item { ThemesCard(inReport, inOnTheme) }
-				item { WeakCard(inReport, inOnTheme, inOnTrainThemes) }
-				item { FamiliesCard(inReport) }
-				item { DifficultyCard(inReport) }
-				item { ProfileCard(inReport) }
-				item { LengthCard(inReport) }
-				item { DayPartsCard(inReport) }
-				item { TimeCard(inReport) }
-				item { ErrorsCard(inReport) }
-				item { RecordsCard(inReport) }
-				item { CoverageCard(inReport) }
-				item { Spacer(Modifier.height(8.dp)) }
+			if (inData != null) {
+				ListGroup(inRows = listOf { LinkRow(stringResource(R.string.stats_history), null, inOnHistory, stringResource(R.string.stats_history_detail)) })
 			}
-		} else {
-			Spacer(Modifier.weight(1f))
 		}
-		BottomNavBar(NavTab.Stats, inOnTab)
+		FloatingNavBar(NavTab.Stats, inOnTab)
 	}
 }
 
 /**
- * Titre de carte et précision facultative.
+ * Classement : grand chiffre, variation sur la période, courbe et choix de la période.
  */
 @Composable
-internal fun CardTitle(inTitle: String, inDetail: String? = null) {
-	val vColors = kLocalChessColors.current
-	Text(inTitle, style = ChessType.kSection, color = vColors.text)
-	inDetail?.let { Text(it, style = ChessType.kCaption, color = vColors.muted) }
-	Spacer(Modifier.height(10.dp))
-}
-
-/**
- * Tuile du résumé : libellé, grande valeur, précision ([inDetail] vide : ligne réservée, null : pas de ligne).
- */
-@Composable
-internal fun Tile(inLabel: String, inValue: String, inDetail: String?, inModifier: Modifier, inDetailColor: Color? = null) {
-	val vColors = kLocalChessColors.current
-	Column(inModifier.background(vColors.surface, RoundedCornerShape(20.dp)).padding(16.dp)) {
-		Text(inLabel, style = ChessType.kCaption, color = vColors.muted)
-		Text(inValue, style = ChessType.kScreenTitle, color = vColors.text, maxLines = 1)
-		inDetail?.let { Text(it, style = ChessType.kCaption, color = inDetailColor ?: vColors.muted, maxLines = 1) }
-	}
-}
-
-/**
- * Résumé en quatre tuiles : cote, résolus, série, réussite.
- */
-@Composable
-private fun SummaryTiles(inReport: StatsReport) {
-	val vColors = kLocalChessColors.current
-	Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-		Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-			val vDelta = inReport.ratingDelta30Days
-			Tile(
-				stringResource(R.string.stats_tile_rating),
-				inReport.currentRating?.let { formatRating(it) } ?: "–",
-				vDelta?.let { stringResource(R.string.stats_delta_30, formatDelta(it)) } ?: "",
-				Modifier.weight(1f),
-				if (vDelta == null) null else if (vDelta >= 0) vColors.success else vColors.error,
-			)
-			Tile(
-				stringResource(R.string.stats_tile_solved),
-				formatRating(inReport.successes),
-				stringResource(R.string.stats_tile_solved_detail, formatRating(inReport.attempts)),
-				Modifier.weight(1f),
-			)
-		}
-		Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-			Tile(
-				stringResource(R.string.stats_tile_streak),
-				pluralStringResource(R.plurals.stats_days, inReport.dayStreak, inReport.dayStreak),
-				stringResource(R.string.stats_tile_streak_detail, pluralStringResource(R.plurals.stats_days, inReport.bestDayStreak, inReport.bestDayStreak)),
-				Modifier.weight(1f),
-			)
-			Tile(
-				stringResource(R.string.stats_tile_success),
-				inReport.successRate?.let { percent(it) } ?: "–",
-				stringResource(R.string.stats_tile_success_detail),
-				Modifier.weight(1f),
-			)
-		}
-	}
-}
-
-/**
- * Courbe de la cote avec sa bande d'incertitude, sur 7 jours, 30 jours ou tout l'historique.
- */
-@Composable
-private fun RatingCard(inReport: StatsReport, inNow: Long) {
-	val vColors = kLocalChessColors.current
+private fun RatingSection(inReport: StatsReport, inNow: Long) {
+	val vColors = ChessPlusTheme.colors
 	var vPeriod by rememberSaveable { mutableIntStateOf(1) }
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_rating_title), inReport.bestRating?.let { stringResource(R.string.stats_best_rating, formatRating(it)) })
-		val vFrom = when (vPeriod) {
-			0 -> inNow - 7 * kDayMs
-			1 -> inNow - 30 * kDayMs
-			else -> Long.MIN_VALUE
+	val vFrom = when (vPeriod) {
+		0 -> inNow - 7 * kDayMs
+		1 -> inNow - 30 * kDayMs
+		2 -> inNow - 365 * kDayMs
+		else -> Long.MIN_VALUE
+	}
+	val vSamples = (listOfNotNull(inReport.ratingHistory.lastOrNull { it.time < vFrom }) + inReport.ratingHistory.filter { it.time >= vFrom })
+		.ifEmpty { listOfNotNull(inReport.ratingHistory.lastOrNull()) }
+	Column {
+		Overline(stringResource(R.string.stats_rating_section))
+		Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+			Text(inReport.currentRating?.let { formatRating(it) } ?: "–", style = ChessPlusTheme.typography.display, color = vColors.ink)
+			if (vSamples.size >= 2) {
+				val vDelta = (vSamples.last().rating - vSamples.first().rating).roundToInt()
+				val vLabel = when (vPeriod) {
+					0 -> R.string.stats_delta_7
+					1 -> R.string.stats_delta_30
+					2 -> R.string.stats_delta_year
+					else -> R.string.stats_delta_all
+				}
+				Text(
+					stringResource(vLabel, formatDelta(vDelta)),
+					style = ChessPlusTheme.typography.moves,
+					color = if (vDelta >= 0) vColors.success else vColors.danger,
+					modifier = Modifier.padding(bottom = 6.dp),
+				)
+			}
 		}
-		val vSamples = (listOfNotNull(inReport.ratingHistory.lastOrNull { it.time < vFrom }) + inReport.ratingHistory.filter { it.time >= vFrom })
-			.ifEmpty { listOfNotNull(inReport.ratingHistory.lastOrNull()) }
-		val vBand = if (vSamples.all { it.deviation != null }) vSamples.map { (it.rating - it.deviation!!).toFloat() to (it.rating + it.deviation).toFloat() } else null
-		LineChart(vSamples.map { it.rating.toFloat() }, Modifier.fillMaxWidth().height(140.dp), vBand)
-		if (vBand != null) {
-			Text(stringResource(R.string.stats_rating_band), style = ChessType.kCaption, color = vColors.muted)
-		}
-		Spacer(Modifier.height(10.dp))
-		SegmentedControl(listOf(stringResource(R.string.stats_tab_7), stringResource(R.string.stats_tab_30), stringResource(R.string.stats_tab_all)), vPeriod) { vPeriod = it }
+		Spacer(Modifier.height(ChessPlusTheme.spacing.space2))
+		LineChart(vSamples.map { it.rating.toFloat() }, Modifier.fillMaxWidth().height(kChartHeight.dp))
+		Spacer(Modifier.height(ChessPlusTheme.spacing.space3))
+		SegmentedControl(
+			listOf(stringResource(R.string.stats_range_7), stringResource(R.string.stats_range_30), stringResource(R.string.stats_range_year), stringResource(R.string.stats_range_all)),
+			vPeriod,
+		) { vPeriod = it }
 	}
 }
 
 /**
- * Calendrier d'activité et séries.
+ * Tuiles 2 × 2 : résolus, réussite, série, chrono record (meilleur score en Rush).
  */
 @Composable
-private fun ActivityCard(inReport: StatsReport) {
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_activity), stringResource(R.string.stats_activity_detail))
-		CalendarHeatmap(inReport.calendar.map { it.count }, Modifier.fillMaxWidth().aspectRatio(kHeatmapRatio))
-		Spacer(Modifier.height(8.dp))
-		HeatmapLegend(stringResource(R.string.stats_less), stringResource(R.string.stats_more))
-		Spacer(Modifier.height(12.dp))
-		Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-			MiniStat(stringResource(R.string.stats_streak_current), pluralStringResource(R.plurals.stats_days, inReport.dayStreak, inReport.dayStreak), Modifier.weight(1f))
-			MiniStat(stringResource(R.string.stats_streak_best), pluralStringResource(R.plurals.stats_days, inReport.bestDayStreak, inReport.bestDayStreak), Modifier.weight(1f))
-			MiniStat(stringResource(R.string.stats_run_best), "${inReport.bestSuccessRun}", Modifier.weight(1f))
+private fun SummaryTiles(inData: StatsData) {
+	val vReport = inData.report
+	StatTiles(
+		listOf(
+			stringResource(R.string.stats_tile_solved) to formatRating(vReport.successes),
+			stringResource(R.string.stats_tile_success) to (vReport.successRate?.let { percent(it) } ?: "–"),
+			stringResource(R.string.stats_tile_streak) to stringResource(R.string.stats_days_short, vReport.dayStreak),
+			stringResource(R.string.stats_tile_rush) to (inData.rushBest?.let { formatRating(it) } ?: "–"),
+		)
+	)
+}
+
+/**
+ * Calendrier d'activité sur 12 semaines.
+ */
+@Composable
+private fun ActivitySection(inReport: StatsReport) {
+	Section(stringResource(R.string.stats_activity)) {
+		CalendarHeatmap(inReport.calendar.map { it.count }, Modifier.fillMaxWidth().height(kChartHeight.dp))
+	}
+}
+
+/**
+ * Lien texte en `accent` (afficher plus ou moins).
+ */
+@Composable
+private fun TextLink(inText: String, inOnClick: () -> Unit) {
+	Text(
+		inText,
+		style = ChessPlusTheme.typography.small.copy(fontWeight = FontWeight(600)),
+		color = ChessPlusTheme.colors.accent,
+		modifier = Modifier.clip(RoundedCornerShape(ChessPlusTheme.radius.radiusXs)).clickable(onClick = inOnClick).padding(vertical = 6.dp),
+	)
+}
+
+/**
+ * Réussite par thème : thèmes entraînables joués au moins 3 fois, du mieux réussi au moins bien réussi.
+ */
+@Composable
+private fun ThemesSection(inReport: StatsReport, inOnTheme: (Theme) -> Unit) {
+	var vShowAll by rememberSaveable { mutableStateOf(false) }
+	val vSorted = inReport.themes
+		.filter { it.attempts >= kMinAttemptsPerTheme && themeFamily(it.theme) in StatsCalculator.kTrainableFamilies }
+		.sortedWith(compareByDescending<ThemeStat> { it.rate }.thenByDescending { it.attempts })
+	if (vSorted.isEmpty()) {
+		return
+	}
+	Section(stringResource(R.string.stats_themes_title)) {
+		Column {
+			for (vStat in if (vShowAll) vSorted else vSorted.take(kThemesPreview)) {
+				BarRow(stringResource(themeLabel(vStat.theme)), percent(vStat.rate), vStat.rate, inOnClick = { inOnTheme(vStat.theme) })
+			}
+			if (vSorted.size > kThemesPreview) {
+				TextLink(if (vShowAll) stringResource(R.string.stats_show_less) else stringResource(R.string.stats_show_all, vSorted.size)) { vShowAll = !vShowAll }
+			}
 		}
 	}
 }
 
 /**
- * Petite statistique : libellé et valeur.
+ * Les trois thèmes les plus faibles et l'entraînement ciblé sur eux (seul bouton principal de l'écran).
  */
 @Composable
-private fun MiniStat(inLabel: String, inValue: String, inModifier: Modifier) {
-	val vColors = kLocalChessColors.current
-	Column(inModifier.background(vColors.background, RoundedCornerShape(14.dp)).padding(10.dp)) {
-		Text(inLabel, style = ChessType.kCaption, color = vColors.muted, maxLines = 2)
-		Text(inValue, style = ChessType.kBodyStrong, color = vColors.text, maxLines = 1)
+private fun WeakSection(inReport: StatsReport, inOnTheme: (Theme) -> Unit, inOnTrainThemes: (Set<Theme>) -> Unit) {
+	Section(stringResource(R.string.stats_weak_title)) {
+		if (inReport.weakest.isEmpty()) {
+			Text(stringResource(R.string.stats_weak_empty), style = ChessPlusTheme.typography.small, color = ChessPlusTheme.colors.inkMuted)
+		} else {
+			Column {
+				for (vStat in inReport.weakest) {
+					BarRow(stringResource(themeLabel(vStat.theme)), percent(vStat.rate), vStat.rate, pluralStringResource(R.plurals.stats_problems, vStat.attempts, vStat.attempts)) { inOnTheme(vStat.theme) }
+				}
+			}
+			PrimaryButton(stringResource(R.string.stats_weak_train), { inOnTrainThemes(inReport.weakest.map { it.theme }.toSet()) }, Modifier.fillMaxWidth(), inIcon = R.drawable.ic_ln_target)
+		}
 	}
 }
 
 /**
- * Problèmes joués par semaine.
+ * Puzzles joués par semaine.
  */
 @Composable
-private fun VolumeCard(inReport: StatsReport) {
+private fun VolumeSection(inReport: StatsReport) {
 	val vMax = inReport.weeklyVolume.maxOfOrNull { it.attempts }?.coerceAtLeast(1) ?: 1
 	val vFormat = SimpleDateFormat("d/M", Locale.FRANCE)
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_volume))
+	Section(stringResource(R.string.stats_volume)) {
 		ColumnChart(
 			inReport.weeklyVolume.map { ColumnItem(vFormat.format(Date(it.weekStart)), it.attempts.toFloat() / vMax, if (it.attempts > 0) "${it.attempts}" else null) },
-			Modifier.height(130.dp),
+			Modifier.height(kColumnsHeight.dp),
 		)
 	}
 }
 
 /**
- * Forces et faiblesses : thèmes classés par réussite ou par cote, avec accès à leur fiche.
+ * Liste de barres de réussite de groupes (famille, longueur, moment).
  */
 @Composable
-private fun ThemesCard(inReport: StatsReport, inOnTheme: (Theme) -> Unit) {
-	var vSortByRating by rememberSaveable { mutableStateOf(false) }
-	var vShowAll by rememberSaveable { mutableStateOf(false) }
-	val vEligible = inReport.themes.filter { it.attempts >= kMinAttemptsPerTheme && themeFamily(it.theme) in StatsCalculator.kTrainableFamilies }
-	if (vEligible.isEmpty()) {
+private fun <K> GroupBars(inTitle: String, inGroups: List<GroupStat<K>>, inLabel: @Composable (K) -> String) {
+	if (inGroups.isEmpty()) {
 		return
 	}
-	val vSorted = if (vSortByRating) vEligible.sortedByDescending { it.rating } else vEligible.sortedWith(compareByDescending<ThemeStat> { it.rate }.thenByDescending { it.attempts })
-	val vMaxRating = vEligible.maxOf { it.rating }.toFloat()
-	val vMinRating = vEligible.minOf { it.rating }.toFloat() - 100f
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_themes_title), stringResource(R.string.stats_themes_detail))
-		SegmentedControl(listOf(stringResource(R.string.stats_sort_rate), stringResource(R.string.stats_sort_rating)), if (vSortByRating) 1 else 0) { vSortByRating = it == 1 }
-		Spacer(Modifier.height(8.dp))
-		for (vStat in if (vShowAll) vSorted else vSorted.take(kThemesPreview)) {
-			BarRow(
-				inLabel = stringResource(themeLabel(vStat.theme)),
-				inValue = if (vSortByRating) formatRating(vStat.rating) else percent(vStat.rate),
-				inFraction = if (vSortByRating) (vStat.rating - vMinRating) / (vMaxRating - vMinRating).coerceAtLeast(1f) else vStat.rate,
-				inDetail = if (vSortByRating) percent(vStat.rate) else stringResource(R.string.stats_theme_rating, formatRating(vStat.rating)),
-				inOnClick = { inOnTheme(vStat.theme) },
-			)
-		}
-		if (vSorted.size > kThemesPreview) {
-			Text(
-				if (vShowAll) stringResource(R.string.stats_show_less) else stringResource(R.string.stats_show_all, vSorted.size),
-				style = ChessType.kBodyStrong,
-				color = kLocalChessColors.current.primary,
-				modifier = Modifier.padding(top = 6.dp).clickable { vShowAll = !vShowAll }.padding(vertical = 4.dp),
-			)
-		}
-	}
-}
-
-/**
- * Les trois thèmes les plus faibles et un entraînement ciblé sur eux.
- */
-@Composable
-private fun WeakCard(inReport: StatsReport, inOnTheme: (Theme) -> Unit, inOnTrainThemes: (Set<Theme>) -> Unit) {
-	val vColors = kLocalChessColors.current
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_weak_title), stringResource(R.string.stats_weak_detail))
-		if (inReport.weakest.isEmpty()) {
-			Text(stringResource(R.string.stats_weak_empty), style = ChessType.kBody, color = vColors.muted)
-		} else {
-			for (vStat in inReport.weakest) {
-				BarRow(stringResource(themeLabel(vStat.theme)), percent(vStat.rate), vStat.rate, pluralStringResource(R.plurals.stats_problems, vStat.attempts, vStat.attempts)) { inOnTheme(vStat.theme) }
+	Section(inTitle) {
+		Column {
+			for (vGroup in inGroups) {
+				BarRow(inLabel(vGroup.key), percent(vGroup.rate), vGroup.rate, pluralStringResource(R.plurals.stats_problems, vGroup.attempts, vGroup.attempts))
 			}
-			Spacer(Modifier.height(10.dp))
-			PrimaryButton(stringResource(R.string.stats_weak_train), { inOnTrainThemes(inReport.weakest.map { it.theme }.toSet()) }, inIcon = R.drawable.ic_bolt_fill1, inHeight = 52)
 		}
 	}
 }
@@ -371,41 +394,40 @@ private fun WeakCard(inReport: StatsReport, inOnTheme: (Theme) -> Unit, inOnTrai
  * Réussite par famille de thèmes.
  */
 @Composable
-private fun FamiliesCard(inReport: StatsReport) {
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_families))
-		for (vGroup in inReport.families.filter { it.attempts > 0 && it.key in kComparedFamilies }) {
-			BarRow(stringResource(vGroup.key.label), percent(vGroup.rate), vGroup.rate, pluralStringResource(R.plurals.stats_problems, vGroup.attempts, vGroup.attempts))
-		}
+private fun FamiliesSection(inReport: StatsReport) {
+	GroupBars(stringResource(R.string.stats_families), inReport.families.filter { it.attempts > 0 && it.key in kComparedFamilies }) { stringResource(it.label) }
+}
+
+/**
+ * Réussite par tranche de difficulté des puzzles.
+ */
+@Composable
+private fun DifficultySection(inReport: StatsReport) {
+	val vBands = inReport.difficulty.filter { it.attempts >= kMinAttemptsPerBand }
+	if (vBands.isEmpty()) {
+		return
+	}
+	Section(stringResource(R.string.stats_difficulty)) {
+		ColumnChart(vBands.map { ColumnItem(formatRating(it.key), it.rate, percent(it.rate)) }, Modifier.height(kColumnsHeight.dp))
 	}
 }
 
 /**
- * Réussite par tranche de difficulté des problèmes.
+ * Répartition des fins de puzzle : réussi, indice, erreur.
  */
 @Composable
-private fun DifficultyCard(inReport: StatsReport) {
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_difficulty), stringResource(R.string.stats_difficulty_detail))
-		ColumnChart(inReport.difficulty.filter { it.attempts >= kMinAttemptsPerBand }.map { ColumnItem("${it.key}", it.rate, percent(it.rate)) }, Modifier.height(140.dp))
-	}
-}
-
-/**
- * Répartition des fins de problème : réussi, indice, erreur.
- */
-@Composable
-private fun ProfileCard(inReport: StatsReport) {
-	val vColors = kLocalChessColors.current
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_profile))
-		StackedBar(
-			listOf(
-				StackSegment(stringResource(R.string.stats_profile_clean), inReport.profile.clean, vColors.chartGood),
-				StackSegment(stringResource(R.string.stats_profile_hint), inReport.profile.hint, vColors.chartHint),
-				StackSegment(stringResource(R.string.stats_profile_mistake), inReport.profile.mistake, vColors.chartBad),
+private fun ProfileSection(inReport: StatsReport) {
+	val vColors = ChessPlusTheme.colors
+	Section(stringResource(R.string.stats_profile)) {
+		Column {
+			StackedBar(
+				listOf(
+					StackSegment(stringResource(R.string.stats_profile_clean), inReport.profile.clean, vColors.success),
+					StackSegment(stringResource(R.string.stats_profile_hint), inReport.profile.hint, vColors.lineStrong),
+					StackSegment(stringResource(R.string.stats_profile_mistake), inReport.profile.mistake, vColors.danger),
+				)
 			)
-		)
+		}
 	}
 }
 
@@ -413,31 +435,24 @@ private fun ProfileCard(inReport: StatsReport) {
  * Réussite selon la longueur de la solution.
  */
 @Composable
-private fun LengthCard(inReport: StatsReport) {
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_length))
-		for (vGroup in inReport.lengths.filter { it.attempts > 0 }) {
-			BarRow(stringResource(themeLabel(vGroup.key.theme)), percent(vGroup.rate), vGroup.rate, pluralStringResource(R.plurals.stats_problems, vGroup.attempts, vGroup.attempts))
-		}
-	}
+private fun LengthSection(inReport: StatsReport) {
+	GroupBars(stringResource(R.string.stats_length), inReport.lengths.filter { it.attempts > 0 }) { stringResource(themeLabel(it.theme)) }
 }
 
 /**
  * Réussite selon le moment de la journée.
  */
 @Composable
-private fun DayPartsCard(inReport: StatsReport) {
-	val vLabels = mapOf(
-		DayPart.Morning to R.string.stats_daypart_morning,
-		DayPart.Afternoon to R.string.stats_daypart_afternoon,
-		DayPart.Evening to R.string.stats_daypart_evening,
-		DayPart.Night to R.string.stats_daypart_night,
-	)
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_dayparts))
-		for (vGroup in inReport.dayParts.filter { it.attempts > 0 }) {
-			BarRow(stringResource(vLabels.getValue(vGroup.key)), percent(vGroup.rate), vGroup.rate, pluralStringResource(R.plurals.stats_problems, vGroup.attempts, vGroup.attempts))
-		}
+private fun DayPartsSection(inReport: StatsReport) {
+	GroupBars(stringResource(R.string.stats_dayparts), inReport.dayParts.filter { it.attempts > 0 }) {
+		stringResource(
+			when (it) {
+				DayPart.Morning -> R.string.stats_daypart_morning
+				DayPart.Afternoon -> R.string.stats_daypart_afternoon
+				DayPart.Evening -> R.string.stats_daypart_evening
+				DayPart.Night -> R.string.stats_daypart_night
+			}
+		)
 	}
 }
 
@@ -445,81 +460,84 @@ private fun DayPartsCard(inReport: StatsReport) {
  * Temps de résolution : moyenne, thèmes extrêmes, médiane par semaine.
  */
 @Composable
-private fun TimeCard(inReport: StatsReport) {
-	val vColors = kLocalChessColors.current
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_time))
+private fun TimeSection(inReport: StatsReport) {
+	val vColors = ChessPlusTheme.colors
+	Section(stringResource(R.string.stats_time)) {
 		val vAverage = inReport.averageDurationMs
 		if (vAverage == null) {
-			Text(stringResource(R.string.stats_time_empty), style = ChessType.kBody, color = vColors.muted)
-			return@SurfaceCard
+			Text(stringResource(R.string.stats_time_empty), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+			return@Section
 		}
-		Text(stringResource(R.string.stats_time_average), style = ChessType.kCaption, color = vColors.muted)
-		Text(duration(vAverage), style = ChessType.kScreenTitle, color = vColors.text)
 		val vTimed = inReport.themes.filter { it.averageDurationMs != null && it.successes >= kMinAttemptsPerTheme && themeFamily(it.theme) in StatsCalculator.kTrainableFamilies }
+		val vRows = mutableListOf<@Composable () -> Unit>({ ValueRow(stringResource(R.string.stats_time_average), null, duration(vAverage)) })
 		if (vTimed.size >= 2) {
 			val vFastest = vTimed.minBy { it.averageDurationMs!! }
 			val vSlowest = vTimed.maxBy { it.averageDurationMs!! }
-			Spacer(Modifier.height(6.dp))
-			Text(stringResource(R.string.stats_time_fastest, stringResource(themeLabel(vFastest.theme)), duration(vFastest.averageDurationMs!!)), style = ChessType.kBody, color = vColors.text)
-			Text(stringResource(R.string.stats_time_slowest, stringResource(themeLabel(vSlowest.theme)), duration(vSlowest.averageDurationMs!!)), style = ChessType.kBody, color = vColors.text)
+			vRows.add { ValueRow(stringResource(R.string.stats_time_fastest), stringResource(themeLabel(vFastest.theme)), duration(vFastest.averageDurationMs!!)) }
+			vRows.add { ValueRow(stringResource(R.string.stats_time_slowest), stringResource(themeLabel(vSlowest.theme)), duration(vSlowest.averageDurationMs!!)) }
 		}
+		ListGroup(inRows = vRows)
 		if (inReport.weeklyDurationMs.size >= 2) {
-			Spacer(Modifier.height(12.dp))
-			Text(stringResource(R.string.stats_time_weekly), style = ChessType.kCaption, color = vColors.muted)
+			Overline(stringResource(R.string.stats_time_weekly), Modifier.padding(top = ChessPlusTheme.spacing.space2))
 			val vMax = inReport.weeklyDurationMs.maxOf { it.second }.toFloat()
 			val vFormat = SimpleDateFormat("d/M", Locale.FRANCE)
-			ColumnChart(inReport.weeklyDurationMs.takeLast(8).map { ColumnItem(vFormat.format(Date(it.first)), it.second / vMax, stringResource(R.string.duration_seconds, (it.second / 1000).toInt())) }, Modifier.height(120.dp))
+			ColumnChart(
+				inReport.weeklyDurationMs.takeLast(8).map { ColumnItem(vFormat.format(Date(it.first)), it.second / vMax, stringResource(R.string.duration_seconds, (it.second / 1000).toInt())) },
+				Modifier.height(kColumnsHeight.dp),
+			)
 		}
 	}
 }
 
 /**
- * Coup où le problème échoue.
+ * Ligne de liste avec une valeur en mono à droite.
  */
 @Composable
-private fun ErrorsCard(inReport: StatsReport) {
-	val vColors = kLocalChessColors.current
+private fun ValueRow(inTitle: String, inSubtitle: String?, inValue: String) {
+	ListRow {
+		RowTexts(inTitle, inSubtitle)
+		Text(inValue, style = ChessPlusTheme.typography.moves, color = ChessPlusTheme.colors.ink, maxLines = 1)
+	}
+}
+
+/**
+ * Coup où le puzzle échoue.
+ */
+@Composable
+private fun ErrorsSection(inReport: StatsReport) {
 	val vTotal = inReport.failedAtMove.sum()
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_errors), stringResource(R.string.stats_errors_detail))
+	Section(stringResource(R.string.stats_errors)) {
 		if (vTotal == 0) {
-			Text(stringResource(R.string.stats_errors_empty), style = ChessType.kBody, color = vColors.muted)
+			Text(stringResource(R.string.stats_errors_empty), style = ChessPlusTheme.typography.small, color = ChessPlusTheme.colors.inkMuted)
 		} else {
 			val vLabels = listOf(R.string.stats_errors_move1, R.string.stats_errors_move2, R.string.stats_errors_move3)
-			inReport.failedAtMove.forEachIndexed { inIndex, inCount ->
-				val vRate = inCount.toFloat() / vTotal
-				BarRow(stringResource(vLabels[inIndex]), percent(vRate), vRate, "$inCount")
+			Column {
+				inReport.failedAtMove.forEachIndexed { inIndex, inCount ->
+					val vRate = inCount.toFloat() / vTotal
+					BarRow(stringResource(vLabels[inIndex]), percent(vRate), vRate, pluralStringResource(R.plurals.stats_problems, inCount, inCount))
+				}
 			}
 		}
 	}
 }
 
 /**
- * Records : meilleure cote, problème le plus difficile réussi, séries.
+ * Records : classement, puzzle le plus difficile, séries, défis.
  */
 @Composable
-private fun RecordsCard(inReport: StatsReport) {
-	val vColors = kLocalChessColors.current
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_records))
-		Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-			MiniStat(stringResource(R.string.stats_record_rating), inReport.bestRating?.let { formatRating(it) } ?: "–", Modifier.weight(1f))
-			MiniStat(stringResource(R.string.stats_record_days), pluralStringResource(R.plurals.stats_days, inReport.bestDayStreak, inReport.bestDayStreak), Modifier.weight(1f))
-			MiniStat(stringResource(R.string.stats_record_run), "${inReport.bestSuccessRun}", Modifier.weight(1f))
-		}
-		inReport.bestSolved?.let { inBest ->
-			Spacer(Modifier.height(10.dp))
-			Column(Modifier.fillMaxWidth().background(vColors.background, RoundedCornerShape(14.dp)).padding(12.dp)) {
-				Text(stringResource(R.string.stats_record_solved), style = ChessType.kCaption, color = vColors.muted)
-				Text(formatRating(inBest.rating), style = ChessType.kSection, color = vColors.text)
-				Text(
-					inBest.themes.filter { themeFamily(it) in StatsCalculator.kTrainableFamilies }.take(3).map { stringResource(themeLabel(it)) }.joinToString(" · "),
-					style = ChessType.kCaption,
-					color = vColors.muted,
-				)
-			}
-		}
+private fun RecordsSection(inData: StatsData) {
+	val vReport = inData.report
+	Section(stringResource(R.string.stats_records)) {
+		StatTiles(
+			listOf(
+				stringResource(R.string.stats_record_rating) to (vReport.bestRating?.let { formatRating(it) } ?: "–"),
+				stringResource(R.string.stats_record_solved) to (vReport.bestSolved?.let { formatRating(it.rating) } ?: "–"),
+				stringResource(R.string.stats_record_days) to stringResource(R.string.stats_days_short, vReport.bestDayStreak),
+				stringResource(R.string.stats_record_run) to formatRating(vReport.bestSuccessRun),
+				stringResource(R.string.stats_record_survival) to (inData.survivalBest?.let { formatRating(it) } ?: "–"),
+				stringResource(R.string.stats_record_rush) to (inData.rushBest?.let { formatRating(it) } ?: "–"),
+			)
+		)
 	}
 }
 
@@ -528,27 +546,28 @@ private fun RecordsCard(inReport: StatsReport) {
  */
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun CoverageCard(inReport: StatsReport) {
-	val vColors = kLocalChessColors.current
+private fun CoverageSection(inReport: StatsReport) {
+	val vColors = ChessPlusTheme.colors
 	val vTotal = Theme.entries.size
-	SurfaceCard {
-		CardTitle(stringResource(R.string.stats_coverage_title))
+	Section(stringResource(R.string.stats_coverage_title)) {
 		BarRow(stringResource(R.string.stats_coverage), stringResource(R.string.stats_coverage_value, inReport.seenThemes, vTotal), inReport.seenThemes.toFloat() / vTotal)
 		if (inReport.unseenThemes.isNotEmpty()) {
-			Spacer(Modifier.height(8.dp))
-			Text(stringResource(R.string.stats_coverage_unseen), style = ChessType.kCaption, color = vColors.muted)
-			Spacer(Modifier.height(6.dp))
+			Text(stringResource(R.string.stats_coverage_unseen), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
 			FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+				val vShape = RoundedCornerShape(ChessPlusTheme.radius.radiusSm)
 				for (vTheme in inReport.unseenThemes.take(kUnseenPreview)) {
-					Text(
-						stringResource(themeLabel(vTheme)),
-						style = ChessType.kCaption,
-						color = vColors.text,
-						modifier = Modifier.background(vColors.background, CircleShape).padding(horizontal = 10.dp, vertical = 5.dp),
-					)
+					Box(Modifier.clip(vShape).background(vColors.surfaceRaised).border(1.dp, vColors.line, vShape).padding(horizontal = ChessPlusTheme.spacing.space2, vertical = 4.dp)) {
+						Text(stringResource(themeLabel(vTheme)), style = ChessPlusTheme.typography.small, color = vColors.ink)
+					}
 				}
 				if (inReport.unseenThemes.size > kUnseenPreview) {
-					Text("+${inReport.unseenThemes.size - kUnseenPreview}", style = ChessType.kCaption, color = vColors.muted, modifier = Modifier.padding(5.dp))
+					Text(
+						"+${inReport.unseenThemes.size - kUnseenPreview}",
+						style = ChessPlusTheme.typography.movesSmall,
+						color = vColors.inkMuted,
+						textAlign = TextAlign.Center,
+						modifier = Modifier.padding(4.dp),
+					)
 				}
 			}
 		}
@@ -556,9 +575,9 @@ private fun CoverageCard(inReport: StatsReport) {
 }
 
 /**
- * Formate un taux de 0 à 1 en pourcentage entier (« 68 % »).
+ * Formate un taux de 0 à 1 en pourcentage entier avec une espace fine insécable (« 68 % »).
  */
-fun percent(inRate: Float): String = "${(inRate * 100).roundToInt()} %"
+fun percent(inRate: Float): String = "${(inRate * 100).roundToInt()}$kThinSpace%"
 
 /**
  * Formate une durée (« 38 s », « 1 min 05 s »).
@@ -568,4 +587,3 @@ fun duration(inMs: Long): String {
 	val vSeconds = (inMs / 1000).toInt()
 	return if (vSeconds < 60) stringResource(R.string.duration_seconds, vSeconds) else stringResource(R.string.duration_minutes, vSeconds / 60, vSeconds % 60)
 }
-

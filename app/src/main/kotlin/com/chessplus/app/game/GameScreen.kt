@@ -1,16 +1,16 @@
 package com.chessplus.app.game
 
-import com.chessplus.app.ui.components.pressClickable
-import com.chessplus.app.ui.components.rememberPressFeedback
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,11 +21,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -36,48 +32,78 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chessplus.app.R
 import com.chessplus.app.ui.board.ChessBoard
 import com.chessplus.app.ui.board.pieceDrawable
+import com.chessplus.app.ui.components.Chip
+import com.chessplus.app.ui.components.IconButtonOutlined
 import com.chessplus.app.ui.components.PrimaryButton
 import com.chessplus.app.ui.components.SecondaryButton
+import com.chessplus.app.ui.components.Tag
+import com.chessplus.app.ui.components.TopBar
+import com.chessplus.app.ui.components.formatClock
 import com.chessplus.app.ui.components.formatDelta
 import com.chessplus.app.ui.components.formatRating
-import com.chessplus.app.ui.theme.ChessType
-import com.chessplus.app.ui.theme.kLocalChessColors
+import com.chessplus.app.ui.components.pressClickable
+import com.chessplus.app.ui.components.rememberPressFeedback
+import com.chessplus.app.ui.mainTheme
+import com.chessplus.app.ui.theme.ChessPlusTheme
+import com.chessplus.app.ui.theme.kMonoFamily
 import com.chessplus.app.ui.themeLabel
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
+import com.chessplus.core.model.Square
 import com.chessplus.core.puzzle.PuzzleResult
 import kotlinx.coroutines.delay
+import java.util.Locale
 import kotlin.math.roundToInt
 
-/** Intervalle de rafraîchissement du chronomètre du Rush. */
+/** Intervalle de rafraîchissement des chronomètres. */
 private const val kTimerTickMs = 250L
 
-/** Temps restant sous lequel le chronomètre passe en rouge. */
+/** Temps restant sous lequel le chronomètre du Rush passe en `danger`. */
 private const val kTimerWarningMs = 30_000L
 
+/** Côté du carré de couleur du camp au trait. */
+private const val kSideSquare = 12
+
+/** Nombre maximal d'éléments de notation affichés (les plus récents). */
+private const val kMaxNotationTokens = 12
+
 /**
- * Ton du message au-dessus de l'échiquier.
+ * Ton de la carte de retour sous l'échiquier.
  */
 private enum class Tone {
 	Neutral,
 	Success,
-	Error,
+	Danger,
 }
 
 /**
- * Écran de jeu : problème en cours, échiquier pleine largeur, commandes sous le pouce.
+ * Retour affiché sous l'échiquier : titre facultatif en couleur, puis précision.
+ *
+ * @property title titre court (« Bon coup. »), ou null.
+ * @property detail précision.
+ * @property tone couleur de la bordure et du titre.
+ */
+private data class Feedback(val title: String?, val detail: String, val tone: Tone)
+
+/**
+ * Écran de jeu : échiquier bord à bord, retour immédiat sous les coups, actions à portée de pouce.
  */
 @Composable
 fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean, inCoordinates: Boolean, inOnBack: () -> Unit) {
@@ -102,18 +128,20 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		inOnTap = vController::onSquareTap,
 		inOnDragStart = vController::onDragStart,
 		inOnDrop = vController::onDrop,
-		inOnRestart = vController::onRestart,
 		inOnHint = vController::onHint,
-		inOnNext = vController::onNext,
+		inOnSolution = vController::onSolution,
+		inOnFlip = vController::onFlip,
+		inOnSkip = vController::onSkip,
 		inOnPromotion = vController::onPromotionChosen,
 		inOnPromotionDismiss = vController::onPromotionDismissed,
-		inOnAbandon = vController::onAbandon,
+		inOnConfirm = vController::onConfirmMove,
+		inOnCancel = vController::onCancelMove,
 		inOnPlayAgain = vController::onPlayAgain,
 	)
 }
 
 /**
- * Contenu de l'écran de jeu, sans état propre (prévisualisable).
+ * Contenu de l'écran de jeu, sans état propre (prévisualisable). [inClock] fournit l'heure des chronomètres.
  */
 @Composable
 fun GameContent(
@@ -121,24 +149,26 @@ fun GameContent(
 	inTitle: String,
 	inCoordinates: Boolean,
 	inOnBack: () -> Unit,
-	inOnTap: (com.chessplus.core.model.Square) -> Unit,
-	inOnDragStart: (com.chessplus.core.model.Square) -> Unit,
-	inOnDrop: (com.chessplus.core.model.Square, com.chessplus.core.model.Square?) -> Unit,
-	inOnRestart: () -> Unit,
+	inOnTap: (Square) -> Unit,
+	inOnDragStart: (Square) -> Unit,
+	inOnDrop: (Square, Square?) -> Unit,
 	inOnHint: () -> Unit,
-	inOnNext: () -> Unit,
+	inOnSolution: () -> Unit,
+	inOnFlip: () -> Unit,
+	inOnSkip: () -> Unit,
 	inOnPromotion: (PieceType) -> Unit,
 	inOnPromotionDismiss: () -> Unit,
-	inOnAbandon: () -> Unit = {},
+	inOnConfirm: () -> Unit = {},
+	inOnCancel: () -> Unit = {},
 	inOnPlayAgain: () -> Unit = {},
 	inClock: () -> Long = System::currentTimeMillis,
 ) {
-	val vColors = kLocalChessColors.current
-	val vChallenge = inState.challenge
-	Box(Modifier.fillMaxSize().background(vColors.background)) {
-		Column(Modifier.fillMaxSize().statusBarsPadding()) {
-			TopBar(inTitle, inState.rating, inOnBack, vChallenge, inClock)
-			Header(inState.header, inState.summary, vChallenge)
+	val vColors = ChessPlusTheme.colors
+	val vSpacing = ChessPlusTheme.spacing
+	Box(Modifier.fillMaxSize().background(vColors.surface)) {
+		Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
+			TopBar(inTitle, inOnBack) { TopChip(inState, inClock) }
+			PuzzleHeader(inState)
 			ChessBoard(
 				inPieces = inState.pieces,
 				inOrientation = inState.orientation,
@@ -146,8 +176,8 @@ fun GameContent(
 				inMoveId = inState.moveId,
 				inAnimateMove = inState.animateMove,
 				inSelected = inState.selected,
-				inHint = inState.hint,
 				inTargets = inState.targets,
+				inHint = inState.hint,
 				inBadge = inState.badge,
 				inCoordinates = inCoordinates,
 				inInteractive = inState.interactive,
@@ -156,26 +186,12 @@ fun GameContent(
 				inOnDrop = inOnDrop,
 				inModifier = Modifier.fillMaxWidth(),
 			)
-			val vSummary = inState.summary
-			val vResult = vChallenge?.result
-			if (vChallenge != null && vResult != null) {
-				ChallengeResultPanel(vResult, Modifier.weight(1f))
-				ChallengeOverControls(inOnBack, inOnPlayAgain)
-			} else if (vChallenge != null) {
-				Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
-					ChallengeScore(vChallenge.score)
-				}
-				Row(Modifier.fillMaxWidth().navigationBarsPadding().padding(bottom = 28.dp), horizontalArrangement = Arrangement.Center) {
-					ControlTile(R.drawable.ic_flag_fill1, stringResource(R.string.action_abandon), true, false, inOnAbandon)
-				}
-			} else if (vSummary != null) {
-				SummaryPanel(vSummary, Modifier.weight(1f))
-				FinishedControls(inOnRestart, inOnNext)
-			} else {
-				Box(Modifier.weight(1f).fillMaxWidth().padding(horizontal = 24.dp), contentAlignment = Alignment.Center) {
-					BoardNote(inState)
-				}
-				Controls(inState, inOnRestart, inOnHint, inOnNext)
+			Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = vSpacing.space4, vertical = vSpacing.space3), verticalArrangement = Arrangement.spacedBy(vSpacing.space3)) {
+				Notation(inState.notation)
+				FeedbackCard(feedbackOf(inState))
+				SessionLine(inState)
+				Spacer(Modifier.weight(1f))
+				Actions(inState, inOnBack, inOnHint, inOnSolution, inOnFlip, inOnSkip, inOnConfirm, inOnCancel, inOnPlayAgain)
 			}
 		}
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
@@ -183,313 +199,285 @@ fun GameContent(
 }
 
 /**
- * Barre du haut : retour, titre, et cote du joueur (vies ou chronomètre en défi).
+ * Chip de la barre du haut : vies (Survie), compte à rebours (Rush) ou chronomètre du puzzle.
  */
 @Composable
-private fun TopBar(inTitle: String, inRating: Int, inOnBack: () -> Unit, inChallenge: ChallengeUi?, inClock: () -> Long) {
-	val vColors = kLocalChessColors.current
-	Box(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 8.dp)) {
-		val vPress = rememberPressFeedback()
-		Box(Modifier.align(Alignment.CenterStart).then(vPress.scale).size(48.dp).clip(CircleShape).pressClickable(vPress, inOnClick = inOnBack), contentAlignment = Alignment.Center) {
-			Icon(painterResource(R.drawable.ic_arrow_back_ios_new), contentDescription = stringResource(R.string.action_back), tint = vColors.text, modifier = Modifier.size(20.dp))
+private fun TopChip(inState: GameUiState, inClock: () -> Long) {
+	val vColors = ChessPlusTheme.colors
+	val vChallenge = inState.challenge
+	if (vChallenge?.kind == ChallengeKind.Survival) {
+		Chip("${vChallenge.lives}", inIcon = R.drawable.ic_ln_heart, inIconTint = vColors.danger)
+		return
+	}
+	val vRunning = if (vChallenge != null) vChallenge.endsAt != null && vChallenge.result == null else inState.clockStart != null && inState.clockEnd == null
+	var vNow by remember { mutableLongStateOf(inClock()) }
+	LaunchedEffect(vRunning, inState.clockStart, vChallenge?.endsAt) {
+		vNow = inClock()
+		while (vRunning) {
+			delay(kTimerTickMs)
+			vNow = inClock()
 		}
-		Text(inTitle, style = ChessType.kBarTitle, color = vColors.text, modifier = Modifier.align(Alignment.Center))
-		val vEndModifier = Modifier.align(Alignment.CenterEnd).padding(end = 8.dp)
-		when {
-			inChallenge?.kind == ChallengeKind.Survival -> Lives(inChallenge.lives, vEndModifier)
-			inChallenge?.kind == ChallengeKind.Rush -> RushTimer(inChallenge, inClock, vEndModifier)
-			inRating > 0 -> Text(formatRating(inRating), style = ChessType.kRating, color = vColors.text, modifier = vEndModifier)
+	}
+	if (vChallenge != null) {
+		val vRemaining = when {
+			vChallenge.result?.end == ChallengeEnd.TimeUp -> 0L
+			vChallenge.endsAt == null -> ChallengeRun.kRushDurationMs
+			else -> (vChallenge.endsAt - vNow).coerceAtLeast(0L)
 		}
+		val vColor = if (vRemaining < kTimerWarningMs) vColors.danger else vColors.ink
+		Chip(formatClock(vRemaining + 999), inIcon = R.drawable.ic_ln_clock, inIconTint = vColor, inTextColor = vColor)
+	} else {
+		val vStart = inState.clockStart ?: vNow
+		Chip(formatClock((inState.clockEnd ?: vNow) - vStart), inIcon = R.drawable.ic_ln_clock)
 	}
 }
 
 /**
- * Vies de la Survie : cœurs pleins pour les vies restantes, grisés pour les vies perdues.
+ * En-tête du puzzle : numéro et classement, camp au trait, thème principal.
  */
 @Composable
-private fun Lives(inLives: Int, inModifier: Modifier) {
-	val vColors = kLocalChessColors.current
-	val vDescription = pluralStringResource(R.plurals.challenge_lives, inLives, inLives)
-	Row(inModifier, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-		repeat(ChallengeRun.kLives) { vIndex ->
-			Icon(
-				painterResource(R.drawable.ic_favorite_fill1),
-				contentDescription = if (vIndex == 0) vDescription else null,
-				tint = if (vIndex < inLives) vColors.error else vColors.track,
-				modifier = Modifier.size(22.dp),
+private fun PuzzleHeader(inState: GameUiState) {
+	val vColors = ChessPlusTheme.colors
+	val vSpacing = ChessPlusTheme.spacing
+	Row(Modifier.fillMaxWidth().padding(start = vSpacing.space4, end = vSpacing.space4, bottom = vSpacing.space3), verticalAlignment = Alignment.Bottom) {
+		Column(Modifier.weight(1f)) {
+			val vId = inState.puzzleId
+			val vRating = inState.puzzleRating
+			Text(
+				buildAnnotatedString {
+					if (vId != null) {
+						append(stringResource(R.string.game_puzzle_number, vId).uppercase(Locale.FRANCE))
+						if (vRating != null) {
+							append(" · ")
+							withStyle(SpanStyle(fontFamily = kMonoFamily)) { append(formatRating(vRating)) }
+						}
+					}
+				},
+				style = ChessPlusTheme.typography.overline,
+				color = vColors.inkMuted,
+				maxLines = 1,
+			)
+			Row(verticalAlignment = Alignment.CenterVertically) {
+				val vWhite = inState.sideToMove == Color.White
+				Box(Modifier.size(kSideSquare.dp).background(if (vWhite) vColors.pieceWhite else vColors.pieceBlack).border(1.5.dp, vColors.pieceBlack))
+				Spacer(Modifier.width(vSpacing.space2))
+				Text(
+					stringResource(if (vWhite) R.string.game_white_to_move else R.string.game_black_to_move),
+					style = ChessPlusTheme.typography.heading,
+					color = vColors.ink,
+					maxLines = 1,
+				)
+			}
+		}
+		mainTheme(inState.puzzleThemes)?.let { Tag(stringResource(themeLabel(it))) }
+	}
+}
+
+/**
+ * Notation des coups en mono : coups joués atténués, numéro du coup à trouver, « ? » souligné d'`accent`.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Notation(inTokens: List<NotationToken>) {
+	val vColors = ChessPlusTheme.colors
+	FlowRow(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space3)) {
+		for (vToken in inTokens.takeLast(kMaxNotationTokens)) {
+			Text(
+				vToken.text,
+				style = ChessPlusTheme.typography.moves,
+				color = if (vToken.kind == NotationKind.Past) vColors.inkMuted else vColors.ink,
+				modifier = if (vToken.kind == NotationKind.Pending) Modifier.drawBehind {
+					val vStroke = 2.dp.toPx()
+					drawLine(vColors.accent, Offset(0f, size.height - vStroke / 2), Offset(size.width, size.height - vStroke / 2), vStroke)
+				} else Modifier,
 			)
 		}
 	}
 }
 
 /**
- * Chronomètre du Rush (minutes:secondes), rouge dans les 30 dernières secondes.
+ * Carte de retour : bordure `success`, `danger` ou `line`, jamais de pop-up.
  */
 @Composable
-private fun RushTimer(inChallenge: ChallengeUi, inClock: () -> Long, inModifier: Modifier) {
-	val vColors = kLocalChessColors.current
-	var vNow by remember { mutableLongStateOf(inClock()) }
-	val vRunning = inChallenge.endsAt != null && inChallenge.result == null
-	LaunchedEffect(inChallenge.endsAt, vRunning) {
-		while (vRunning) {
-			vNow = inClock()
-			delay(kTimerTickMs)
-		}
-	}
-	val vRemaining = when {
-		inChallenge.result?.end == ChallengeEnd.TimeUp -> 0L
-		inChallenge.endsAt == null -> ChallengeRun.kRushDurationMs
-		else -> (inChallenge.endsAt - vNow).coerceAtLeast(0L)
-	}
-	val vSeconds = ((vRemaining + 999) / 1000).toInt()
-	val vColor = if (vRemaining < kTimerWarningMs) vColors.error else vColors.text
-	Row(inModifier, verticalAlignment = Alignment.CenterVertically) {
-		Icon(painterResource(R.drawable.ic_timer_fill1), contentDescription = null, tint = vColor, modifier = Modifier.size(20.dp))
-		Spacer(Modifier.width(4.dp))
-		Text("%d:%02d".format(vSeconds / 60, vSeconds % 60), style = ChessType.kRating, color = vColor)
-	}
-}
-
-/**
- * Score de la partie de défi en cours, sous l'échiquier.
- */
-@Composable
-private fun ChallengeScore(inScore: Int) {
-	val vColors = kLocalChessColors.current
-	Column(horizontalAlignment = Alignment.CenterHorizontally) {
-		Text("$inScore", style = ChessType.kNumber, color = vColors.text)
-		Text(pluralStringResource(R.plurals.challenge_solved, inScore), style = ChessType.kCaption, color = vColors.muted)
-	}
-}
-
-/**
- * Bilan d'une partie de défi : score, record, problème le plus difficile réussi.
- */
-@Composable
-private fun ChallengeResultPanel(inResult: ChallengeResult, inModifier: Modifier) {
-	val vColors = kLocalChessColors.current
-	Column(inModifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp)) {
-		Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp)).background(vColors.surface).padding(20.dp)) {
-			Row(verticalAlignment = Alignment.Bottom) {
-				Text("${inResult.score}", style = ChessType.kNumber, color = vColors.text)
-				Spacer(Modifier.width(10.dp))
-				Text(pluralStringResource(R.plurals.challenge_solved, inResult.score), style = ChessType.kBody, color = vColors.muted, modifier = Modifier.padding(bottom = 10.dp))
-			}
-			if (inResult.newRecord) {
-				Text(stringResource(R.string.challenge_new_record), style = ChessType.kBodyStrong, color = vColors.success)
-			} else {
-				Text(stringResource(R.string.challenge_record, inResult.best), style = ChessType.kBodyStrong, color = vColors.text)
-			}
-			inResult.bestPuzzleRating?.let {
-				Spacer(Modifier.height(4.dp))
-				Text(stringResource(R.string.challenge_best_puzzle, formatRating(it)), style = ChessType.kBody, color = vColors.muted)
-			}
-		}
-	}
-}
-
-/**
- * Commandes de fin de partie de défi : Accueil, et Rejouer sous le pouce.
- */
-@Composable
-private fun ChallengeOverControls(inOnHome: () -> Unit, inOnPlayAgain: () -> Unit) {
-	Row(
-		Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 20.dp),
-		horizontalArrangement = Arrangement.spacedBy(12.dp),
-	) {
-		SecondaryButton(stringResource(R.string.action_home), inOnHome, R.drawable.ic_home, Modifier.weight(1f), inHeight = 60)
-		PrimaryButton(stringResource(R.string.action_play_again), inOnPlayAgain, Modifier.weight(1.4f), inIcon = R.drawable.ic_refresh)
-	}
-}
-
-/**
- * Message au-dessus de l'échiquier ; à la fin du problème, résultat du bilan.
- */
-@Composable
-private fun Header(inHeader: GameHeader, inSummary: GameSummary?, inChallenge: ChallengeUi?) {
-	val vColors = kLocalChessColors.current
-	val (vTitle, vSubtitle, vTone) = if (inSummary != null) summaryTexts(inSummary) else headerTexts(inHeader, inChallenge?.kind)
-	val vColor = when (vTone) {
-		Tone.Neutral -> vColors.text
+private fun FeedbackCard(inFeedback: Feedback) {
+	val vColors = ChessPlusTheme.colors
+	val vBorder = when (inFeedback.tone) {
+		Tone.Neutral -> vColors.line
 		Tone.Success -> vColors.success
-		Tone.Error -> vColors.error
+		Tone.Danger -> vColors.danger
 	}
-	Column(Modifier.fillMaxWidth().height(96.dp).padding(horizontal = 24.dp), verticalArrangement = Arrangement.Center) {
-		Row(verticalAlignment = Alignment.CenterVertically) {
-			when (vTone) {
-				Tone.Success -> Icon(painterResource(R.drawable.ic_check_circle_fill1), contentDescription = null, tint = vColor, modifier = Modifier.size(30.dp).padding(end = 6.dp))
-				Tone.Error -> Icon(painterResource(R.drawable.ic_cancel_fill1), contentDescription = null, tint = vColor, modifier = Modifier.size(30.dp).padding(end = 6.dp))
-				Tone.Neutral -> Unit
-			}
-			Text(vTitle, style = ChessType.kFeedback, color = vColor)
-		}
-		if (vSubtitle.isNotEmpty()) {
-			Spacer(Modifier.height(4.dp))
-			Text(vSubtitle, style = ChessType.kBody, color = vColors.muted)
-		}
-	}
-}
-
-/**
- * Retourne le titre, le sous-titre et le ton du message de fin de problème.
- */
-@Composable
-private fun summaryTexts(inSummary: GameSummary): Triple<String, String, Tone> {
-	val vSuccess = inSummary.result == PuzzleResult.Success
-	return Triple(
-		stringResource(if (vSuccess) R.string.summary_success else R.string.summary_failure),
-		summaryDetail(inSummary),
-		if (vSuccess) Tone.Success else Tone.Error,
-	)
-}
-
-/**
- * Retourne le titre, le sous-titre et le ton d'un message.
- */
-@Composable
-private fun headerTexts(inHeader: GameHeader, inChallenge: ChallengeKind?): Triple<String, String, Tone> = when (inHeader) {
-	GameHeader.Loading -> Triple(stringResource(R.string.game_loading), stringResource(R.string.game_loading_detail), Tone.Neutral)
-	is GameHeader.ToMove -> Triple(
-		stringResource(if (inHeader.color == Color.White) R.string.game_white_to_move else R.string.game_black_to_move),
-		stringResource(if (inHeader.afterCorrect) R.string.game_find_next else R.string.game_find_best),
-		Tone.Neutral,
-	)
-	is GameHeader.Correct -> Triple(
-		stringResource(R.string.game_correct),
-		stringResource(if (inHeader.opponent == Color.White) R.string.game_white_thinking else R.string.game_black_thinking),
-		Tone.Success,
-	)
-	GameHeader.Wrong -> Triple(
-		stringResource(R.string.game_wrong),
-		stringResource(
-			when (inChallenge) {
-				ChallengeKind.Survival -> R.string.challenge_life_lost
-				ChallengeKind.Rush -> R.string.challenge_next
-				null -> R.string.game_wrong_detail
-			}
-		),
-		Tone.Error,
-	)
-	GameHeader.Solved -> Triple(stringResource(R.string.challenge_solved_title), stringResource(R.string.challenge_next), Tone.Success)
-	is GameHeader.Missed -> Triple(
-		stringResource(R.string.game_wrong),
-		stringResource(R.string.challenge_missed_detail, inHeader.move.from.toAlgebraic(), inHeader.move.to.toAlgebraic()),
-		Tone.Error,
-	)
-	is GameHeader.ChallengeOver -> Triple(
-		stringResource(
-			when (inHeader.end) {
-				ChallengeEnd.NoLives -> R.string.challenge_over_lives
-				ChallengeEnd.TimeUp -> R.string.challenge_over_time
-				ChallengeEnd.Abandoned -> R.string.challenge_over_abandoned
-				ChallengeEnd.NoPuzzle -> R.string.challenge_over_no_puzzle
-			}
-		),
-		stringResource(if (inChallenge == ChallengeKind.Rush) R.string.challenge_over_rush else R.string.challenge_over_survival),
-		Tone.Neutral,
-	)
-	is GameHeader.HintPiece -> Triple(
-		stringResource(R.string.game_hint),
-		stringResource(
-			when (inHeader.piece) {
-				PieceType.King -> R.string.game_hint_king
-				PieceType.Queen -> R.string.game_hint_queen
-				PieceType.Rook -> R.string.game_hint_rook
-				PieceType.Bishop -> R.string.game_hint_bishop
-				PieceType.Knight -> R.string.game_hint_knight
-				PieceType.Pawn -> R.string.game_hint_pawn
-			}
-		),
-		Tone.Neutral,
-	)
-	is GameHeader.Hint -> Triple(
-		stringResource(R.string.game_hint),
-		stringResource(R.string.game_hint_detail, inHeader.move.from.toAlgebraic(), inHeader.move.to.toAlgebraic()),
-		Tone.Neutral,
-	)
-	is GameHeader.Finished -> Triple(
-		stringResource(if (inHeader.mate) R.string.game_mate else R.string.game_finished),
-		when {
-			inHeader.hintsUsed -> stringResource(R.string.game_hints_used)
-			inHeader.mate -> stringResource(R.string.game_finished)
-			else -> ""
-		},
-		if (inHeader.success) Tone.Success else Tone.Neutral,
-	)
-	GameHeader.NoPuzzle -> Triple(stringResource(R.string.game_no_puzzle), stringResource(R.string.game_no_puzzle_detail), Tone.Neutral)
-}
-
-/**
- * Mention discrète sous l'échiquier : aide, ou rappel après une erreur.
- */
-@Composable
-private fun BoardNote(inState: GameUiState) {
-	val vColors = kLocalChessColors.current
-	when {
-		inState.header is GameHeader.Wrong -> Text(stringResource(R.string.game_wrong_note), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
-		inState.hint != null -> Text(stringResource(R.string.game_hint_again), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
-		inState.header is GameHeader.ToMove && !inState.header.afterCorrect && inState.interactive ->
-			Text(stringResource(R.string.game_touch_help), style = ChessType.kCaption, color = vColors.muted, textAlign = TextAlign.Center)
-		else -> Unit
-	}
-}
-
-/**
- * Commandes sous le pouce : Recommencer, Indice (principal), Suivant.
- */
-@Composable
-private fun Controls(inState: GameUiState, inOnRestart: () -> Unit, inOnHint: () -> Unit, inOnNext: () -> Unit) {
+	val vShape = RoundedCornerShape(ChessPlusTheme.radius.radiusMd)
 	Row(
-		Modifier.fillMaxWidth().padding(horizontal = 28.dp).navigationBarsPadding().padding(bottom = 28.dp),
-		horizontalArrangement = Arrangement.SpaceBetween,
-		verticalAlignment = Alignment.Top,
+		Modifier.fillMaxWidth().clip(vShape).background(vColors.surfaceRaised).border(1.dp, vBorder, vShape).padding(horizontal = 12.dp, vertical = 10.dp),
+		verticalAlignment = Alignment.CenterVertically,
 	) {
-		ControlTile(R.drawable.ic_refresh, stringResource(R.string.action_restart), inState.pieces.isNotEmpty(), false, inOnRestart)
-		PrimaryRoundButton(R.drawable.ic_lightbulb, stringResource(R.string.action_hint), inState.hintEnabled, inOnHint)
-		ControlTile(R.drawable.ic_skip_next, stringResource(R.string.action_next), inState.nextEnabled, inState.nextEnabled, inOnNext)
+		inFeedback.title?.let {
+			Text(
+				it,
+				style = ChessPlusTheme.typography.button.copy(lineHeight = ChessPlusTheme.typography.moves.lineHeight),
+				color = when (inFeedback.tone) {
+					Tone.Neutral -> vColors.ink
+					Tone.Success -> vColors.success
+					Tone.Danger -> vColors.danger
+				},
+				maxLines = 1,
+			)
+			Spacer(Modifier.width(10.dp))
+		}
+		Text(inFeedback.detail, style = ChessPlusTheme.typography.small, color = vColors.inkMuted, maxLines = 2, overflow = TextOverflow.Ellipsis)
 	}
 }
 
 /**
- * Tuile de commande secondaire avec son libellé.
+ * Retourne le retour à afficher pour l'état de l'écran.
  */
 @Composable
-private fun ControlTile(inIcon: Int, inLabel: String, inEnabled: Boolean, inHighlighted: Boolean, inOnClick: () -> Unit) {
-	val vColors = kLocalChessColors.current
-	val vPress = rememberPressFeedback()
-	Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.width(100.dp).padding(top = 8.dp)) {
-		Box(
-			Modifier
-				.then(vPress.scale)
-				.size(60.dp)
-				.clip(RoundedCornerShape(20.dp))
-				.background(if (inHighlighted) vColors.primary else vColors.surface)
-				.pressClickable(vPress, inEnabled, inOnClick),
-			contentAlignment = Alignment.Center,
-		) {
-			Icon(painterResource(inIcon), contentDescription = inLabel, tint = if (inHighlighted) vColors.onPrimary else if (inEnabled) vColors.text else vColors.muted, modifier = Modifier.size(26.dp))
+private fun feedbackOf(inState: GameUiState): Feedback {
+	val vChallenge = inState.challenge
+	val vSide = stringResource(if (inState.sideToMove == Color.White) R.string.game_side_white else R.string.game_side_black)
+	return when (val vHeader = inState.header) {
+		GameHeader.Loading -> Feedback(null, stringResource(R.string.game_loading), Tone.Neutral)
+		is GameHeader.ToMove -> if (vHeader.afterCorrect) {
+			Feedback(stringResource(R.string.game_good_move), pluralStringResource(R.plurals.game_moves_left, inState.remainingMoves, inState.remainingMoves), Tone.Success)
+		} else {
+			Feedback(null, stringResource(R.string.game_find_best, vSide), Tone.Neutral)
 		}
-		Spacer(Modifier.height(8.dp))
-		Text(inLabel, style = ChessType.kLabel, color = if (inEnabled) vColors.text else vColors.muted, maxLines = 1, softWrap = false)
+		is GameHeader.Correct -> Feedback(
+			stringResource(R.string.game_good_move),
+			stringResource(if (vHeader.opponent == Color.White) R.string.game_white_thinking else R.string.game_black_thinking),
+			Tone.Success,
+		)
+		GameHeader.Wrong -> Feedback(
+			stringResource(R.string.game_wrong),
+			stringResource(
+				when (vChallenge?.kind) {
+					ChallengeKind.Survival -> R.string.challenge_life_lost
+					ChallengeKind.Rush -> R.string.challenge_next
+					null -> R.string.game_wrong_detail
+				}
+			),
+			Tone.Danger,
+		)
+		is GameHeader.HintPiece -> Feedback(stringResource(R.string.game_hint), stringResource(pieceHint(vHeader.piece)), Tone.Neutral)
+		is GameHeader.Hint -> Feedback(
+			stringResource(R.string.game_solution),
+			stringResource(R.string.game_solution_detail, vHeader.move.from.toAlgebraic(), vHeader.move.to.toAlgebraic()),
+			Tone.Neutral,
+		)
+		is GameHeader.Finished -> {
+			val vSummary = inState.summary
+			val vDetail = when {
+				vSummary == null -> stringResource(R.string.game_saving)
+				!vSummary.rated -> stringResource(R.string.game_unrated)
+				else -> stringResource(
+					R.string.game_rating_after,
+					formatRating(vSummary.ratingAfter.roundToInt()),
+					formatDelta(vSummary.ratingAfter.roundToInt() - vSummary.ratingBefore.roundToInt()),
+				)
+			}
+			val vSuccess = vSummary?.result?.let { it == PuzzleResult.Success } ?: vHeader.success
+			Feedback(stringResource(if (vSuccess) R.string.game_solved else R.string.game_failed), vDetail, if (vSuccess) Tone.Success else Tone.Danger)
+		}
+		GameHeader.NoPuzzle -> Feedback(stringResource(R.string.game_no_puzzle), stringResource(R.string.game_no_puzzle_detail), Tone.Neutral)
+		GameHeader.Solved -> Feedback(stringResource(R.string.game_good_move), stringResource(R.string.challenge_next), Tone.Success)
+		is GameHeader.Missed -> Feedback(
+			stringResource(R.string.game_wrong),
+			stringResource(R.string.challenge_missed_detail, vHeader.move.from.toAlgebraic(), vHeader.move.to.toAlgebraic()),
+			Tone.Danger,
+		)
+		is GameHeader.ChallengeOver -> {
+			val vResult = vChallenge?.result
+			val vTitle = stringResource(
+				when (vHeader.end) {
+					ChallengeEnd.NoLives -> R.string.challenge_over_lives
+					ChallengeEnd.TimeUp -> R.string.challenge_over_time
+					ChallengeEnd.Abandoned -> R.string.challenge_over_abandoned
+					ChallengeEnd.NoPuzzle -> R.string.challenge_over_no_puzzle
+				}
+			)
+			val vDetail = if (vResult == null) "" else {
+				val vScore = pluralStringResource(R.plurals.challenge_score, vResult.score, vResult.score)
+				if (vResult.newRecord) stringResource(R.string.challenge_new_record, vScore) else stringResource(R.string.challenge_record, vScore, vResult.best)
+			}
+			Feedback(vTitle, vDetail, if (vResult?.newRecord == true) Tone.Success else Tone.Neutral)
+		}
 	}
 }
 
 /**
- * Gros bouton rond principal avec son libellé.
+ * Retourne la phrase d'indice pour la pièce à jouer.
+ */
+private fun pieceHint(inPiece: PieceType): Int = when (inPiece) {
+	PieceType.King -> R.string.game_hint_king
+	PieceType.Queen -> R.string.game_hint_queen
+	PieceType.Rook -> R.string.game_hint_rook
+	PieceType.Bishop -> R.string.game_hint_bishop
+	PieceType.Knight -> R.string.game_hint_knight
+	PieceType.Pawn -> R.string.game_hint_pawn
+}
+
+/**
+ * Bilan de la session : réussis en `success`, ratés en `danger`, variation du classement (ou record en défi).
  */
 @Composable
-private fun PrimaryRoundButton(inIcon: Int, inLabel: String, inEnabled: Boolean, inOnClick: () -> Unit) {
-	val vColors = kLocalChessColors.current
-	val vPress = rememberPressFeedback()
-	Column(horizontalAlignment = Alignment.CenterHorizontally) {
-		Box(
-			Modifier.then(vPress.scale).size(76.dp).clip(CircleShape).background(if (inEnabled) vColors.primary else vColors.track).pressClickable(vPress, inEnabled, inOnClick),
-			contentAlignment = Alignment.Center,
-		) {
-			Icon(painterResource(inIcon), contentDescription = inLabel, tint = if (inEnabled) vColors.onPrimary else vColors.muted, modifier = Modifier.size(30.dp))
+private fun SessionLine(inState: GameUiState) {
+	val vColors = ChessPlusTheme.colors
+	val vMono = ChessPlusTheme.typography.moves.copy(fontSize = ChessPlusTheme.typography.small.fontSize, lineHeight = ChessPlusTheme.typography.small.lineHeight)
+	val vTally = inState.tally
+	Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space4), verticalAlignment = Alignment.CenterVertically) {
+		Text(stringResource(if (inState.challenge != null) R.string.game_tally_run else R.string.game_tally_session), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+		Text(pluralStringResource(R.plurals.game_tally_solved, vTally.solved, vTally.solved), style = vMono, color = vColors.success)
+		Text(pluralStringResource(R.plurals.game_tally_failed, vTally.failed, vTally.failed), style = vMono, color = vColors.danger)
+		Spacer(Modifier.weight(1f))
+		val vRight = when {
+			inState.challenge != null -> inState.challengeBest?.let { stringResource(R.string.game_tally_record, it) }
+			vTally.ratingDelta != null && (vTally.solved + vTally.failed) > 0 -> formatDelta(vTally.ratingDelta)
+			else -> null
 		}
-		Spacer(Modifier.height(8.dp))
-		Text(inLabel, style = ChessType.kLabel, color = if (inEnabled) vColors.text else vColors.muted)
+		vRight?.let { Text(it, style = vMono, color = vColors.ink) }
+	}
+}
+
+/**
+ * Actions à portée de pouce : Indice, Solution, Retourner, Passer ; Confirmer / Annuler pour un coup en
+ * attente ; Puzzle suivant une fois le puzzle terminé ; Accueil / Rejouer à la fin d'un défi.
+ */
+@Composable
+private fun Actions(
+	inState: GameUiState,
+	inOnHome: () -> Unit,
+	inOnHint: () -> Unit,
+	inOnSolution: () -> Unit,
+	inOnFlip: () -> Unit,
+	inOnSkip: () -> Unit,
+	inOnConfirm: () -> Unit,
+	inOnCancel: () -> Unit,
+	inOnPlayAgain: () -> Unit,
+) {
+	val vSpacing = ChessPlusTheme.spacing
+	Row(Modifier.fillMaxWidth().padding(bottom = vSpacing.space4), horizontalArrangement = Arrangement.spacedBy(vSpacing.space2)) {
+		val vChallenge = inState.challenge
+		val vFinished = inState.header is GameHeader.Finished || inState.header == GameHeader.NoPuzzle
+		when {
+			vChallenge?.result != null -> {
+				SecondaryButton(stringResource(R.string.action_home), inOnHome, Modifier.weight(1f), inIcon = R.drawable.ic_ln_home)
+				PrimaryButton(stringResource(R.string.action_play_again), inOnPlayAgain, Modifier.weight(1f), inIcon = R.drawable.ic_ln_replay)
+			}
+			inState.pendingConfirm -> {
+				SecondaryButton(stringResource(R.string.action_cancel), inOnCancel, Modifier.weight(1f), inIcon = R.drawable.ic_ln_close)
+				PrimaryButton(stringResource(R.string.action_confirm), inOnConfirm, Modifier.weight(1f), inIcon = R.drawable.ic_ln_check)
+			}
+			vFinished && vChallenge == null -> {
+				PrimaryButton(stringResource(R.string.action_next), inOnSkip, Modifier.weight(1f), inIcon = R.drawable.ic_ln_skip, inEnabled = inState.skipEnabled)
+				IconButtonOutlined(R.drawable.ic_ln_flip, stringResource(R.string.action_flip), inOnFlip)
+			}
+			else -> {
+				SecondaryButton(stringResource(R.string.action_hint), inOnHint, Modifier.weight(1f), inIcon = R.drawable.ic_ln_bulb, inEnabled = inState.hintEnabled, inHorizontalPadding = vSpacing.space2)
+				SecondaryButton(stringResource(R.string.action_solution), inOnSolution, Modifier.weight(1f), inIcon = R.drawable.ic_ln_eye, inEnabled = inState.solutionEnabled, inHorizontalPadding = vSpacing.space2)
+				IconButtonOutlined(R.drawable.ic_ln_flip, stringResource(R.string.action_flip), inOnFlip)
+				IconButtonOutlined(R.drawable.ic_ln_skip, stringResource(R.string.action_skip), inOnSkip, inEnabled = inState.skipEnabled)
+			}
+		}
 	}
 }
 
@@ -498,128 +486,37 @@ private fun PrimaryRoundButton(inIcon: Int, inLabel: String, inEnabled: Boolean,
  */
 @Composable
 private fun PromotionDialog(inColor: Color, inOnChoose: (PieceType) -> Unit, inOnDismiss: () -> Unit) {
-	val vColors = kLocalChessColors.current
+	val vColors = ChessPlusTheme.colors
+	val vShape = RoundedCornerShape(ChessPlusTheme.radius.radiusMd)
 	Box(
-		Modifier.fillMaxSize().background(vColors.scrim).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = inOnDismiss),
+		Modifier.fillMaxSize().background(vColors.ink.copy(alpha = 0.4f)).clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = inOnDismiss),
 		contentAlignment = Alignment.Center,
 	) {
 		Column(
 			Modifier
-				.padding(horizontal = 24.dp)
+				.padding(horizontal = ChessPlusTheme.spacing.space4)
 				.fillMaxWidth()
-				.clip(RoundedCornerShape(28.dp))
-				.background(vColors.surface)
+				.clip(vShape)
+				.background(vColors.surfaceRaised)
+				.border(1.dp, vColors.line, vShape)
 				.clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
-				.padding(20.dp),
+				.padding(ChessPlusTheme.spacing.space4),
 			horizontalAlignment = Alignment.CenterHorizontally,
 		) {
-			Text(stringResource(R.string.promotion_title), style = ChessType.kSection, color = vColors.text)
-			Spacer(Modifier.height(4.dp))
-			Text(stringResource(R.string.promotion_detail), style = ChessType.kBody, color = vColors.muted)
-			Spacer(Modifier.height(16.dp))
-			Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+			Text(stringResource(R.string.promotion_title), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Text(stringResource(R.string.promotion_detail), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
 				for (vType in listOf(PieceType.Queen, PieceType.Rook, PieceType.Bishop, PieceType.Knight)) {
 					val vPress = rememberPressFeedback()
 					Box(
-						Modifier.then(vPress.scale).size(70.dp).clip(RoundedCornerShape(18.dp)).background(vColors.squareLight).pressClickable(vPress) { inOnChoose(vType) },
+						Modifier.then(vPress.scale).size(64.dp).clip(RoundedCornerShape(ChessPlusTheme.radius.radiusSm)).background(vColors.boardLight).pressClickable(vPress) { inOnChoose(vType) },
 						contentAlignment = Alignment.Center,
 					) {
-						Image(painterResource(pieceDrawable(Piece(inColor, vType))), contentDescription = null, modifier = Modifier.size(60.dp))
+						Image(painterResource(pieceDrawable(Piece(inColor, vType))), contentDescription = null, modifier = Modifier.size(58.dp))
 					}
 				}
 			}
 		}
 	}
-}
-
-/**
- * Bilan sous l'échiquier, qui laisse la position finale visible : cotes et thèmes.
- */
-@Composable
-private fun SummaryPanel(inSummary: GameSummary, inModifier: Modifier) {
-	val vColors = kLocalChessColors.current
-	val vSuccess = inSummary.result == PuzzleResult.Success
-	Column(
-		inModifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp, vertical = 12.dp),
-		verticalArrangement = Arrangement.spacedBy(10.dp),
-	) {
-		Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-			Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(vColors.surface).padding(horizontal = 14.dp, vertical = 10.dp)) {
-				Text(stringResource(R.string.summary_my_rating), style = ChessType.kCaption, color = vColors.muted)
-				Row(verticalAlignment = Alignment.Bottom) {
-					Text(formatRating(inSummary.ratingAfter.roundToInt()), style = ChessType.kSection, color = vColors.text)
-					Spacer(Modifier.width(6.dp))
-					if (inSummary.rated) {
-						Text(
-							formatDelta(inSummary.ratingAfter.roundToInt() - inSummary.ratingBefore.roundToInt()),
-							style = ChessType.kBodyStrong,
-							color = if (vSuccess) vColors.success else vColors.error,
-						)
-					} else {
-						Text(stringResource(R.string.summary_unrated_short), style = ChessType.kCaption, color = vColors.muted)
-					}
-				}
-			}
-			Column(Modifier.weight(1f).clip(RoundedCornerShape(16.dp)).background(vColors.surface).padding(horizontal = 14.dp, vertical = 10.dp)) {
-				Text(stringResource(R.string.summary_puzzle_rating), style = ChessType.kCaption, color = vColors.muted)
-				Text(formatRating(inSummary.puzzleRating), style = ChessType.kSection, color = vColors.text)
-			}
-		}
-		Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-			for (vTheme in inSummary.themes) {
-				Box(Modifier.clip(RoundedCornerShape(16.dp)).background(vColors.surface).padding(horizontal = 12.dp, vertical = 7.dp)) {
-					Text(stringResource(themeLabel(vTheme)), style = ChessType.kCaption, color = vColors.text)
-				}
-			}
-		}
-	}
-}
-
-/**
- * Commandes de fin de problème : Recommencer, et gros bouton « Suivant » sous le pouce.
- */
-@Composable
-private fun FinishedControls(inOnRestart: () -> Unit, inOnNext: () -> Unit) {
-	val vColors = kLocalChessColors.current
-	Row(
-		Modifier.fillMaxWidth().padding(horizontal = 20.dp).navigationBarsPadding().padding(bottom = 20.dp),
-		verticalAlignment = Alignment.CenterVertically,
-	) {
-		val vRestartPress = rememberPressFeedback()
-		Box(
-			Modifier.then(vRestartPress.scale).size(60.dp).clip(RoundedCornerShape(20.dp)).background(vColors.surface).pressClickable(vRestartPress, inOnClick = inOnRestart),
-			contentAlignment = Alignment.Center,
-		) {
-			Icon(painterResource(R.drawable.ic_refresh), contentDescription = stringResource(R.string.action_restart), tint = vColors.text, modifier = Modifier.size(26.dp))
-		}
-		Spacer(Modifier.width(12.dp))
-		val vNextPress = rememberPressFeedback()
-		Row(
-			Modifier.weight(1f).then(vNextPress.scale).height(60.dp).clip(RoundedCornerShape(30.dp)).background(vColors.primary).pressClickable(vNextPress, inOnClick = inOnNext),
-			horizontalArrangement = Arrangement.Center,
-			verticalAlignment = Alignment.CenterVertically,
-		) {
-			Icon(painterResource(R.drawable.ic_skip_next), contentDescription = null, tint = vColors.onPrimary, modifier = Modifier.size(22.dp))
-			Spacer(Modifier.width(10.dp))
-			Text(stringResource(R.string.action_next), style = ChessType.kBarTitle, color = vColors.onPrimary)
-		}
-	}
-}
-
-/**
- * Retourne la phrase de détail du bilan.
- */
-@Composable
-private fun summaryDetail(inSummary: GameSummary): String {
-	if (inSummary.mistakes == 0 && inSummary.revealed == 0) {
-		return stringResource(R.string.summary_clean)
-	}
-	val vParts = mutableListOf<String>()
-	if (inSummary.mistakes > 0) {
-		vParts.add(pluralStringResource(R.plurals.summary_mistakes, inSummary.mistakes, inSummary.mistakes))
-	}
-	if (inSummary.revealed > 0) {
-		vParts.add(pluralStringResource(R.plurals.summary_hints, inSummary.revealed, inSummary.revealed))
-	}
-	return vParts.joinToString(", ")
 }
