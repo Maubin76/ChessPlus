@@ -70,10 +70,14 @@ class GameControllerTest {
 		/** Demi-largeurs de recherche des problèmes de défi demandés, dans l'ordre. */
 		val halfWidths = mutableListOf<Int>()
 
+		/** Acceptation des problèmes déjà joués, pour chaque problème de défi demandé. */
+		val includeSeen = mutableListOf<Boolean>()
+
 		/** Premier problème pas encore vu dans la partie. */
-		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inExclude: Set<String>): Puzzle? {
+		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inIncludeSeen: Boolean, inExclude: Set<String>): Puzzle? {
 			centers.add(inCenter)
 			halfWidths.add(inHalfWidth)
+			includeSeen.add(inIncludeSeen)
 			return list.firstOrNull { it.id !in inExclude }
 		}
 	}
@@ -104,6 +108,9 @@ class GameControllerTest {
 		/** Résultats enregistrés (problème, résultat, noté). */
 		val records = mutableListOf<Triple<String, PuzzleResult, Boolean>>()
 
+		/** Passage par la file de révision, pour chaque enregistrement. */
+		val reviewable = mutableListOf<Boolean>()
+
 		/** Durée et coup de l'échec de chaque enregistrement. */
 		val details = mutableListOf<Pair<Long?, Int?>>()
 
@@ -114,8 +121,9 @@ class GameControllerTest {
 		override suspend fun currentRating(): PlayerRating = rating
 
 		/** Enregistre et met à jour la cote si le problème est noté. */
-		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean, inDurationMs: Long?, inFailedAtMove: Int?): RecordedResult {
+		override suspend fun record(inPuzzle: Puzzle, inResult: PuzzleResult, inMistakes: Int, inRevealed: Int, inRated: Boolean, inDurationMs: Long?, inFailedAtMove: Int?, inReviewable: Boolean): RecordedResult {
 			details.add(inDurationMs to inFailedAtMove)
+			reviewable.add(inReviewable)
 			val vBefore = rating.rating
 			if (inRated) {
 				rating = EloRatingSystem().update(rating, inPuzzle.rating, inResult)
@@ -529,6 +537,7 @@ class GameControllerTest {
 		assertEquals(1, vController.state.value.challenge?.score)
 		assertEquals(listOf(400, 450), vPuzzles.centers, "de 400 en montant de 50, quel que soit le classement")
 		assertEquals(listOf(25, 25), vPuzzles.halfWidths)
+		assertEquals(listOf(true, true), vPuzzles.includeSeen, "la Survie reprend aussi les puzzles déjà joués")
 		vController.tapMove("f7", "f6")
 		assertEquals(2, vController.state.value.challenge?.lives)
 		assertEquals(3, vPuzzles.centers.size)
@@ -546,6 +555,7 @@ class GameControllerTest {
 			"chaque puzzle compte dans les statistiques, sans effet sur le classement",
 		)
 		assertEquals(listOf<Int?>(null, 1, 1, 1), vProgress.details.map { it.second }, "coup de l'échec")
+		assertEquals(listOf(false, false, false, false), vProgress.reviewable, "les défis n'alimentent pas la révision")
 		assertNull(vSessions.saved)
 	}
 

@@ -29,7 +29,8 @@ class ProgressRepository(
 
 	/**
 	 * Enregistre le résultat d'un problème dans une seule transaction : tentative, bilan du
-	 * problème, file de révision et, si [inRated], nouvelle cote du joueur. Retourne la cote après le problème.
+	 * problème, file de révision (si [inReviewable] ; pas pour les défis) et, si [inRated], nouvelle
+	 * cote du joueur. Retourne la cote après le problème.
 	 * [inDurationMs] et [inFailedAtMove] alimentent les statistiques (null si inconnus).
 	 */
 	suspend fun recordResult(
@@ -41,6 +42,7 @@ class ProgressRepository(
 		inNow: Long,
 		inDurationMs: Long? = null,
 		inFailedAtMove: Int? = null,
+		inReviewable: Boolean = true,
 	): PlayerRating = database.useWriterConnection { inTransactor ->
 		inTransactor.immediateTransaction {
 			val vBefore = currentRating()
@@ -75,7 +77,9 @@ class ProgressRepository(
 					lastPlayedAt = inNow,
 				)
 			)
-			scheduleReview(inPuzzle.id, inResult, inNow)
+			if (inReviewable) {
+				scheduleReview(inPuzzle.id, inResult, inNow)
+			}
 			if (inRated) {
 				dao.upsertPlayer(PlayerEntity(rating = vAfter.rating, deviation = vAfter.deviation, volatility = vAfter.volatility, updatedAt = inNow))
 			}
@@ -84,20 +88,30 @@ class ProgressRepository(
 	}
 
 	/**
-	 * Met à jour la file de révision : un échec (re)place le puzzle au premier palier ; une réussite
-	 * sur un puzzle à réviser le fait passer au palier suivant, ou le retire après le dernier.
-	 * Une réussite avant l'échéance ne change rien.
+	 * Met à jour la file de révision. Un premier échec place le puzzle au premier palier ; un nouvel
+	 * échec d'un puzzle déjà dans la file le fait redescendre d'un palier seulement. Dans les deux
+	 * cas, il est à revoir le lendemain. Une réussite sur un puzzle arrivé à échéance le fait passer
+	 * au palier suivant, ou le retire après le dernier ; une réussite avant l'échéance ne change rien.
+	 * La file garde au plus [kReviewQueueLimit] puzzles : ceux des paliers les plus bas, ratés depuis le
+	 * plus longtemps, en sortent.
 	 */
 	private suspend fun scheduleReview(inPuzzleId: String, inResult: PuzzleResult, inNow: Long) {
 		val vItem = dao.getReviewItem(inPuzzleId)
+		// Paliers d'avant le passage à trois réussites ramenés au dernier palier actuel.
+		val vLevel = vItem?.level?.coerceAtMost(kReviewIntervalsDays.lastIndex)
 		if (inResult == PuzzleResult.Failure) {
-			dao.upsertReviewItem(ReviewItemEntity(inPuzzleId, 0, dueIn(inNow, 0), vItem?.addedAt ?: inNow))
+			val vDown = if (vLevel == null) 0 else maxOf(0, vLevel - 1)
+			dao.upsertReviewItem(ReviewItemEntity(inPuzzleId, vDown, dueIn(inNow, 0), inNow))
+			val vExcess = dao.countReviewItems() - kReviewQueueLimit
+			if (vExcess > 0) {
+				dao.trimReviewItems(vExcess)
+			}
 			return
 		}
-		if (vItem == null || vItem.dueAt > inNow) {
+		if (vItem == null || vLevel == null || vItem.dueAt > inNow) {
 			return
 		}
-		val vNext = vItem.level + 1
+		val vNext = vLevel + 1
 		if (vNext >= kReviewIntervalsDays.size) {
 			dao.deleteReviewItem(inPuzzleId)
 		} else {
@@ -116,8 +130,14 @@ class ProgressRepository(
 	private fun PlayerEntity.toRating(): PlayerRating = PlayerRating(rating, deviation, volatility)
 
 	companion object {
-		/** Intervalles de révision, en jours, palier par palier ; réussi au dernier, le puzzle est maîtrisé. */
-		val kReviewIntervalsDays = listOf(1L, 3L, 7L, 14L, 30L)
+		/**
+		 * Intervalles de révision, en jours, palier par palier : trois réussites à échéance d'affilée
+		 * (au lendemain de l'échec, une semaine plus tard, un mois plus tard) et le puzzle est maîtrisé.
+		 */
+		val kReviewIntervalsDays = listOf(1L, 7L, 30L)
+
+		/** Nombre maximal de puzzles dans la file de révision. */
+		const val kReviewQueueLimit = 200
 
 		/** Durée d'un jour en millisecondes. */
 		private const val kDayMs = 24L * 60 * 60 * 1000

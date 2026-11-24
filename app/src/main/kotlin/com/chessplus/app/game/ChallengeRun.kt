@@ -98,6 +98,13 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 	}
 
 	/**
+	 * Indique si les puzzles déjà joués hors de la partie peuvent revenir : oui en Survie, pour que
+	 * chaque partie reparte vraiment des puzzles les plus faciles ; non en Rush, où les puzzles
+	 * inédits au niveau du joueur abondent.
+	 */
+	fun includesSeen(): Boolean = kind == ChallengeKind.Survival
+
+	/**
 	 * Note qu'un problème est proposé.
 	 */
 	fun onServed(inPuzzleId: String) {

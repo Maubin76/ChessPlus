@@ -105,7 +105,7 @@ Le compteur « Révision » de l'accueil afficherait plusieurs milliers de puzzl
 
 ## Recommandations
 
-Par ordre d'intérêt, à valider avant toute modification :
+Retenues par Mathieu le 2026-11-24 et mises en œuvre le jour même (détail dans `docs/DESIGN.md` et `docs/PROGRESS.md`) : file de révision (défis exclus, échec qui fait redescendre d'un palier, plus avancés d'abord, plafond de 200, **3 réussites au lieu de 5**), accueil allégé, Survie qui accepte les puzzles déjà joués et générateur plus permissif sous 600. Simulation refaite avec ces règles (4 révisions par jour) : **528 puzzles maîtrisés en deux ans** (contre 5), file stable à 200 puzzles, dont environ 160 à réviser à un instant donné. Recommandations d'origine :
 
 1. **File de révision**, à redéfinir. Pistes à combiner :
    - ne pas faire entrer les échecs des défis, puzzles joués vite et sous pression : environ 17 % des entrées ;

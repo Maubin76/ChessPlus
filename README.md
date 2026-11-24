@@ -62,7 +62,7 @@ répond tout seul.
 |---|---|
 | **Arcade** | Les puzzles s'enchaînent, adaptés à ton classement |
 | **Entraînement** | Choisis tes thèmes parmi 73 (fourchette, clouage, mat en 2…) et ta difficulté |
-| **Révision** | Tes puzzles ratés reviennent après 1, 3, 7, 14 puis 30 jours, jusqu'à ce qu'ils soient acquis |
+| **Révision** | Tes puzzles ratés reviennent le lendemain, une semaine puis un mois plus tard : trois réussites d'affilée et ils sont acquis |
 | **Rush** | Un maximum de puzzles en 3 minutes ; une erreur fait passer au suivant |
 | **Survie** | Seulement trois vies, et une difficulté qui part de 400 et monte de 50 à chaque puzzle |
 | **Puzzle du jour** | Un nouveau puzzle chaque jour, avec le calendrier des jours résolus |

@@ -44,7 +44,6 @@ import com.chessplus.app.R
 import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.DailyDays
 import com.chessplus.app.goal.GoalProgress
-import com.chessplus.app.stats.StatsCalculator
 import com.chessplus.app.ui.components.Chip
 import com.chessplus.app.ui.components.FloatingNavBar
 import com.chessplus.app.ui.components.ListGroup
@@ -67,14 +66,12 @@ import com.chessplus.core.model.Color
 import com.chessplus.core.model.Piece
 import com.chessplus.core.model.Square
 import com.chessplus.core.model.Theme
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -161,14 +158,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 				}
 			}
 			launch {
-				vDao.observeAllAttempts().collect { inAttempts ->
-					val vReport = withContext(Dispatchers.Default) { StatsCalculator().report(inAttempts, System.currentTimeMillis()) }
-					mutableState.update { it.copy(dayStreak = vReport.dayStreak) }
-				}
-			}
-			launch {
-				// L'objectif se recalcule à chaque tentative enregistrée (défis compris) et à chaque changement d'objectif.
-				combine(vDao.observeAllAttempts(), container.settingsStore.settings) { _, _ -> }
+				// Objectif, série et révisions relus à chaque tentative enregistrée (défis compris) et à chaque
+				// changement d'objectif, par des requêtes légères : le coût ne grandit pas avec l'historique.
+				combine(vDao.observeAttemptCount(), container.settingsStore.settings) { _, _ -> }
 					.collect { refreshGoal() }
 			}
 			launch {
@@ -182,16 +174,17 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 	}
 
 	/**
-	 * Relit l'avancement de l'objectif quotidien.
+	 * Relit l'avancement de l'objectif quotidien, la série de jours et le nombre de puzzles à réviser.
 	 */
 	private suspend fun refreshGoal() {
 		val vGoal = container.goalProgress()
 		val vDue = container.dueReviewCount()
-		mutableState.update { it.copy(goal = vGoal, dueReviews = vDue) }
+		val vStreak = container.dayStreak()
+		mutableState.update { it.copy(goal = vGoal, dueReviews = vDue, dayStreak = vStreak) }
 	}
 
 	/**
-	 * Relit le puzzle du jour et l'objectif (à chaque affichage de l'accueil : ils changent à minuit).
+	 * Relit le puzzle du jour, l'objectif et la série (à chaque affichage de l'accueil : ils changent à minuit).
 	 */
 	fun refresh() {
 		viewModelScope.launch { refreshGoal() }

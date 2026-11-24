@@ -189,10 +189,31 @@ interface UserDao {
 	suspend fun deleteReviewItem(inPuzzleId: String)
 
 	/**
-	 * Retourne les puzzles à réviser à une date, du plus ancien au plus récent.
+	 * Retourne les puzzles à réviser à une date : les plus avancés d'abord (les plus proches d'être
+	 * maîtrisés, pour que la file se vide), puis du plus ancien au plus récent.
 	 */
-	@Query("SELECT puzzleId FROM review_item WHERE dueAt <= :inNow ORDER BY dueAt, puzzleId LIMIT :inLimit")
+	@Query("SELECT puzzleId FROM review_item WHERE dueAt <= :inNow ORDER BY level DESC, dueAt, puzzleId LIMIT :inLimit")
 	suspend fun getDueReviewIds(inNow: Long, inLimit: Int): List<String>
+
+	/**
+	 * Retourne le nombre de puzzles de la file de révision.
+	 */
+	@Query("SELECT COUNT(*) FROM review_item")
+	suspend fun countReviewItems(): Int
+
+	/**
+	 * Retire de la file de révision [inCount] puzzles : ceux des paliers les plus bas d'abord (les plus
+	 * avancés sont protégés, sinon aucun n'atteindrait la maîtrise), puis ceux dont le dernier échec
+	 * est le plus ancien.
+	 */
+	@Query("DELETE FROM review_item WHERE puzzleId IN (SELECT puzzleId FROM review_item ORDER BY level, addedAt, puzzleId LIMIT :inCount)")
+	suspend fun trimReviewItems(inCount: Int)
+
+	/**
+	 * Retourne les dates des tentatives depuis [inFrom] (série de jours de l'accueil).
+	 */
+	@Query("SELECT playedAt FROM attempt WHERE playedAt >= :inFrom")
+	suspend fun getPlayedAtSince(inFrom: Long): List<Long>
 
 	/**
 	 * Retourne le nombre de puzzles à réviser à une date.

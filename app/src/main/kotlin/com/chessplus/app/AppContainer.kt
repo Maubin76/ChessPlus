@@ -14,6 +14,7 @@ import com.chessplus.app.game.RecordedResult
 import com.chessplus.app.game.SavedSession
 import com.chessplus.app.game.SessionStore
 import com.chessplus.app.settings.SettingsStore
+import com.chessplus.app.stats.StatsCalculator
 import com.chessplus.core.puzzle.Puzzle
 import com.chessplus.core.puzzle.PuzzleResult
 import com.chessplus.core.puzzle.PuzzleSnapshot
@@ -116,10 +117,10 @@ class AppContainer(private val context: Context) {
 		override suspend fun isNew(inId: String): Boolean = ready().second.userDao().getState(inId) == null
 
 		/** Tire un problème de défi autour de la cote visée, hors des problèmes déjà vus dans la partie. */
-		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inExclude: Set<String>): Puzzle? {
+		override suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inIncludeSeen: Boolean, inExclude: Set<String>): Puzzle? {
 			val (vPuzzles, vUser) = ready()
 			return PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao())
-				.nextPuzzle(inCenter.toDouble(), SelectionCriteria(initialHalfWidth = inHalfWidth), null, System.currentTimeMillis(), inExclude)
+				.nextPuzzle(inCenter.toDouble(), SelectionCriteria(initialHalfWidth = inHalfWidth, includeSeen = inIncludeSeen), null, System.currentTimeMillis(), inExclude)
 		}
 	}
 
@@ -222,6 +223,24 @@ class AppContainer(private val context: Context) {
 	suspend fun dueReviewCount(inNow: Long = System.currentTimeMillis()): Int = ready().second.userDao().countDueReviews(inNow)
 
 	/**
+	 * Retourne la série de jours consécutifs en cours, en ne lisant que les dates des tentatives
+	 * récentes : la fenêtre double tant que la série la remplit, si bien que le coût ne grandit pas
+	 * avec l'historique.
+	 */
+	suspend fun dayStreak(inNow: Long = System.currentTimeMillis()): Int {
+		val vDao = ready().second.userDao()
+		val vCalculator = StatsCalculator()
+		var vWindowDays = kStreakWindowDays
+		while (true) {
+			val vStreak = vCalculator.dayStreak(vDao.getPlayedAtSince(inNow - vWindowDays * kDayMs), inNow)
+			if (vStreak < vWindowDays - 1) {
+				return vStreak
+			}
+			vWindowDays *= 2
+		}
+	}
+
+	/**
 	 * Retourne l'état de la base de puzzles hors ligne : nombre de puzzles et taille du fichier.
 	 */
 	suspend fun offlineBaseInfo(): OfflineBaseInfo {
@@ -257,10 +276,11 @@ class AppContainer(private val context: Context) {
 			inRated: Boolean,
 			inDurationMs: Long?,
 			inFailedAtMove: Int?,
+			inReviewable: Boolean,
 		): RecordedResult {
 			val vRepository = ProgressRepository(ready().second, ratingSystem) { DailyGoal.dayStart(it) }
 			val vBefore = vRepository.currentRating().rating
-			val vAfter = vRepository.recordResult(inPuzzle, inResult, inMistakes, inRevealed, inRated, System.currentTimeMillis(), inDurationMs, inFailedAtMove).rating
+			val vAfter = vRepository.recordResult(inPuzzle, inResult, inMistakes, inRevealed, inRated, System.currentTimeMillis(), inDurationMs, inFailedAtMove, inReviewable).rating
 			return RecordedResult(inResult, vBefore, vAfter)
 		}
 
@@ -325,6 +345,12 @@ class AppContainer(private val context: Context) {
 
 		/** Nombre de puzzles à réviser lus pour choisir le suivant. */
 		private const val kReviewCandidates = 20
+
+		/** Fenêtre de départ de la lecture des tentatives pour la série de jours. */
+		private const val kStreakWindowDays = 64L
+
+		/** Durée d'un jour en millisecondes. */
+		private const val kDayMs = 24L * 60 * 60 * 1000
 	}
 }
 

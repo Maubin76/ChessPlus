@@ -94,6 +94,20 @@ class PuzzleSelectorTest {
 		assertNull(selector.nextPuzzle(1500.0, SelectionCriteria(), "c", 0L, setOf("a", "b")))
 	}
 
+	/** Vérifie la Survie : les problèmes déjà réussis peuvent revenir, sauf ceux de la partie. */
+	@Test
+	fun includeSeenPuzzles() = runBlocking<Unit> {
+		insert("a" to 1500, "b" to 1510)
+		val vRepository = ProgressRepository(user, EloRatingSystem())
+		vRepository.recordResult(TestDatabases.puzzle("a", 1500), PuzzleResult.Success, 0, 0, inRated = false, inNow = 1_000L)
+		repeat(10) { assertEquals("b", selector.nextPuzzle(1500.0, SelectionCriteria(), null, 2_000L)?.id, "un problème réussi n'est pas reproposé") }
+		val vCriteria = SelectionCriteria(includeSeen = true)
+		val vSeen = mutableSetOf<String>()
+		repeat(50) { vSeen.add(assertNotNull(selector.nextPuzzle(1500.0, vCriteria, null, 2_000L)).id) }
+		assertEquals(setOf("a", "b"), vSeen, "sauf si les problèmes déjà vus sont acceptés")
+		repeat(10) { assertEquals("a", selector.nextPuzzle(1500.0, vCriteria, null, 2_000L, setOf("b"))?.id) }
+	}
+
 	/** Vérifie le filtre par thème et par tranche imposée. */
 	@Test
 	fun themeAndImposedRange() = runBlocking {

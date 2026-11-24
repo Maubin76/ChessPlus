@@ -16,6 +16,10 @@ import java.io.File
  * @property dropIndexes supprime les index avant l'insertion et les recrée à l'identique ensuite
  *   (par défaut : environ 10 s gagnées sur 37 avec l'index de sélection couvrant).
  * @property validate rejoue chaque solution avec les règles des échecs pour écarter les problèmes invalides.
+ * @property lowRatingLimit cote sous laquelle s'appliquent les seuils des problèmes faciles (0 : jamais).
+ * @property lowMaxRatingDeviation écart de cote maximal d'un problème facile.
+ * @property lowMinPopularity popularité minimale d'un problème facile.
+ * @property lowMinPlays nombre minimal de parties d'un problème facile.
  */
 data class BuilderOptions(
 	val source: File,
@@ -28,7 +32,17 @@ data class BuilderOptions(
 	val batchSize: Int = kDefaultBatchSize,
 	val dropIndexes: Boolean = true,
 	val validate: Boolean = true,
+	val lowRatingLimit: Int = kDefaultLowRatingLimit,
+	val lowMaxRatingDeviation: Int = kDefaultLowMaxRatingDeviation,
+	val lowMinPopularity: Int = kDefaultLowMinPopularity,
+	val lowMinPlays: Int = kDefaultLowMinPlays,
 ) {
+	/**
+	 * Retourne les seuils de qualité correspondant aux options.
+	 */
+	fun thresholds(): QualityThresholds =
+		QualityThresholds(maxRatingDeviation, minPopularity, minPlays, lowRatingLimit, lowMaxRatingDeviation, lowMinPopularity, lowMinPlays)
+
 	companion object {
 		/** Écart de cote maximal par défaut. */
 		const val kDefaultMaxRatingDeviation = 80
@@ -38,6 +52,21 @@ data class BuilderOptions(
 
 		/** Nombre minimal de parties par défaut. */
 		const val kDefaultMinPlays = 250
+
+		/**
+		 * Cote sous laquelle s'appliquent par défaut les seuils des problèmes faciles : au-dessus, les
+		 * seuils généraux remplissent déjà les tranches (plafond atteint dès 600-799).
+		 */
+		const val kDefaultLowRatingLimit = 600
+
+		/** Écart de cote maximal par défaut d'un problème facile. */
+		const val kDefaultLowMaxRatingDeviation = 100
+
+		/** Popularité minimale par défaut d'un problème facile. */
+		const val kDefaultLowMinPopularity = 85
+
+		/** Nombre minimal de parties par défaut d'un problème facile. */
+		const val kDefaultLowMinPlays = 100
 
 		/** Plafond par tranche de 200 points par défaut. */
 		const val kDefaultMaxPerBand = 30_000
@@ -58,6 +87,11 @@ data class BuilderOptions(
 			  --min-popularity=N  popularité minimale, de -100 à 100 (défaut $kDefaultMinPopularity)
 			  --min-plays=N       nombre minimal de parties jouées (défaut $kDefaultMinPlays)
 			  --max-per-band=N    plafond par tranche de 200 points, 0 pour aucun (défaut $kDefaultMaxPerBand)
+			  --low-limit=N       cote sous laquelle s'appliquent les seuils des problèmes faciles,
+			                      0 pour aucun (défaut $kDefaultLowRatingLimit)
+			  --low-max-rd=N      écart de cote maximal d'un problème facile (défaut $kDefaultLowMaxRatingDeviation)
+			  --low-min-popularity=N popularité minimale d'un problème facile (défaut $kDefaultLowMinPopularity)
+			  --low-min-plays=N   nombre minimal de parties d'un problème facile (défaut $kDefaultLowMinPlays)
 			  --output=FICHIER    base produite (défaut $kDefaultOutput)
 			  --work-file=FICHIER fichier de travail (défaut $kDefaultWorkFile)
 			  --batch-size=N      problèmes par insertion (défaut $kDefaultBatchSize)
@@ -83,6 +117,10 @@ data class BuilderOptions(
 					"--min-popularity" -> vOptions.copy(minPopularity = intValue(vName, vValue, -100..100))
 					"--min-plays" -> vOptions.copy(minPlays = intValue(vName, vValue, 0..Int.MAX_VALUE))
 					"--max-per-band" -> vOptions.copy(maxPerBand = intValue(vName, vValue, 0..Int.MAX_VALUE))
+					"--low-limit" -> vOptions.copy(lowRatingLimit = intValue(vName, vValue, 0..4000))
+					"--low-max-rd" -> vOptions.copy(lowMaxRatingDeviation = intValue(vName, vValue, 0..1000))
+					"--low-min-popularity" -> vOptions.copy(lowMinPopularity = intValue(vName, vValue, -100..100))
+					"--low-min-plays" -> vOptions.copy(lowMinPlays = intValue(vName, vValue, 0..Int.MAX_VALUE))
 					"--output" -> vOptions.copy(output = File(textValue(vName, vValue)))
 					"--work-file" -> vOptions.copy(workFile = File(textValue(vName, vValue)))
 					"--batch-size" -> vOptions.copy(batchSize = intValue(vName, vValue, 1..100_000))

@@ -58,6 +58,7 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 - 6 193 530 lignes lues → **292 090 problèmes retenus** ; rejets : RD 2 600 916, popularité 1 421 356, parties 221 531, plafond 1 657 637, solution invalide 0.
 - Répartition : 30 000 par tranche de 600 à 2399 ; 1 314 en 400-599 ; 20 214 en 2400-2599 ; 562 en 2600-2799.
 - Les 73 thèmes sont présents ; les plus rares : balestraMate 28, underPromotion 58, vukovicMate 67, superGM 71, castling 88.
+- **Seuils des puzzles faciles** (demandés par Mathieu le 2026-11-24, après l'étude volumétrique) : sous 600, RD ≤ 100, popularité ≥ 85, parties ≥ 100 (options `--low-limit`, `--low-max-rd`, `--low-min-popularity`, `--low-min-plays`). Les seuils généraux n'en gardaient que 1 314 sous 600, dont 23 sous 500 ; le CSV en contient environ 85 000 avec ces seuils entre 350 et 599 (environ 1 300 en 350-399, puis le plafond de 30 000 en 400-599). Les tranches à partir de 600 ne changent pas. Base à régénérer (`./gradlew :puzzle-builder:run`) ; le téléphone recopie désormais la base embarquée à chaque mise à jour de l'application.
 - **Durée : 27 à 37 s** selon la charge de la machine (passe 1 ≈ 7 s, passe 2 ≈ 19 à 27 s).
 - **Fichier : 36,8 Mo** ; compressé à 20,3 Mo dans l'APK release (25,3 Mo au total).
 - Effet des index sur la passe 2 : avec l'index simple sur `rating`, négligeable (< 1 s) ; avec l'index couvrant, 30,2 s en le gardant contre 18,9 s en le supprimant puis recréant (0,3 s) → suppression par défaut, `--keep-indexes` pour l'autre mode.

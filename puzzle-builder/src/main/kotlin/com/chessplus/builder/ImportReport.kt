@@ -69,7 +69,9 @@ class ImportReport {
 		appendLine("Source : ${inOptions.source}")
 		appendLine(
 			"Seuils : RD <= ${inOptions.maxRatingDeviation}, popularité >= ${inOptions.minPopularity}, " +
-				"parties >= ${inOptions.minPlays}, plafond par tranche ${if (inOptions.maxPerBand == 0) "aucun" else group(inOptions.maxPerBand.toLong())}, " +
+				"parties >= ${inOptions.minPlays}" +
+				(if (inOptions.lowRatingLimit > 0) " (sous ${inOptions.lowRatingLimit} : RD <= ${inOptions.lowMaxRatingDeviation}, popularité >= ${inOptions.lowMinPopularity}, parties >= ${inOptions.lowMinPlays})" else "") +
+				", plafond par tranche ${if (inOptions.maxPerBand == 0) "aucun" else group(inOptions.maxPerBand.toLong())}, " +
 				"validation ${if (inOptions.validate) "oui" else "non"}, index supprimés pendant l'insertion ${if (inOptions.dropIndexes) "oui" else "non"}"
 		)
 		appendLine()

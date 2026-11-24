@@ -34,25 +34,38 @@ object RatingBands {
 }
 
 /**
- * Seuils de qualité appliqués à chaque ligne.
+ * Seuils de qualité appliqués à chaque ligne. Sous [lowRatingLimit], des seuils plus permissifs
+ * s'appliquent : les problèmes faciles, moins joués, ont un écart de cote plus élevé, et les seuils
+ * généraux n'en gardaient presque aucun (23 sous 500 points).
  *
  * @property maxRatingDeviation écart de cote maximal.
  * @property minPopularity popularité minimale.
  * @property minPlays nombre minimal de parties jouées.
+ * @property lowRatingLimit cote sous laquelle s'appliquent les seuils des problèmes faciles (0 : jamais).
+ * @property lowMaxRatingDeviation écart de cote maximal d'un problème facile.
+ * @property lowMinPopularity popularité minimale d'un problème facile.
+ * @property lowMinPlays nombre minimal de parties d'un problème facile.
  */
 data class QualityThresholds(
 	val maxRatingDeviation: Int,
 	val minPopularity: Int,
 	val minPlays: Int,
+	val lowRatingLimit: Int = 0,
+	val lowMaxRatingDeviation: Int = maxRatingDeviation,
+	val lowMinPopularity: Int = minPopularity,
+	val lowMinPlays: Int = minPlays,
 ) {
 	/**
 	 * Retourne le premier seuil non respecté par la ligne, ou null si elle les respecte tous.
 	 */
-	fun check(inRow: LichessCsvRow): RejectReason? = when {
-		inRow.ratingDeviation > maxRatingDeviation -> RejectReason.RatingDeviation
-		inRow.popularity < minPopularity -> RejectReason.Popularity
-		inRow.nbPlays < minPlays -> RejectReason.Plays
-		else -> null
+	fun check(inRow: LichessCsvRow): RejectReason? {
+		val vLow = inRow.rating < lowRatingLimit
+		return when {
+			inRow.ratingDeviation > (if (vLow) lowMaxRatingDeviation else maxRatingDeviation) -> RejectReason.RatingDeviation
+			inRow.popularity < (if (vLow) lowMinPopularity else minPopularity) -> RejectReason.Popularity
+			inRow.nbPlays < (if (vLow) lowMinPlays else minPlays) -> RejectReason.Plays
+			else -> null
+		}
 	}
 }
 

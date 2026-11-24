@@ -14,11 +14,14 @@ import kotlin.random.Random
  * @property themes thèmes acceptés (au moins un en commun) ; vide pour tous les thèmes.
  * @property ratingRange tranche de difficulté imposée, ou null pour suivre la cote du joueur.
  * @property initialHalfWidth demi-largeur de la première tranche autour de la cote visée (sans tranche imposée).
+ * @property includeSeen accepte aussi les problèmes déjà joués, réussis ou non (Survie : seuls ceux de
+ *   la partie, passés en exclusion, sont écartés).
  */
 data class SelectionCriteria(
 	val themes: ThemeSet = ThemeSet.kEmpty,
 	val ratingRange: IntRange? = null,
 	val initialHalfWidth: Int = PuzzleSelector.kInitialHalfWidth,
+	val includeSeen: Boolean = false,
 )
 
 /**
@@ -58,7 +61,7 @@ class PuzzleSelector(
 			repeat(minOf(kTriesPerRange, vCount)) {
 				val vOffset = random.nextInt(vCount)
 				val vId = puzzleDao.getIdAtOffsetInRange(vRange.first, vRange.last, inCriteria.themes.low, inCriteria.themes.high, vOffset)
-				if (vId != null && vId != inExcludeId && vId !in inExcludeIds && isEligible(vId, inNow)) {
+				if (vId != null && vId != inExcludeId && vId !in inExcludeIds && (inCriteria.includeSeen || isEligible(vId, inNow))) {
 					puzzleDao.getById(vId)?.let { return it.toPuzzle() }
 				}
 			}

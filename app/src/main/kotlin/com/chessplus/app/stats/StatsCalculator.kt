@@ -318,6 +318,12 @@ class StatsCalculator(private val zone: TimeZone = TimeZone.getDefault()) {
 	private fun themesOf(inAttempt: AttemptEntity): ThemeSet = ThemeSet(inAttempt.themesLow, inAttempt.themesHigh)
 
 	/**
+	 * Retourne la série de jours consécutifs en cours (aujourd'hui ou hier compris) à partir des
+	 * seules dates des tentatives (accueil : sans calculer tout le rapport).
+	 */
+	fun dayStreak(inPlayedAt: Collection<Long>, inNow: Long): Int = currentDayStreak(inPlayedAt.mapTo(HashSet()) { dayStart(it) }, inNow)
+
+	/**
 	 * Retourne la série de jours consécutifs en cours (aujourd'hui ou hier compris).
 	 */
 	private fun currentDayStreak(inDays: Set<Long>, inNow: Long): Int {

@@ -817,7 +817,7 @@ class GameController(
 	 */
 	private suspend fun nextChallengePuzzle() {
 		val vRun = run ?: return
-		val vPuzzle = puzzles.challengeNext(vRun.targetRating(), vRun.searchHalfWidth(), vRun.playedIds)
+		val vPuzzle = puzzles.challengeNext(vRun.targetRating(), vRun.searchHalfWidth(), vRun.includesSeen(), vRun.playedIds)
 		if (vPuzzle == null) {
 			endRun(ChallengeEnd.NoPuzzle)
 			return
@@ -878,7 +878,7 @@ class GameController(
 		val vMistakes = inSession.mistakeCount
 		val vRevealed = inSession.revealedCount
 		val vJob = scope.launch(NonCancellable) {
-			persistMutex.withLock { progress.record(inSession.puzzle, inResult, vMistakes, vRevealed, false, vDuration, vFailedAt) }
+			persistMutex.withLock { progress.record(inSession.puzzle, inResult, vMistakes, vRevealed, false, vDuration, vFailedAt, inReviewable = false) }
 		}
 		synchronized(persistJobs) {
 			persistJobs.removeAll { it.isCompleted }

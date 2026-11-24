@@ -27,9 +27,10 @@ interface PuzzleProvider {
 	/**
 	 * Retourne un problème de défi autour de la cote [inCenter] (première tranche de demi-largeur
 	 * [inHalfWidth], élargie s'il le faut), hors des problèmes [inExclude] déjà vus dans la partie,
-	 * ou null si aucun ne convient.
+	 * ou null si aucun ne convient. Si [inIncludeSeen], les problèmes déjà joués hors de la partie
+	 * peuvent revenir.
 	 */
-	suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inExclude: Set<String>): Puzzle?
+	suspend fun challengeNext(inCenter: Int, inHalfWidth: Int, inIncludeSeen: Boolean, inExclude: Set<String>): Puzzle?
 }
 
 /**
@@ -113,7 +114,8 @@ interface ProgressStore {
 
 	/**
 	 * Enregistre le résultat d'un problème et retourne les cotes avant et après. [inDurationMs] et
-	 * [inFailedAtMove] alimentent les statistiques (null si inconnus).
+	 * [inFailedAtMove] alimentent les statistiques (null si inconnus) ; [inReviewable] est faux pour
+	 * les défis, qui n'alimentent pas la file de révision.
 	 */
 	suspend fun record(
 		inPuzzle: Puzzle,
@@ -123,6 +125,7 @@ interface ProgressStore {
 		inRated: Boolean,
 		inDurationMs: Long?,
 		inFailedAtMove: Int?,
+		inReviewable: Boolean = true,
 	): RecordedResult
 
 	/**

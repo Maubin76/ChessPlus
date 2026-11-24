@@ -9,12 +9,14 @@ import com.chessplus.core.rating.Glicko2RatingSystem
 import com.chessplus.data.user.ActiveSessionEntity
 import com.chessplus.data.user.AttemptEntity
 import com.chessplus.data.user.ProgressRepository
+import com.chessplus.data.user.ReviewItemEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import kotlin.test.AfterTest
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotNull
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -54,20 +56,48 @@ class ProgressRepositoryTest {
 		assertEquals(listOf("r1"), dao.getDueReviewIds(11 * vDay, 10))
 		assertEquals(0, dao.countDueReviews(10 * vDay + 1))
 		var vNow = 11 * vDay
-		for (vExpected in listOf(3L, 7L, 14L, 30L)) {
+		for (vExpected in listOf(7L, 30L)) {
 			repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
 			assertEquals(vNow + vExpected * vDay, dao.getReviewItem("r1")?.dueAt)
 			vNow += vExpected * vDay
 		}
 		repository.recordResult(vPuzzle, PuzzleResult.Failure, 1, 0, inRated = false, inNow = vNow)
-		assertEquals(0, dao.getReviewItem("r1")?.level, "un échec ramène au premier palier")
+		assertEquals(1, dao.getReviewItem("r1")?.level, "un échec fait redescendre d'un palier seulement")
+		assertEquals(vNow + vDay, dao.getReviewItem("r1")?.dueAt, "et le puzzle est à revoir le lendemain")
 		vNow += vDay
-		for (vStep in listOf(3L, 7L, 14L, 30L)) {
-			repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
-			vNow += vStep * vDay
-		}
 		repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
-		assertNull(dao.getReviewItem("r1"), "maîtrisé après le dernier palier")
+		vNow += 30 * vDay
+		repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
+		assertNull(dao.getReviewItem("r1"), "maîtrisé après trois réussites (le dernier palier)")
+	}
+
+	/** Vérifie que les défis n'alimentent pas la file de révision. */
+	@Test
+	fun challengesAreNotReviewed() = runBlocking<Unit> {
+		val vPuzzle = TestDatabases.puzzle("c1", 1500, ThemeSet.of(Theme.Fork))
+		repository.recordResult(vPuzzle, PuzzleResult.Failure, 1, 0, inRated = false, inNow = 1_000L, inReviewable = false)
+		assertNull(dao.getReviewItem("c1"))
+		assertEquals(1, dao.getState("c1")?.failureCount, "le bilan est quand même tenu")
+	}
+
+	/** Vérifie l'ordre de la file (les plus avancés d'abord) et son plafond. */
+	@Test
+	fun reviewQueueOrderAndLimit() = runBlocking<Unit> {
+		val vDay = 24L * 60 * 60 * 1000
+		dao.upsertReviewItem(ReviewItemEntity("bas", 0, vDay, 0L))
+		dao.upsertReviewItem(ReviewItemEntity("haut", 2, 2 * vDay, 0L))
+		dao.upsertReviewItem(ReviewItemEntity("ancien", 4, vDay, 0L))
+		assertEquals(listOf("ancien", "haut", "bas"), dao.getDueReviewIds(3 * vDay, 10))
+		repository.recordResult(TestDatabases.puzzle("ancien", 1500), PuzzleResult.Success, 0, 0, inRated = false, inNow = 3 * vDay)
+		assertNull(dao.getReviewItem("ancien"), "un ancien palier 4 est maîtrisé à la réussite suivante")
+		for (vIndex in 1..ProgressRepository.kReviewQueueLimit + 5) {
+			repository.recordResult(TestDatabases.puzzle("p$vIndex", 1500), PuzzleResult.Failure, 1, 0, inRated = false, inNow = 10 * vDay + vIndex)
+		}
+		assertEquals(ProgressRepository.kReviewQueueLimit, dao.countReviewItems())
+		assertNull(dao.getReviewItem("bas"), "les puzzles ratés depuis le plus longtemps sortent de la file")
+		assertNotNull(dao.getReviewItem("haut"), "sauf ceux des paliers avancés, protégés")
+		assertNull(dao.getReviewItem("p5"))
+		assertNotNull(dao.getReviewItem("p${ProgressRepository.kReviewQueueLimit + 5}"))
 	}
 
 	/** Vérifie le comptage de l'objectif quotidien : réussites depuis une date, notées ou non. */

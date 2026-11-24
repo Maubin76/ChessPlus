@@ -169,7 +169,8 @@ data class DailyPuzzleEntity(
  * @property puzzleId identifiant Lichess du puzzle.
  * @property level palier de l'intervalle (indice dans [ProgressRepository.kReviewIntervalsDays]).
  * @property dueAt date à partir de laquelle le puzzle est à réviser (millisecondes).
- * @property addedAt date d'entrée dans la file (millisecondes).
+ * @property addedAt date du dernier échec, entrée dans la file ou nouvel échec (millisecondes) :
+ *   quand la file déborde, les puzzles des paliers les plus bas ratés depuis le plus longtemps en sortent.
  */
 @Entity(
 	tableName = "review_item",

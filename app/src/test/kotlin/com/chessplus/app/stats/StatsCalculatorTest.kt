@@ -84,6 +84,17 @@ class StatsCalculatorTest {
 		assertEquals(1900, vReport.bestSolved?.rating)
 		assertEquals(ResolutionProfile(clean = 3, hint = 0, mistake = 1), vReport.profile)
 		assertEquals(2, vReport.calendar.last { it.count > 0 && it.dayStart == kMonday }.count)
+		assertEquals(3, calculator.dayStreak(vAttempts.map { it.playedAt }, kMonday + 2 * kDay + 12 * kHour), "même série sans le rapport complet")
+	}
+
+	/** Vérifie la série de jours seule : aujourd'hui ou hier compris, interrompue par un jour sans puzzle. */
+	@Test
+	fun dayStreakFromDates() {
+		val vDates = listOf(kMonday + kHour, kMonday + 2 * kDay + kHour, kMonday + 3 * kDay + kHour, kMonday + 3 * kDay + 5 * kHour)
+		assertEquals(2, calculator.dayStreak(vDates, kMonday + 3 * kDay + 12 * kHour))
+		assertEquals(2, calculator.dayStreak(vDates, kMonday + 4 * kDay + 12 * kHour), "pas encore joué aujourd'hui : la série d'hier compte")
+		assertEquals(0, calculator.dayStreak(vDates, kMonday + 5 * kDay + 12 * kHour))
+		assertEquals(0, calculator.dayStreak(emptyList(), kMonday))
 	}
 
 	/** Vérifie les bilans par thème, famille, longueur, difficulté et moment de la journée. */
