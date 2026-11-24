@@ -670,6 +670,7 @@ class GameController(
 				val vRun = run
 				if (vRun != null) {
 					vRun.onSolved(vSession.puzzle.rating)
+					recordChallengeResult(vSession, PuzzleResult.Success)
 					header = GameHeader.Solved
 					scheduleNextChallenge(challengeNextDelayMs)
 				} else {
@@ -761,6 +762,7 @@ class GameController(
 	 */
 	private suspend fun onChallengeMiss(inSession: PuzzleSession) {
 		val vRun = run ?: return
+		recordChallengeResult(inSession, PuzzleResult.Failure)
 		val vLost = vRun.onMissed()
 		if (vRun.kind == ChallengeKind.Survival) {
 			val vMove = inSession.revealNextMove()
@@ -774,6 +776,24 @@ class GameController(
 			}
 		}
 		nextChallengePuzzle()
+	}
+
+	/**
+	 * Défi : enregistre le puzzle comme une tentative non notée (statistiques, historique, objectif,
+	 * sans effet sur le classement). L'enregistrement survit à la fin de la partie et à la fermeture de l'écran.
+	 */
+	private fun recordChallengeResult(inSession: PuzzleSession, inResult: PuzzleResult) {
+		val vDuration = durationMs()
+		val vFailedAt = if (inResult == PuzzleResult.Failure) failedAtMove ?: (inSession.solutionPly / 2 + 1) else null
+		val vMistakes = inSession.mistakeCount
+		val vRevealed = inSession.revealedCount
+		val vJob = scope.launch(NonCancellable) {
+			persistMutex.withLock { progress.record(inSession.puzzle, inResult, vMistakes, vRevealed, false, vDuration, vFailedAt) }
+		}
+		synchronized(persistJobs) {
+			persistJobs.removeAll { it.isCompleted }
+			persistJobs.add(vJob)
+		}
 	}
 
 	/**

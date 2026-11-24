@@ -8,7 +8,6 @@ import com.chessplus.core.puzzle.PuzzleResult
 import com.chessplus.core.rating.Glicko2RatingSystem
 import com.chessplus.data.user.ActiveSessionEntity
 import com.chessplus.data.user.AttemptEntity
-import com.chessplus.data.user.ChallengeRunEntity
 import com.chessplus.data.user.ProgressRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
@@ -43,7 +42,7 @@ class ProgressRepositoryTest {
 		database.close()
 	}
 
-	/** Vérifie le comptage de l'objectif quotidien : réussites depuis une date, défis compris. */
+	/** Vérifie le comptage de l'objectif quotidien : réussites depuis une date, notées ou non. */
 	@Test
 	fun dailyGoalCounts() = runBlocking {
 		val vPuzzle = TestDatabases.puzzle("p1", 1500, ThemeSet.of(Theme.Fork))
@@ -53,11 +52,7 @@ class ProgressRepositoryTest {
 		repository.recordResult(vOther, PuzzleResult.Success, 0, 0, inRated = false, inNow = 6_000L)
 		assertEquals(2, dao.countSuccessesSince(0L))
 		assertEquals(1, dao.countSuccessesSince(2_000L))
-		dao.insertChallengeRun(ChallengeRunEntity(kind = "rush", playedAt = 7_000L, score = 12, bestPuzzleRating = 1600, durationMs = 180_000L))
-		dao.insertChallengeRun(ChallengeRunEntity(kind = "survival", playedAt = 500L, score = 4, bestPuzzleRating = null, durationMs = 60_000L))
-		assertEquals(12, dao.sumChallengeScoresSince(2_000L))
-		assertEquals(0, dao.sumChallengeScoresSince(8_000L))
-		assertEquals(2, dao.observeChallengeRunCount().first())
+		assertEquals(0, dao.countSuccessesSince(7_000L))
 	}
 
 	/** Vérifie la cote initiale puis l'enregistrement d'une réussite et d'un échec. */

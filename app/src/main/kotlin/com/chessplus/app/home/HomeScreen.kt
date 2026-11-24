@@ -166,8 +166,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 				}
 			}
 			launch {
-				// L'objectif se recalcule à chaque résultat (tentative ou partie de défi) et à chaque changement d'objectif.
-				combine(vDao.observeAllAttempts(), vDao.observeChallengeRunCount(), container.settingsStore.settings) { _, _, _ -> }
+				// L'objectif se recalcule à chaque tentative enregistrée (défis compris) et à chaque changement d'objectif.
+				combine(vDao.observeAllAttempts(), container.settingsStore.settings) { _, _ -> }
 					.collect { refreshGoal() }
 			}
 			launch {

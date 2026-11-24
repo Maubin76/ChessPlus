@@ -146,12 +146,12 @@ class AppContainer(private val context: Context) {
 
 	/**
 	 * Retourne l'avancement de l'objectif quotidien : puzzles réussis aujourd'hui (tous modes, défis
-	 * compris) et objectif des réglages.
+	 * compris, puisque chaque puzzle de défi est enregistré comme une tentative) et objectif des réglages.
 	 */
 	suspend fun goalProgress(inNow: Long = System.currentTimeMillis()): GoalProgress {
 		val vDao = ready().second.userDao()
 		val vFrom = DailyGoal.dayStart(inNow)
-		return GoalProgress(vDao.countSuccessesSince(vFrom) + vDao.sumChallengeScoresSince(vFrom), settingsStore.settings.value.dailyGoal)
+		return GoalProgress(vDao.countSuccessesSince(vFrom), settingsStore.settings.value.dailyGoal)
 	}
 
 	/**

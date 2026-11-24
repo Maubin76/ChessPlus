@@ -168,15 +168,5 @@ interface UserDao {
 	@Query("SELECT COUNT(*) FROM attempt WHERE result = 'Success' AND playedAt >= :inFrom")
 	suspend fun countSuccessesSince(inFrom: Long): Int
 
-	/**
-	 * Retourne le total des puzzles réussis en défi depuis une date (objectif quotidien).
-	 */
-	@Query("SELECT COALESCE(SUM(score), 0) FROM challenge_run WHERE playedAt >= :inFrom")
-	suspend fun sumChallengeScoresSince(inFrom: Long): Int
 
-	/**
-	 * Observe le nombre de parties de défi (signal de mise à jour de l'objectif quotidien).
-	 */
-	@Query("SELECT COUNT(*) FROM challenge_run")
-	fun observeChallengeRunCount(): Flow<Int>
 }

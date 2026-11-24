@@ -456,7 +456,12 @@ class GameControllerTest {
 		assertEquals(Move.fromUci("a2e6"), vState.lastMove)
 		assertFalse(vState.interactive)
 		assertEquals(listOf(ChallengeKind.Survival to 1), vChallenges.saved)
-		assertTrue(vProgress.records.isEmpty())
+		assertEquals(
+			listOf(Triple("m1", PuzzleResult.Success, false), Triple("m2", PuzzleResult.Failure, false), Triple("m3", PuzzleResult.Failure, false), Triple("m4", PuzzleResult.Failure, false)),
+			vProgress.records,
+			"chaque puzzle compte dans les statistiques, sans effet sur le classement",
+		)
+		assertEquals(listOf<Int?>(null, 1, 1, 1), vProgress.details.map { it.second }, "coup de l'échec")
 		assertNull(vSessions.saved)
 	}
 
@@ -465,7 +470,8 @@ class GameControllerTest {
 	fun rush() = runBlocking<Unit> {
 		val vPuzzles = FakePuzzles(mateCopies(3))
 		val vChallenges = FakeChallenges()
-		val vController = controller(vPuzzles, inMode = GameMode.Challenge(ChallengeKind.Rush), inChallenges = vChallenges, inRushDurationMs = 300)
+		val vProgress = FakeProgress()
+		val vController = controller(vPuzzles, vProgress, inMode = GameMode.Challenge(ChallengeKind.Rush), inChallenges = vChallenges, inRushDurationMs = 300)
 		vController.start()
 		vController.awaitIdle()
 		assertEquals(342L, vController.state.value.challenge?.endsAt)
@@ -480,6 +486,7 @@ class GameControllerTest {
 		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.TimeUp), vController.state.value.header)
 		assertEquals(ChallengeResult(ChallengeEnd.TimeUp, 1, 1, true, 1760), vController.state.value.challenge?.result)
 		assertEquals(listOf(ChallengeKind.Rush to 1), vChallenges.saved)
+		assertEquals(listOf(Triple("m1", PuzzleResult.Failure, false), Triple("m2", PuzzleResult.Success, false)), vProgress.records)
 	}
 
 	/** Vérifie l'abandon sans score (non enregistré) et la nouvelle partie. */
