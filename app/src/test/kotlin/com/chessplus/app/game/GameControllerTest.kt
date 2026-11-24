@@ -333,7 +333,8 @@ class GameControllerTest {
 		assertEquals(listOf("17…", "Kd7", "18.", "Be6+", "Kd8", "19.", "?"), vController.state.value.notation.map { it.text })
 		vController.tapMove("f7", "f8")
 		assertEquals(SessionTally(1, 0, vController.state.value.tally.ratingDelta, 0L), vController.state.value.tally)
-		assertTrue(vController.state.value.isArcade, "l'Arcade demande confirmation avant de quitter")
+		assertTrue(vController.state.value.sessionRecap, "l'Arcade demande confirmation avant de quitter")
+		assertTrue(vController.state.value.keepsPuzzle)
 		assertEquals(42L, vController.state.value.sessionStartedAt, "début de la session à l'ouverture de l'écran")
 		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
 	}
@@ -445,6 +446,7 @@ class GameControllerTest {
 		assertEquals(ChallengeUi(ChallengeKind.Survival, 0, 3, null, null), vController.state.value.challenge)
 		assertFalse(vController.state.value.hintEnabled)
 		assertFalse(vController.state.value.showThemeTag, "pas de thème en Survie")
+		assertFalse(vController.state.value.sessionRecap, "la Survie a son propre récapitulatif")
 		vController.tapMove("a2", "e6")
 		vController.tapMove("f7", "f8")
 		assertEquals(1, vController.state.value.challenge?.score)
@@ -588,6 +590,8 @@ class GameControllerTest {
 		assertEquals(Move.fromUci("b8c7"), vController.state.value.lastMove)
 		assertEquals(listOf<GameMode>(GameMode.Targeted(vCriteria)), vPuzzles.modes)
 		assertTrue(vController.state.value.showThemeTag, "thème affiché en Entraînement")
+		assertTrue(vController.state.value.sessionRecap, "l'Entraînement demande aussi confirmation et récapitule la session")
+		assertFalse(vController.state.value.keepsPuzzle, "l'Entraînement ne garde pas le puzzle en cours")
 	}
 
 	/** Vérifie que le rejeu charge le problème demandé, sans effet sur la cote. */

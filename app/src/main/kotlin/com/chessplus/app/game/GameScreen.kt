@@ -129,9 +129,9 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		vController.onLeave()
 		inOnBack()
 	}
-	// Arcade : quitter une session où au moins un puzzle est terminé demande confirmation, puis affiche le récapitulatif.
+	// Arcade et Entraînement : quitter une session où au moins un puzzle est terminé demande confirmation, puis affiche le récapitulatif.
 	var vExitStep by rememberSaveable { mutableStateOf(ExitStep.None) }
-	val vConfirmExit = vState.isArcade && vState.tally.played > 0
+	val vConfirmExit = vState.sessionRecap && vState.tally.played > 0
 	val vRequestBack: () -> Unit = { if (vConfirmExit) vExitStep = ExitStep.Confirm else vBack() }
 	BackHandler(enabled = vState.challenge != null || vConfirmExit, onBack = vRequestBack)
 	GameContent(
@@ -242,7 +242,7 @@ fun GameContent(
 		}
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
 		when (inExitStep) {
-			ExitStep.Confirm -> ConfirmExitDialog({ inOnExitStep(ExitStep.None) }) { inOnExitStep(ExitStep.Recap) }
+			ExitStep.Confirm -> ConfirmExitDialog(inState.keepsPuzzle, { inOnExitStep(ExitStep.None) }) { inOnExitStep(ExitStep.Recap) }
 			ExitStep.Recap -> ArcadeRecapDialog(inState, inClock) {
 				inOnExitStep(ExitStep.None)
 				inOnLeave()
@@ -261,15 +261,16 @@ fun GameContent(
 }
 
 /**
- * Confirmation avant de quitter une session d'Arcade : « Continuer » ou « Terminer ».
+ * Confirmation avant de quitter une session d'Arcade ou d'Entraînement : « Continuer » ou « Terminer ».
+ * [inKeepsPuzzle] précise si le puzzle en cours est gardé (Arcade) ou abandonné (Entraînement).
  */
 @Composable
-private fun ConfirmExitDialog(inOnCancel: () -> Unit, inOnConfirm: () -> Unit) {
+private fun ConfirmExitDialog(inKeepsPuzzle: Boolean, inOnCancel: () -> Unit, inOnConfirm: () -> Unit) {
 	val vColors = ChessPlusTheme.colors
 	Dialog(onDismissRequest = inOnCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
 		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
 			Text(stringResource(R.string.exit_title), style = ChessPlusTheme.typography.heading, color = vColors.ink)
-			Text(stringResource(R.string.exit_detail), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+			Text(stringResource(if (inKeepsPuzzle) R.string.exit_detail else R.string.exit_detail_training), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
 			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
 			Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
 				SecondaryButton(stringResource(R.string.exit_continue), inOnCancel, Modifier.weight(1f))
@@ -280,7 +281,7 @@ private fun ConfirmExitDialog(inOnCancel: () -> Unit, inOnConfirm: () -> Unit) {
 }
 
 /**
- * Récapitulatif d'une session d'Arcade : classement et sa variation, durée de la session, puzzles
+ * Récapitulatif d'une session d'Arcade ou d'Entraînement : classement et sa variation, durée de la session, puzzles
  * joués, réussis et ratés, taux de réussite, temps moyen ; « Accueil » quitte l'écran.
  */
 @Composable

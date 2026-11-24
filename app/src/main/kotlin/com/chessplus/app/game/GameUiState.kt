@@ -221,7 +221,8 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property challengeBest record du défi, ou null.
  * @property daily puzzle du jour et calendrier, ou null hors puzzle du jour.
  * @property showThemeTag vrai si le thème principal est affiché pendant le puzzle (Entraînement seulement).
- * @property isArcade vrai en Arcade : quitter demande confirmation et affiche le récapitulatif de la session.
+ * @property sessionRecap vrai en Arcade et en Entraînement : quitter demande confirmation et affiche le récapitulatif de la session.
+ * @property keepsPuzzle vrai si le puzzle en cours est gardé pour la reprise (Arcade seulement).
  * @property sessionStartedAt début de la session (ouverture de l'écran, millisecondes), ou null avant le démarrage.
  */
 data class GameUiState(
@@ -258,6 +259,7 @@ data class GameUiState(
 	val challengeBest: Int? = null,
 	val daily: DailyUi? = null,
 	val showThemeTag: Boolean = false,
-	val isArcade: Boolean = false,
+	val sessionRecap: Boolean = false,
+	val keepsPuzzle: Boolean = false,
 	val sessionStartedAt: Long? = null,
 )

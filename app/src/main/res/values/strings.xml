@@ -137,6 +137,7 @@
 	<!-- Fin d'une session d'Arcade -->
 	<string name="exit_title">Mettre fin à la session ?</string>
 	<string name="exit_detail">Ton puzzle en cours est gardé pour la prochaine fois.</string>
+	<string name="exit_detail_training">Le puzzle en cours ne sera pas gardé.</string>
 	<string name="exit_continue">Continuer</string>
 	<string name="exit_confirm">Terminer</string>
 	<string name="session_title">Session terminée</string>

@@ -74,13 +74,19 @@ private fun Shot(inState: GameUiState, inTitle: String = "Arcade", inExitStep: E
 @PreviewTest
 @DesignPreviews
 @Composable
-fun RealGameExitConfirmShot() = Shot(kMockupState.copy(isArcade = true), inExitStep = ExitStep.Confirm)
+fun RealGameExitConfirmShot() = Shot(kMockupState.copy(sessionRecap = true, keepsPuzzle = true), inExitStep = ExitStep.Confirm)
+
+/** Entraînement : confirmation avant de quitter (le puzzle en cours n'est pas gardé). */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameTrainingExitShot() = Shot(kMockupState.copy(sessionRecap = true, showThemeTag = true), "Entraînement", ExitStep.Confirm)
 
 /** Arcade : récapitulatif de la session. */
 @PreviewTest
 @DesignPreviews
 @Composable
-fun RealGameSessionRecapShot() = Shot(kMockupState.copy(isArcade = true, tally = SessionTally(7, 2, 18, 41_000L), sessionStartedAt = kClock - 12 * 60_000L), inExitStep = ExitStep.Recap)
+fun RealGameSessionRecapShot() = Shot(kMockupState.copy(sessionRecap = true, keepsPuzzle = true, tally = SessionTally(7, 2, 18, 41_000L), sessionStartedAt = kClock - 12 * 60_000L), inExitStep = ExitStep.Recap)
 
 /** Maquette : bon coup, il reste un coup, fou f3 sélectionné et coups possibles. */
 @PreviewTest

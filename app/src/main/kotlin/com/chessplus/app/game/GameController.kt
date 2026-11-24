@@ -1028,7 +1028,8 @@ class GameController(
 			clockEnd = clockEnd,
 			tally = run?.let { SessionTally(it.score, it.misses, null, it.averageDurationMs) }
 				?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt(), if (sessionTimedCount == 0) null else sessionTimedMs / sessionTimedCount),
-			isArcade = mode == GameMode.Continuous,
+			sessionRecap = mode == GameMode.Continuous || mode is GameMode.Targeted,
+			keepsPuzzle = keepsSession,
 			sessionStartedAt = sessionStartedAt,
 			pendingConfirm = pendingMove != null,
 			solutionEnabled = isInteractive() && challengeKind == null,
