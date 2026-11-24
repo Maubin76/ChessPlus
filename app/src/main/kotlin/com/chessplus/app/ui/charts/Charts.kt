@@ -112,8 +112,9 @@ fun BarRow(inLabel: String, inValue: String, inFraction: Float, inDetail: String
  * @property label libellé sous la colonne.
  * @property fraction hauteur, de 0 à 1.
  * @property value valeur écrite au-dessus, ou null.
+ * @property detail précision écrite sous le libellé (effectif…), ou null.
  */
-data class ColumnItem(val label: String, val fraction: Float, val value: String?)
+data class ColumnItem(val label: String, val fraction: Float, val value: String?, val detail: String? = null)
 
 /**
  * Graphique en barres verticales `accent` (coins `radiusXs` en haut), valeur au-dessus et libellé
@@ -141,6 +142,7 @@ fun ColumnChart(inItems: List<ColumnItem>, inModifier: Modifier = Modifier) {
 				Box(Modifier.fillMaxWidth().height(1.dp).background(vColors.line))
 				Spacer(Modifier.height(ChessPlusTheme.spacing.space1))
 				Text(vItem.label, style = vLabelStyle, color = vColors.inkMuted, maxLines = 1, textAlign = TextAlign.Center)
+				vItem.detail?.let { Text(it, style = vLabelStyle, color = vColors.inkMuted.copy(alpha = 0.7f), maxLines = 1, textAlign = TextAlign.Center) }
 			}
 		}
 	}

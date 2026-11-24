@@ -51,6 +51,16 @@
 	<string name="stats_profile_hint">Indice ou solution</string>
 	<string name="stats_profile_mistake">Erreur</string>
 	<string name="stats_length">Selon la longueur</string>
+	<string name="stats_length_axis">Taux de réussite selon le nombre de coups à trouver</string>
+	<string name="stats_length_more">4 et +</string>
+	<plurals name="stats_length_moves">
+		<item quantity="one">%d coup</item>
+		<item quantity="other">%d coups</item>
+	</plurals>
+	<plurals name="stats_length_played">
+		<item quantity="one">%d joué</item>
+		<item quantity="other">%d joués</item>
+	</plurals>
 	<string name="stats_dayparts">Selon le moment</string>
 	<string name="stats_daypart_morning">Matin · 6 h à 12 h</string>
 	<string name="stats_daypart_afternoon">Après-midi · 12 h à 18 h</string>

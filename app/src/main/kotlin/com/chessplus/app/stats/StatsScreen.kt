@@ -98,6 +98,9 @@ private const val kChartHeight = 96
 /** Hauteur des graphiques en colonnes. */
 private const val kColumnsHeight = 110
 
+/** Hauteur du graphique de réussite selon la longueur (une ligne d'effectif en plus). */
+private const val kLengthChartHeight = 140
+
 /** Familles comparées dans « Par famille » (la longueur a sa propre section, l'évaluation n'est pas un motif). */
 private val kComparedFamilies = setOf(ThemeFamily.Tactics, ThemeFamily.Mates, ThemeFamily.Endgames, ThemeFamily.Phase)
 
@@ -432,11 +435,32 @@ private fun ProfileSection(inReport: StatsReport) {
 }
 
 /**
- * Réussite selon la longueur de la solution.
+ * Réussite selon la longueur de la solution : en abscisse le nombre de coups à trouver (thèmes de
+ * longueur de Lichess : 1, 2, 3, 4 et plus), en ordonnée le taux de réussite sur une échelle fixe de
+ * 0 à 100 %, avec le nombre de puzzles joués sous chaque colonne.
  */
 @Composable
 private fun LengthSection(inReport: StatsReport) {
-	GroupBars(stringResource(R.string.stats_length), inReport.lengths.filter { it.attempts > 0 }) { stringResource(themeLabel(it.theme)) }
+	if (inReport.lengths.none { it.attempts > 0 }) {
+		return
+	}
+	Section(stringResource(R.string.stats_length)) {
+		Text(stringResource(R.string.stats_length_axis), style = ChessPlusTheme.typography.small, color = ChessPlusTheme.colors.inkMuted)
+		ColumnChart(
+			inReport.lengths.map { vGroup ->
+				ColumnItem(
+					label = when (vGroup.key) {
+						PuzzleLength.VeryLong -> stringResource(R.string.stats_length_more)
+						else -> pluralStringResource(R.plurals.stats_length_moves, vGroup.key.ordinal + 1, vGroup.key.ordinal + 1)
+					},
+					fraction = if (vGroup.attempts > 0) vGroup.rate else 0f,
+					value = if (vGroup.attempts > 0) percent(vGroup.rate) else "–",
+					detail = pluralStringResource(R.plurals.stats_length_played, vGroup.attempts, vGroup.attempts),
+				)
+			},
+			Modifier.height(kLengthChartHeight.dp),
+		)
+	}
 }
 
 /**
