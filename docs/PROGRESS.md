@@ -2,7 +2,7 @@
 
 ## Phase en cours
 
-**V1 terminée le 2026-11-23** : les six phases de la spécification sont validées par Mathieu. Release publiée : v0.1 (https://github.com/Maubin76/ChessPlus/releases/tag/v0.1). Prochaine étape : choisir parmi les points en suspens et les évolutions envisagées (section « Reste à faire »).
+**V2 publiée le 2026-11-24 en version 2.0.0** (fusion de `road-to-v2` dans `main`, validée par Mathieu) : nouveau design system, modes Survie, Rush et Révision, puzzle du jour avec calendrier, objectif quotidien et rappel, statistiques détaillées, revue de la solution, sons et retours haptiques, widget, export et import de la progression, suites de l'étude volumétrique (`docs/VOLUMETRIE.md`). La V1 était terminée le 2026-11-23 (release v1.0). Les travaux suivants se font sur une nouvelle branche dédiée.
 
 ## Fait
 

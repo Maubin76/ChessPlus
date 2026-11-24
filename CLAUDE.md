@@ -1,6 +1,6 @@
 # ChessPlus
 
-Application Android d'entraînement aux puzzles d'échecs, hors connexion, à partir de la base Lichess. La V1 est publiée ; la V2 se prépare sur la branche `road-to-v2`.
+Application Android d'entraînement aux puzzles d'échecs, hors connexion, à partir de la base Lichess. Version publiée : 2.0.0 (V1 en 1.0).
 
 - Spécification de référence : [docs/SPEC.md](docs/SPEC.md). À lire en entier avant toute tâche.
 - État d'avancement et décisions : [docs/PROGRESS.md](docs/PROGRESS.md). À tenir à jour à chaque étape.
@@ -17,8 +17,9 @@ Application Android d'entraînement aux puzzles d'échecs, hors connexion, à pa
 
 ## Branches et publication
 
-- Travailler sur `road-to-v2`, et y pousser.
+- Travailler sur une branche dédiée (jamais directement sur `main`), et y pousser.
 - Toute mise à jour de `main`, même forcée, publie une release par la CI : ne rien fusionner dans `main` ni publier sans l'accord explicite de Mathieu.
+- Version dans `gradle.properties` (`chessplus.version`, `chessplus.versionCode`) : publiée telle quelle si son tag n'existe pas, sinon augmentée par la CI (2.0.0 → 2.1.0).
 
 ## Design system
 

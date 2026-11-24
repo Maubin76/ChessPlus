@@ -13,9 +13,9 @@
 #
 # Tests verts sur main : publication d'une release. La version de gradle.properties est publiée
 # telle quelle si son tag n'existe pas encore (première version, numéro changé à la main) ;
-# sinon elle augmente de 0.1 (0.1 → 0.2, numéro Android + 1), commitée sur main par la CI.
-# Puis APK signé (clé des secrets KEYSTORE_BASE64, KEY_ALIAS, KEY_PASSWORD) et release GitHub
-# « vX.Y » avec l'APK.
+# sinon son deuxième nombre augmente de 1 (1.0 → 1.1, 2.0.0 → 2.1.0, numéro Android + 1),
+# commitée sur main par la CI. Puis APK signé (clé des secrets KEYSTORE_BASE64, KEY_ALIAS,
+# KEY_PASSWORD) et release GitHub « vX.Y » ou « vX.Y.Z » avec l'APK.
 #
 # Les captures des @Preview (validateDebugScreenshotTest) ne sont pas vérifiées ici : leur rendu
 # dépend du système (polices, anticrénelage) et les références sont produites sous Windows.
@@ -159,7 +159,13 @@ jobs:
           then
             vMajor=$(echo "$vVersion" | cut -d. -f1)
             vMinor=$(echo "$vVersion" | cut -d. -f2)
-            vVersion="$vMajor.$((vMinor + 1))"
+            # Trois nombres (2.0.0) : le troisième repart à 0 ; deux nombres (1.0) : format gardé.
+            if [ "$(echo "$vVersion" | tr -cd . | wc -c)" -ge 2 ]
+            then
+              vVersion="$vMajor.$((vMinor + 1)).0"
+            else
+              vVersion="$vMajor.$((vMinor + 1))"
+            fi
             vCode=$((vCode + 1))
             sed -i "s/^chessplus.version=.*/chessplus.version=$vVersion/; s/^chessplus.versionCode=.*/chessplus.versionCode=$vCode/" gradle.properties
             git config user.name "github-actions[bot]"
