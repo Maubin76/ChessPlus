@@ -18,7 +18,7 @@
 	<string name="set_confirm">Confirmer les coups</string>
 	<string name="set_confirm_detail">Évite les coups joués par erreur</string>
 	<string name="set_vibration">Vibration</string>
-	<string name="set_vibration_detail">Courte vibration à chaque coup</string>
+	<string name="set_vibration_detail">À la réussite d’un puzzle et sur un mauvais coup</string>
 
 	<!-- Puzzles -->
 	<string name="set_section_puzzles">Puzzles</string>

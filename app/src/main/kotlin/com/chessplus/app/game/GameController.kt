@@ -743,9 +743,8 @@ class GameController(
 			MoveVerdict.Correct -> {
 				requestSound(if (vCapture) SoundKind.Capture else SoundKind.Move)
 				showMove(inAnimate)
-				badge = inMove.to to BadgeKind.Success
+				badge = null
 				header = GameHeader.Correct(vSession.puzzle.opponentColor)
-				requestHaptic(true)
 				publish()
 				persist()
 				scheduleOpponent(opponentDelayMs)
@@ -753,8 +752,9 @@ class GameController(
 			is MoveVerdict.Solved -> {
 				requestSound(SoundKind.Success)
 				showMove(inAnimate)
+				// Dernier coup trouvé : retour haptique et visuel de réussite, même après une erreur.
 				badge = inMove.to to BadgeKind.Success
-				requestHaptic(vSession.result == PuzzleResult.Success || vVerdict.alternativeMate)
+				requestHaptic(true)
 				val vRun = run
 				if (vRun != null) {
 					vRun.onSolved(vSession.puzzle.rating)

@@ -243,7 +243,8 @@ class GameControllerTest {
 		vController.onSquareTap(sq("a2"))
 		vController.onSquareTap(sq("e6"))
 		assertEquals(GameHeader.Correct(Color.Black), vController.state.value.header)
-		assertEquals(sq("e6") to BadgeKind.Success, vController.state.value.badge)
+		assertNull(vController.state.value.badge, "pas de retour visuel sur un coup intermédiaire")
+		assertNull(vController.state.value.haptic, "pas de vibration sur un coup intermédiaire")
 		vController.awaitIdle()
 		assertEquals(GameHeader.ToMove(Color.White, afterCorrect = true), vController.state.value.header)
 		assertEquals(Move.fromUci("d7d8"), vController.state.value.lastMove)
@@ -338,6 +339,26 @@ class GameControllerTest {
 		assertTrue(vController.state.value.keepsPuzzle)
 		assertEquals(42L, vController.state.value.sessionStartedAt, "début de la session à l'ouverture de l'écran")
 		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
+	}
+
+	/** Vérifie les retours haptiques et visuels : erreur, puis dernier coup trouvé (même après l'erreur). */
+	@Test
+	fun hapticAndVisualFeedback() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2)))
+		vController.start()
+		vController.awaitIdle()
+		vController.onSquareTap(sq("f7"))
+		vController.onSquareTap(sq("f6"))
+		assertEquals(false, vController.state.value.haptic?.success)
+		assertEquals(sq("f6") to BadgeKind.Error, vController.state.value.badge)
+		vController.awaitIdle()
+		vController.tapMove("a2", "e6")
+		val vErrorId = vController.state.value.haptic!!.id
+		vController.onSquareTap(sq("f7"))
+		vController.onSquareTap(sq("f8"))
+		assertEquals(true, vController.state.value.haptic?.success, "dernier coup trouvé")
+		assertTrue(vController.state.value.haptic!!.id > vErrorId)
+		assertEquals(sq("f8") to BadgeKind.Success, vController.state.value.badge)
 	}
 
 	/** Vérifie les sons demandés : coup de l'adversaire, bon coup, erreur, prise, réussite. */

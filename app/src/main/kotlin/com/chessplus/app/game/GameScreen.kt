@@ -38,8 +38,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
@@ -119,7 +117,7 @@ private data class Feedback(val title: String?, val detail: String, val tone: To
 fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean, inCoordinates: Boolean, inOnBack: () -> Unit, inSounds: Boolean = false) {
 	val vState by inViewModel.state.collectAsStateWithLifecycle()
 	val vController = inViewModel.controller
-	val vHaptics = LocalHapticFeedback.current
+	val vHaptics = rememberGameHaptics()
 	val vSoundPlayer = rememberSoundPlayer()
 	LaunchedEffect(vState.sound?.id) {
 		if (inSounds) {
@@ -128,7 +126,7 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 	}
 	LaunchedEffect(vState.haptic?.id) {
 		if (inVibration) {
-			vState.haptic?.let { vHaptics.performHapticFeedback(if (it.success) HapticFeedbackType.Confirm else HapticFeedbackType.Reject) }
+			vState.haptic?.let { vHaptics.play(it.success) }
 		}
 	}
 	val vBack: () -> Unit = {

@@ -78,6 +78,15 @@ private const val kCoordinateMarginRatio = 0.006f
 /** Épaisseur du cadre de la pièce montrée par l'indice. */
 private const val kHintStroke = 2
 
+/** Opacité de départ de l'éclat de la case (réussite ou erreur). */
+private const val kFlashAlpha = 0.55f
+
+/** Durée de l'éclat de la case. */
+private const val kFlashMs = 700
+
+/** Amplitude du tremblement de l'échiquier sur une erreur. */
+private const val kShakeDp = 7f
+
 /**
  * Retourne la ressource cburnett d'une pièce.
  */
@@ -212,6 +221,22 @@ fun ChessBoard(
 		vMemory.moveId = inMoveId
 	}
 	val vProgress = remember(inMoveId) { Animatable(if (vPlan.isEmpty) 1f else 0f) }
+	// Retour visuel : la case d'arrivée s'illumine (vert à la réussite, rouge sur une erreur) ; sur une erreur, l'échiquier tremble.
+	val vFlash = remember { Animatable(0f) }
+	val vShake = remember { Animatable(0f) }
+	LaunchedEffect(inBadge, inMoveId) {
+		if (inBadge != null) {
+			vFlash.snapTo(1f)
+			vFlash.animateTo(0f, tween(kFlashMs))
+		}
+	}
+	LaunchedEffect(inBadge, inMoveId) {
+		if (inBadge?.second == BadgeKind.Error) {
+			for (vStep in listOf(-1f, 1f, -0.7f, 0.7f, -0.35f, 0f)) {
+				vShake.animateTo(vStep * kShakeDp, tween(45))
+			}
+		}
+	}
 	var vDragFrom by remember { mutableStateOf<Square?>(null) }
 	var vDragPosition by remember { mutableStateOf(Offset.Zero) }
 	val vPieces by rememberUpdatedState(inPieces)
@@ -226,7 +251,12 @@ fun ChessBoard(
 		}
 	}
 
-	BoxWithConstraints(inModifier.aspectRatio(1f).clip(RoundedCornerShape(ChessPlusTheme.radius.radiusSm))) {
+	BoxWithConstraints(
+		inModifier
+			.graphicsLayer { translationX = vShake.value * density }
+			.aspectRatio(1f)
+			.clip(RoundedCornerShape(ChessPlusTheme.radius.radiusSm)),
+	) {
 		val vSquareDp = maxWidth / 8
 		val vSquarePx = with(LocalDensity.current) { vSquareDp.toPx() }
 		val vGeometry = BoardGeometry(vSquarePx, inOrientation)
@@ -272,6 +302,12 @@ fun ChessBoard(
 				}
 				if (vSquare == inSelected) {
 					drawRect(vColors.boardSelect, vTopLeft, vSize)
+				}
+			}
+			inBadge?.let { (inSquare, inKind) ->
+				val vAlpha = kFlashAlpha * vFlash.value
+				if (vAlpha > 0f) {
+					drawRect((if (inKind == BadgeKind.Success) vColors.success else vColors.danger).copy(alpha = vAlpha), vGeometry.topLeft(inSquare), vSize)
 				}
 			}
 			inHint?.let { inSquare ->
