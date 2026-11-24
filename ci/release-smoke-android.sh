@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 # Test de fumée de l'APK release (R8, réduit) sur un émulateur, lancé par la CI (même principe
 # que PatrimoinePlus) : installation, lancement, choix du niveau du premier lancement
-# (« Commencer »), accueil (« Problèmes résolus »), un problème (« … jouent »), retour à
-# l'accueil, onglets Historique et Statistiques ; aucun plantage (journal « crash » vide,
-# processus vivant). L'appli est pilotée par son arbre d'accessibilité (uiautomator), sans
+# (« Commencer »), accueil (modes de jeu), un puzzle d'Arcade (« Indice »), retour à l'accueil,
+# onglet Stats puis Historique (en bas de la page), onglet Réglages ; aucun plantage (journal
+# « crash » vide, processus vivant). L'appli est pilotée par son arbre d'accessibilité (uiautomator), sans
 # dépendre de son code : c'est bien l'APK produit qui est vérifié.
 # Usage : ci/release-smoke-android.sh chemin/vers/app-release.apk
 set -euo pipefail
@@ -58,23 +58,47 @@ check_alive()
 	adb shell pidof "$kPackage" > /dev/null || { echo "::error::L'appli n'est plus lancée"; adb logcat -d | tail -80; return 1; }
 }
 
+# Fait défiler l'écran vers le bas jusqu'à ce qu'un texte exact apparaisse (12 gestes au plus).
+# $1 : texte exact
+scroll_to()
+{
+	local vSize vWidth vHeight vTry
+	vSize=$(adb shell wm size | grep -o '[0-9]*x[0-9]*' | tail -1)
+	vWidth=${vSize%x*}
+	vHeight=${vSize#*x}
+	for vTry in $(seq 1 12); do
+		if screen | grep -q -- "text=\"$1\""; then return 0; fi
+		adb shell input swipe $(( vWidth / 2 )) $(( vHeight * 7 / 10 )) $(( vWidth / 2 )) $(( vHeight * 3 / 10 )) 300
+		sleep 1
+	done
+	echo "::error::Introuvable après défilement : $1"
+	return 1
+}
+
 adb install -r "$kApk"
 adb logcat -c
 adb shell am start -W -n "$kPackage/.MainActivity"
-wait_for 'text="Quel est votre niveau ?"'
+wait_for 'text="Quel est ton niveau ?"'
 check_alive
 tap "Commencer"
-wait_for 'text="Problèmes résolus"'
+wait_for 'text="Puzzles adaptés à ton classement"'
 check_alive
-tap "S’entraîner"
-wait_for 'jouent"'
+tap "Arcade"
+wait_for 'text="Indice"'
 check_alive
 adb shell input keyevent KEYCODE_BACK
-wait_for 'text="Problèmes résolus"'
+wait_for 'text="Puzzles adaptés à ton classement"'
+tap "Stats"
+wait_for 'text="Statistiques"'
+check_alive
+scroll_to "Historique"
 tap "Historique"
 wait_for 'text="Tous"'
-tap "Statistiques"
+check_alive
+adb shell input keyevent KEYCODE_BACK
 wait_for 'text="Statistiques"'
+tap "Réglages"
+wait_for 'text="Réglages"'
 sleep 2
 check_alive
-echo "APK release vérifié : lancement, choix du niveau, accueil, problème, historique et statistiques sans plantage."
+echo "APK release vérifié : lancement, choix du niveau, accueil, puzzle, statistiques, historique et réglages sans plantage."
