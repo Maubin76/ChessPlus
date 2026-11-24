@@ -28,6 +28,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.chessplus.app.game.ChallengeKind
+import com.chessplus.app.game.DailyDays
+import com.chessplus.app.widget.ChessPlusWidget
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.GameScreen
 import com.chessplus.app.game.GameViewModel
@@ -57,13 +59,28 @@ import kotlinx.coroutines.launch
  * retour système, et écran courant avec ses propres ViewModels.
  */
 @Composable
-fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> Unit) {
+fun ChessPlusApp(
+	inContainer: AppContainer,
+	inVersion: String,
+	inOnExit: () -> Unit,
+	inOnRestart: () -> Unit = {},
+	inOpen: String? = null,
+	inOnOpened: () -> Unit = {},
+) {
 	val vNavigation: NavigationViewModel = viewModel()
 	val vSettings by inContainer.settingsStore.settings.collectAsStateWithLifecycle()
 	val vScope = rememberCoroutineScope()
 	LaunchedEffect(Unit) {
 		if (!vNavigation.isInitialized) {
 			vNavigation.initialize(if (inContainer.hasPlayer()) Destination.Home else Destination.Level(firstLaunch = true))
+		}
+	}
+	// Widget : ouvre le puzzle du jour une fois la navigation prête (et le joueur créé).
+	LaunchedEffect(inOpen, vNavigation.isInitialized) {
+		if (inOpen == ChessPlusWidget.kOpenDaily && vNavigation.isInitialized && inContainer.hasPlayer()) {
+			val vDay = DailyDays.keyOf(System.currentTimeMillis())
+			inContainer.dailyStore.puzzleFor(vDay)?.let { vNavigation.navigate(Destination.Game(GameMode.Daily(vDay, it.id))) }
+			inOnOpened()
 		}
 	}
 	val vEntry = vNavigation.backStack.lastOrNull()
@@ -132,6 +149,9 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inLoadBaseInfo = inContainer::offlineBaseInfo,
 						inOnLevel = { vNavigation.navigate(Destination.Level(firstLaunch = false)) },
 						inOnTab = vNavigation::selectTab,
+						inExport = inContainer::exportProgress,
+						inStageImport = inContainer::stageImport,
+						inRestart = inOnRestart,
 					)
 					Destination.Targeted -> TargetedScreen(
 						inViewModel = viewModel(factory = TargetedViewModel.factory(inContainer)),

@@ -205,4 +205,10 @@ interface UserDao {
 	 */
 	@Query("SELECT * FROM challenge_run ORDER BY playedAt, id")
 	fun observeChallengeRuns(): Flow<List<ChallengeRunEntity>>
+
+	/**
+	 * Observe le nombre de tentatives (signal de mise à jour du widget).
+	 */
+	@Query("SELECT COUNT(*) FROM attempt")
+	fun observeAttemptCount(): Flow<Int>
 }

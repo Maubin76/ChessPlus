@@ -7,6 +7,12 @@ import com.chessplus.app.ui.board.rememberPiecePainter
 import com.chessplus.core.model.Piece
 import com.chessplus.core.model.PieceType
 import com.chessplus.core.model.Color as Side
+import android.widget.Toast
+import androidx.compose.runtime.rememberCoroutineScope
+import com.chessplus.app.game.DailyDays
+import kotlinx.coroutines.launch
+import java.io.InputStream
+import java.io.OutputStream
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -89,6 +95,15 @@ private const val kBytesPerMegabyte = 1_000_000.0
 /** Côté d'une case de l'aperçu des styles de pièces. */
 private const val kPieceSampleSize = 32
 
+/** Type MIME des sauvegardes (base SQLite). */
+private const val kBackupMime = "application/vnd.sqlite3"
+
+/** Début du nom de fichier proposé à l'export. */
+private const val kBackupPrefix = "chessplus-progression-"
+
+/** Extension du fichier exporté. */
+private const val kBackupExtension = ".db"
+
 /** Hauteur du bouton compact « Gérer ». */
 private const val kCompactButtonHeight = 32
 
@@ -127,8 +142,34 @@ fun SettingsScreen(
 	inLoadBaseInfo: suspend () -> OfflineBaseInfo,
 	inOnLevel: () -> Unit,
 	inOnTab: (NavTab) -> Unit,
+	inExport: suspend (OutputStream) -> Unit = {},
+	inStageImport: suspend (InputStream) -> Boolean = { false },
+	inRestart: () -> Unit = {},
 ) {
 	val vSettings by inStore.settings.collectAsStateWithLifecycle()
+	val vScope = rememberCoroutineScope()
+	var vBackupDialog by rememberSaveable { mutableStateOf<BackupDialog?>(null) }
+	val vResolver = LocalContext.current.contentResolver
+	val vExportedText = stringResource(R.string.set_export_done)
+	val vExportFailedText = stringResource(R.string.set_export_failed)
+	val vToastContext = LocalContext.current
+	// Export : le joueur choisit où écrire le fichier ; import : il choisit le fichier, vérifié avant de redémarrer.
+	val vExportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument(kBackupMime)) { inUri ->
+		if (inUri != null) {
+			vScope.launch {
+				val vDone = runCatching { vResolver.openOutputStream(inUri)?.use { inExport(it) } != null }.getOrDefault(false)
+				Toast.makeText(vToastContext, if (vDone) vExportedText else vExportFailedText, Toast.LENGTH_SHORT).show()
+			}
+		}
+	}
+	val vImportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { inUri ->
+		if (inUri != null) {
+			vScope.launch {
+				val vValid = runCatching { vResolver.openInputStream(inUri)?.let { inStageImport(it) } ?: false }.getOrDefault(false)
+				if (vValid) inRestart() else vBackupDialog = BackupDialog.Invalid
+			}
+		}
+	}
 	var vBaseInfo by remember { mutableStateOf<OfflineBaseInfo?>(null) }
 	LaunchedEffect(Unit) { vBaseInfo = inLoadBaseInfo() }
 	val vContext = LocalContext.current
@@ -145,7 +186,48 @@ fun SettingsScreen(
 			inStore.update { it.copy(reminder = inOn) }
 		}
 	}
-	SettingsContent(vSettings, inStore::update, inVersion, vBaseInfo, inOnLevel, inOnTab, vOnReminderChange)
+	SettingsContent(
+		vSettings, inStore::update, inVersion, vBaseInfo, inOnLevel, inOnTab, vOnReminderChange,
+		inOnExport = { vExportLauncher.launch(kBackupPrefix + DailyDays.keyOf(System.currentTimeMillis()) + kBackupExtension) },
+		inOnImport = { vBackupDialog = BackupDialog.Confirm },
+	)
+	when (vBackupDialog) {
+		BackupDialog.Confirm -> ConfirmImportDialog({ vBackupDialog = null }) {
+			vBackupDialog = null
+			vImportLauncher.launch(arrayOf("*/*"))
+		}
+		BackupDialog.Invalid -> InfoDialog(stringResource(R.string.set_import_invalid_title), stringResource(R.string.set_import_invalid), inOnDismiss = { vBackupDialog = null })
+		null -> Unit
+	}
+}
+
+/**
+ * Fenêtres de la sauvegarde de la progression.
+ */
+private enum class BackupDialog {
+	/** Confirmation avant de choisir le fichier à importer. */
+	Confirm,
+
+	/** Fichier refusé. */
+	Invalid,
+}
+
+/**
+ * Confirmation avant un import : la progression actuelle sera remplacée et l'application redémarrera.
+ */
+@Composable
+private fun ConfirmImportDialog(inOnCancel: () -> Unit, inOnConfirm: () -> Unit) {
+	Dialog(onDismissRequest = inOnCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
+			Text(stringResource(R.string.set_import_title), style = ChessPlusTheme.typography.heading, color = ChessPlusTheme.colors.ink)
+			Text(stringResource(R.string.set_import_detail), style = ChessPlusTheme.typography.small, color = ChessPlusTheme.colors.inkMuted)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
+				SecondaryButton(stringResource(R.string.set_cancel), inOnCancel, Modifier.weight(1f))
+				PrimaryButton(stringResource(R.string.set_import_choose), inOnConfirm, Modifier.weight(1f))
+			}
+		}
+	}
 }
 
 /**
@@ -160,6 +242,8 @@ fun SettingsContent(
 	inOnLevel: () -> Unit,
 	inOnTab: (NavTab) -> Unit,
 	inOnReminderChange: (Boolean) -> Unit = { inOn -> inOnUpdate { it.copy(reminder = inOn) } },
+	inOnExport: () -> Unit = {},
+	inOnImport: () -> Unit = {},
 ) {
 	val vColors = ChessPlusTheme.colors
 	var vDialog by rememberSaveable { mutableStateOf<SettingsDialog?>(null) }
@@ -237,6 +321,14 @@ fun SettingsContent(
 					listOf(stringResource(R.string.set_theme_system), stringResource(R.string.set_theme_light), stringResource(R.string.set_theme_dark)),
 					inSettings.themeMode.ordinal,
 				) { inIndex -> inOnUpdate { it.copy(themeMode = ThemeMode.entries[inIndex]) } }
+			}
+			Section(stringResource(R.string.set_section_data)) {
+				ListGroup(
+					inRows = listOf(
+						{ LinkRow(stringResource(R.string.set_export), null, inOnExport, stringResource(R.string.set_export_detail)) },
+						{ LinkRow(stringResource(R.string.set_import), null, inOnImport, stringResource(R.string.set_import_row_detail)) },
+					),
+				)
 			}
 			Section(stringResource(R.string.set_section_about)) {
 				ListGroup(

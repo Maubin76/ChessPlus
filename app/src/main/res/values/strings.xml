@@ -64,6 +64,13 @@
 		<item quantity="other">Encore %1$d puzzles pour atteindre ton objectif (%2$d/%3$d).</item>
 	</plurals>
 
+	<!-- Widget -->
+	<string name="widget_description">Objectif du jour et puzzle du jour</string>
+	<string name="widget_goal">Objectif du jour</string>
+	<string name="widget_daily">Puzzle du jour</string>
+	<string name="widget_daily_solved">Résolu</string>
+	<string name="widget_daily_todo">Résoudre</string>
+
 	<!-- Calendrier des puzzles du jour -->
 	<string name="daily_calendar">Puzzles du jour</string>
 	<string name="daily_calendar_hint">Touche un jour pour résoudre son puzzle.</string>

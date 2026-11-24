@@ -64,4 +64,17 @@
 	<string name="set_validate">Valider</string>
 	<string name="set_sounds">Sons</string>
 	<string name="set_sounds_detail">Coups, prises, erreurs et réussites</string>
+	<!-- Sauvegarde de la progression -->
+	<string name="set_section_data">Données</string>
+	<string name="set_export">Exporter ma progression</string>
+	<string name="set_export_detail">Un fichier à garder ou à transférer</string>
+	<string name="set_export_done">Progression exportée.</string>
+	<string name="set_export_failed">L’export a échoué.</string>
+	<string name="set_import">Importer une progression</string>
+	<string name="set_import_row_detail">Remplace la progression actuelle</string>
+	<string name="set_import_title">Importer une progression ?</string>
+	<string name="set_import_detail">Ta progression actuelle sera remplacée par celle du fichier, puis l’app redémarrera. Les réglages ne changent pas.</string>
+	<string name="set_import_choose">Choisir le fichier</string>
+	<string name="set_import_invalid_title">Fichier refusé</string>
+	<string name="set_import_invalid">Ce fichier n’est pas une progression ChessPlus.</string>
 </resources>

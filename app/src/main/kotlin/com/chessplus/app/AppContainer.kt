@@ -30,6 +30,7 @@ import com.chessplus.data.selection.SelectionCriteria
 import com.chessplus.data.user.ActiveSessionEntity
 import com.chessplus.data.user.ChallengeRunEntity
 import com.chessplus.data.user.DailyPuzzleEntity
+import com.chessplus.data.user.UserBackup
 import com.chessplus.data.user.PlayerEntity
 import com.chessplus.data.user.ProgressRepository
 import com.chessplus.data.user.UserDatabase
@@ -37,6 +38,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import java.io.File
+import java.io.InputStream
+import java.io.OutputStream
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -75,7 +79,10 @@ class AppContainer(private val context: Context) {
 			installPuzzleDatabase(context)
 			createPuzzleDatabase(context)
 		}.also { puzzleDatabase = it }
-		val vUser = userDatabase ?: createUserDatabase(context).also { userDatabase = it }
+		val vUser = userDatabase ?: withContext(Dispatchers.IO) {
+			applyPendingImport()
+			createUserDatabase(context)
+		}.also { userDatabase = it }
 		vPuzzles to vUser
 	}
 
@@ -156,6 +163,56 @@ class AppContainer(private val context: Context) {
 		val vDao = ready().second.userDao()
 		val vFrom = DailyGoal.dayStart(inNow)
 		return GoalProgress(vDao.countSuccessesSince(vFrom), settingsStore.settings.value.dailyGoal)
+	}
+
+	/**
+	 * Exporte la progression (copie complète de la base utilisateur) dans [inOutput].
+	 */
+	suspend fun exportProgress(inOutput: OutputStream) {
+		val vUser = ready().second
+		withContext(Dispatchers.IO) {
+			val vTemp = File(context.cacheDir, kExportFile).apply { delete() }
+			try {
+				UserBackup.export(vUser, vTemp.absolutePath)
+				vTemp.inputStream().use { it.copyTo(inOutput) }
+			} finally {
+				vTemp.delete()
+			}
+		}
+	}
+
+	/**
+	 * Prépare l'import d'une progression : vérifie le fichier puis le met de côté ; il remplacera la
+	 * base au prochain démarrage (avant son ouverture). Retourne faux si le fichier ne convient pas.
+	 */
+	suspend fun stageImport(inInput: InputStream): Boolean = withContext(Dispatchers.IO) {
+		val vTemp = File(context.cacheDir, kImportFile).apply { delete() }
+		inInput.use { vSource -> vTemp.outputStream().use { vSource.copyTo(it) } }
+		if (UserBackup.validate(vTemp.absolutePath) == null) {
+			vTemp.delete()
+			return@withContext false
+		}
+		val vPending = context.getDatabasePath(kPendingImport)
+		vPending.delete()
+		vTemp.copyTo(vPending)
+		vTemp.delete()
+		true
+	}
+
+	/**
+	 * Remplace la base utilisateur par une progression importée, si un import est en attente (appelé
+	 * avant l'ouverture de la base).
+	 */
+	private fun applyPendingImport() {
+		val vPending = context.getDatabasePath(kPendingImport)
+		if (!vPending.exists()) {
+			return
+		}
+		val vTarget = context.getDatabasePath(UserDatabase.kFileName)
+		for (vSuffix in listOf("", "-wal", "-shm", "-journal")) {
+			File(vTarget.path + vSuffix).delete()
+		}
+		vPending.renameTo(vTarget)
 	}
 
 	/**
@@ -253,6 +310,15 @@ class AppContainer(private val context: Context) {
 	}
 
 	companion object {
+		/** Fichier temporaire de l'export. */
+		private const val kExportFile = "export.db"
+
+		/** Fichier temporaire de l'import, avant vérification. */
+		private const val kImportFile = "import.db"
+
+		/** Progression importée en attente du prochain démarrage (à côté des bases). */
+		private const val kPendingImport = "user.db.import"
+
 		/** Nombre de problèmes non réussis examinés pour le rejeu. */
 		private const val kReplayCandidates = 50
 
