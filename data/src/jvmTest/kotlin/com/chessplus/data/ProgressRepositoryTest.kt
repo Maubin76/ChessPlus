@@ -42,6 +42,34 @@ class ProgressRepositoryTest {
 		database.close()
 	}
 
+	/** Vérifie la file de révision : entrée sur un échec, paliers 1, 3, 7, 14, 30 jours, retour au début sur un échec, sortie une fois maîtrisé. */
+	@Test
+	fun reviewSchedule() = runBlocking {
+		val vDay = 24L * 60 * 60 * 1000
+		val vPuzzle = TestDatabases.puzzle("r1", 1500, ThemeSet.of(Theme.Fork))
+		repository.recordResult(vPuzzle, PuzzleResult.Failure, 1, 0, inRated = true, inNow = 10 * vDay)
+		assertEquals(11 * vDay, dao.getReviewItem("r1")?.dueAt, "à réviser le lendemain")
+		repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = 10 * vDay + 1)
+		assertEquals(0, dao.getReviewItem("r1")?.level, "une réussite avant l'échéance ne compte pas")
+		assertEquals(listOf("r1"), dao.getDueReviewIds(11 * vDay, 10))
+		assertEquals(0, dao.countDueReviews(10 * vDay + 1))
+		var vNow = 11 * vDay
+		for (vExpected in listOf(3L, 7L, 14L, 30L)) {
+			repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
+			assertEquals(vNow + vExpected * vDay, dao.getReviewItem("r1")?.dueAt)
+			vNow += vExpected * vDay
+		}
+		repository.recordResult(vPuzzle, PuzzleResult.Failure, 1, 0, inRated = false, inNow = vNow)
+		assertEquals(0, dao.getReviewItem("r1")?.level, "un échec ramène au premier palier")
+		vNow += vDay
+		for (vStep in listOf(3L, 7L, 14L, 30L)) {
+			repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
+			vNow += vStep * vDay
+		}
+		repository.recordResult(vPuzzle, PuzzleResult.Success, 0, 0, inRated = false, inNow = vNow)
+		assertNull(dao.getReviewItem("r1"), "maîtrisé après le dernier palier")
+	}
+
 	/** Vérifie le comptage de l'objectif quotidien : réussites depuis une date, notées ou non. */
 	@Test
 	fun dailyGoalCounts() = runBlocking {

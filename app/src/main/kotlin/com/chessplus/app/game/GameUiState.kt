@@ -223,6 +223,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property showThemeTag vrai si le thème principal est affiché pendant le puzzle (Entraînement seulement).
  * @property sessionRecap vrai en Arcade et en Entraînement : quitter demande confirmation et affiche le récapitulatif de la session.
  * @property keepsPuzzle vrai si le puzzle en cours est gardé pour la reprise (Arcade seulement).
+ * @property isReview vrai en Révision (message propre quand il n'y a plus rien à réviser).
  * @property sessionStartedAt début de la session (ouverture de l'écran, millisecondes), ou null avant le démarrage.
  */
 data class GameUiState(
@@ -261,5 +262,6 @@ data class GameUiState(
 	val showThemeTag: Boolean = false,
 	val sessionRecap: Boolean = false,
 	val keepsPuzzle: Boolean = false,
+	val isReview: Boolean = false,
 	val sessionStartedAt: Long? = null,
 )

@@ -32,6 +32,8 @@
 	<string name="home_offline">Hors ligne · %1$s puzzles disponibles</string>
 	<string name="mode_arcade">Arcade</string>
 	<string name="mode_arcade_detail">Puzzles adaptés à ton classement</string>
+	<string name="mode_review">Révision</string>
+	<string name="mode_review_detail">Tes puzzles ratés, à intervalles croissants</string>
 	<string name="mode_rush">Rush</string>
 	<string name="mode_rush_detail">3 minutes, un maximum de puzzles</string>
 	<string name="mode_survival">Survie</string>
@@ -46,6 +48,9 @@
 	<string name="game_title_targeted">Entraînement</string>
 	<string name="game_title_replay">Rejouer</string>
 	<string name="game_title_daily">Puzzle du jour</string>
+	<string name="game_title_review">Révision</string>
+	<string name="review_done">Rien à réviser.</string>
+	<string name="review_done_detail">Reviens demain : tes puzzles ratés reviendront à intervalles croissants.</string>
 	<string name="game_title_daily_past">Puzzle du %1$s</string>
 
 	<!-- Objectif quotidien -->

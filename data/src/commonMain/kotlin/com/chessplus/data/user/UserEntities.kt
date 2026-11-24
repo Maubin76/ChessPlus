@@ -163,6 +163,26 @@ data class DailyPuzzleEntity(
 )
 
 /**
+ * Puzzle à réviser (répétition espacée) : entré après un échec, revu à intervalles croissants
+ * tant qu'il est réussi, puis retiré une fois maîtrisé.
+ *
+ * @property puzzleId identifiant Lichess du puzzle.
+ * @property level palier de l'intervalle (indice dans [ProgressRepository.kReviewIntervalsDays]).
+ * @property dueAt date à partir de laquelle le puzzle est à réviser (millisecondes).
+ * @property addedAt date d'entrée dans la file (millisecondes).
+ */
+@Entity(
+	tableName = "review_item",
+	indices = [Index("dueAt")],
+)
+data class ReviewItemEntity(
+	@PrimaryKey val puzzleId: String,
+	val level: Int,
+	val dueAt: Long,
+	val addedAt: Long,
+)
+
+/**
  * Meilleur score d'un défi.
  *
  * @property kind défi.

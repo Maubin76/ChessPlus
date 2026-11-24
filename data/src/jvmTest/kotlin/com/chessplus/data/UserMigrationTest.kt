@@ -51,6 +51,7 @@ class UserMigrationTest {
 					"VALUES ('00sHx', 1000, 'Success', 1, 1760, 0, 0, 0, 0, 1500.0, 1512.0)"
 			)
 			vConnection.execSQL("INSERT INTO puzzle_state (puzzleId, solved, attemptCount, failureCount, lastResult, lastPlayedAt) VALUES ('00sHx', 1, 1, 0, 'Success', 1000)")
+			vConnection.execSQL("INSERT INTO puzzle_state (puzzleId, solved, attemptCount, failureCount, lastResult, lastPlayedAt) VALUES ('raté', 0, 1, 1, 'Failure', 5000)")
 			vConnection.execSQL("PRAGMA user_version = 1")
 			vConnection.close()
 
@@ -70,6 +71,8 @@ class UserMigrationTest {
 				assertEquals(listOf("20261123"), vDatabase.userDao().getSolvedDailyDays(), "00sHx est réussi dans la base migrée")
 				vDatabase.userDao().insertDailyPuzzle(DailyPuzzleEntity("20261123", "autre", 4000))
 				assertEquals("00sHx", vDatabase.userDao().getDailyPuzzle("20261123")?.puzzleId, "un tirage existant n'est pas remplacé")
+				assertEquals(5000L + 24L * 60 * 60 * 1000, vDatabase.userDao().getReviewItem("raté")?.dueAt, "un puzzle raté jamais réussi entre dans la révision")
+				assertNull(vDatabase.userDao().getReviewItem("00sHx"), "un puzzle réussi n'y entre pas")
 			} finally {
 				vDatabase.close()
 			}

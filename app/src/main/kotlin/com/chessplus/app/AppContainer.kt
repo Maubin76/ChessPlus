@@ -90,6 +90,10 @@ class AppContainer(private val context: Context) {
 		 */
 		override suspend fun next(inRating: Double, inExcludeId: String?, inMode: GameMode): Puzzle? {
 			val (vPuzzles, vUser) = ready()
+			if (inMode == GameMode.Review) {
+				val vId = vUser.userDao().getDueReviewIds(System.currentTimeMillis(), kReviewCandidates).firstOrNull { it != inExcludeId } ?: return null
+				return vPuzzles.puzzleDao().getById(vId)?.toPuzzle()
+			}
 			if (inMode is GameMode.Replay) {
 				val vId = vUser.userDao().getUnsolvedIds(kReplayCandidates).firstOrNull { it != inExcludeId } ?: return null
 				return vPuzzles.puzzleDao().getById(vId)?.toPuzzle()
@@ -155,6 +159,11 @@ class AppContainer(private val context: Context) {
 	}
 
 	/**
+	 * Retourne le nombre de puzzles à réviser maintenant.
+	 */
+	suspend fun dueReviewCount(inNow: Long = System.currentTimeMillis()): Int = ready().second.userDao().countDueReviews(inNow)
+
+	/**
 	 * Retourne l'état de la base de puzzles hors ligne : nombre de puzzles et taille du fichier.
 	 */
 	suspend fun offlineBaseInfo(): OfflineBaseInfo {
@@ -191,7 +200,7 @@ class AppContainer(private val context: Context) {
 			inDurationMs: Long?,
 			inFailedAtMove: Int?,
 		): RecordedResult {
-			val vRepository = ProgressRepository(ready().second, ratingSystem)
+			val vRepository = ProgressRepository(ready().second, ratingSystem) { DailyGoal.dayStart(it) }
 			val vBefore = vRepository.currentRating().rating
 			val vAfter = vRepository.recordResult(inPuzzle, inResult, inMistakes, inRevealed, inRated, System.currentTimeMillis(), inDurationMs, inFailedAtMove).rating
 			return RecordedResult(inResult, vBefore, vAfter)
@@ -246,6 +255,9 @@ class AppContainer(private val context: Context) {
 	companion object {
 		/** Nombre de problèmes non réussis examinés pour le rejeu. */
 		private const val kReplayCandidates = 50
+
+		/** Nombre de puzzles à réviser lus pour choisir le suivant. */
+		private const val kReviewCandidates = 20
 	}
 }
 

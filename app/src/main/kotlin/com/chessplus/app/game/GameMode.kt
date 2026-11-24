@@ -66,6 +66,9 @@ sealed interface GameMode {
 	/** Rejeu d'un problème de l'historique (sans effet sur la cote), puis des autres problèmes non réussis. */
 	data class Replay(val puzzleId: String) : GameMode
 
+	/** Révision : les puzzles ratés dont l'échéance est arrivée, du plus ancien au plus récent. */
+	data object Review : GameMode
+
 	/** Puzzle du jour [day] (« yyyyMMdd ») ; les puzzles du jour ne s'enchaînent pas, un calendrier permet d'en choisir un autre. */
 	data class Daily(val day: String, val puzzleId: String) : GameMode
 

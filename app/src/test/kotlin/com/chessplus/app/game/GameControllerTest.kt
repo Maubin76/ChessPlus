@@ -594,6 +594,23 @@ class GameControllerTest {
 		assertFalse(vController.state.value.keepsPuzzle, "l'Entraînement ne garde pas le puzzle en cours")
 	}
 
+	/** Vérifie la Révision : le mode est transmis à la source, récapitulatif de session, message quand tout est révisé. */
+	@Test
+	fun reviewMode() = runBlocking<Unit> {
+		val vPuzzles = FakePuzzles(listOf(kMateIn2))
+		val vController = controller(vPuzzles, inMode = GameMode.Review)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(listOf<GameMode>(GameMode.Review), vPuzzles.modes)
+		assertTrue(vController.state.value.isReview)
+		assertTrue(vController.state.value.sessionRecap)
+		assertFalse(vController.state.value.keepsPuzzle, "la Révision ne touche pas au puzzle en cours de l'Arcade")
+		val vEmpty = controller(FakePuzzles(emptyList()), inMode = GameMode.Review)
+		vEmpty.start()
+		vEmpty.awaitIdle()
+		assertEquals(GameHeader.NoPuzzle, vEmpty.state.value.header)
+	}
+
 	/** Vérifie que le rejeu charge le problème demandé, sans effet sur la cote. */
 	@Test
 	fun replayModeIsUnrated() = runBlocking<Unit> {

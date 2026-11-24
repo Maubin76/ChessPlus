@@ -169,4 +169,34 @@ interface UserDao {
 	suspend fun countSuccessesSince(inFrom: Long): Int
 
 
+
+	/**
+	 * Retourne le puzzle de la file de révision, ou null s'il n'y est pas.
+	 */
+	@Query("SELECT * FROM review_item WHERE puzzleId = :inPuzzleId")
+	suspend fun getReviewItem(inPuzzleId: String): ReviewItemEntity?
+
+	/**
+	 * Crée ou remplace un puzzle de la file de révision.
+	 */
+	@Upsert
+	suspend fun upsertReviewItem(inItem: ReviewItemEntity)
+
+	/**
+	 * Retire un puzzle maîtrisé de la file de révision.
+	 */
+	@Query("DELETE FROM review_item WHERE puzzleId = :inPuzzleId")
+	suspend fun deleteReviewItem(inPuzzleId: String)
+
+	/**
+	 * Retourne les puzzles à réviser à une date, du plus ancien au plus récent.
+	 */
+	@Query("SELECT puzzleId FROM review_item WHERE dueAt <= :inNow ORDER BY dueAt, puzzleId LIMIT :inLimit")
+	suspend fun getDueReviewIds(inNow: Long, inLimit: Int): List<String>
+
+	/**
+	 * Retourne le nombre de puzzles à réviser à une date.
+	 */
+	@Query("SELECT COUNT(*) FROM review_item WHERE dueAt <= :inNow")
+	suspend fun countDueReviews(inNow: Long): Int
 }

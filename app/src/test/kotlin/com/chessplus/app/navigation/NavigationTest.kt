@@ -31,6 +31,7 @@ class NavigationTest {
 			Destination.Settings,
 			Destination.Targeted,
 			Destination.Game(GameMode.Continuous),
+			Destination.Game(GameMode.Review),
 			Destination.Game(GameMode.Replay("00sHx")),
 			Destination.Game(GameMode.Daily("20261124", "00sJ9")),
 			Destination.Game(GameMode.Challenge(ChallengeKind.Survival)),

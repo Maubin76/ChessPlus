@@ -565,7 +565,11 @@ private fun feedbackOf(inState: GameUiState): Feedback {
 			val vSuccess = vSummary?.result?.let { it == PuzzleResult.Success } ?: vHeader.success
 			Feedback(stringResource(if (vSuccess) R.string.game_solved else R.string.game_failed), vDetail, if (vSuccess) Tone.Success else Tone.Danger)
 		}
-		GameHeader.NoPuzzle -> Feedback(stringResource(R.string.game_no_puzzle), stringResource(R.string.game_no_puzzle_detail), Tone.Neutral)
+		GameHeader.NoPuzzle -> if (inState.isReview) {
+			Feedback(stringResource(R.string.review_done), stringResource(R.string.review_done_detail), Tone.Success)
+		} else {
+			Feedback(stringResource(R.string.game_no_puzzle), stringResource(R.string.game_no_puzzle_detail), Tone.Neutral)
+		}
 		GameHeader.Solved -> Feedback(stringResource(R.string.game_good_move), stringResource(R.string.challenge_next), Tone.Success)
 		is GameHeader.Missed -> Feedback(
 			stringResource(R.string.game_wrong),

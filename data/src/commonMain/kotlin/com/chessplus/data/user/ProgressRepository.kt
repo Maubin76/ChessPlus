@@ -12,10 +12,12 @@ import com.chessplus.core.rating.RatingSystem
  *
  * @property database base utilisateur.
  * @property ratingSystem algorithme de cote.
+ * @property dayStart début du jour local d'une date (les révisions tombent en début de journée).
  */
 class ProgressRepository(
 	private val database: UserDatabase,
 	private val ratingSystem: RatingSystem,
+	private val dayStart: (Long) -> Long = { it },
 ) {
 	/** DAO de la base utilisateur. */
 	private val dao: UserDao = database.userDao()
@@ -27,7 +29,7 @@ class ProgressRepository(
 
 	/**
 	 * Enregistre le résultat d'un problème dans une seule transaction : tentative, bilan du
-	 * problème et, si [inRated], nouvelle cote du joueur. Retourne la cote après le problème.
+	 * problème, file de révision et, si [inRated], nouvelle cote du joueur. Retourne la cote après le problème.
 	 * [inDurationMs] et [inFailedAtMove] alimentent les statistiques (null si inconnus).
 	 */
 	suspend fun recordResult(
@@ -73,6 +75,7 @@ class ProgressRepository(
 					lastPlayedAt = inNow,
 				)
 			)
+			scheduleReview(inPuzzle.id, inResult, inNow)
 			if (inRated) {
 				dao.upsertPlayer(PlayerEntity(rating = vAfter.rating, deviation = vAfter.deviation, volatility = vAfter.volatility, updatedAt = inNow))
 			}
@@ -81,7 +84,42 @@ class ProgressRepository(
 	}
 
 	/**
+	 * Met à jour la file de révision : un échec (re)place le puzzle au premier palier ; une réussite
+	 * sur un puzzle à réviser le fait passer au palier suivant, ou le retire après le dernier.
+	 * Une réussite avant l'échéance ne change rien.
+	 */
+	private suspend fun scheduleReview(inPuzzleId: String, inResult: PuzzleResult, inNow: Long) {
+		val vItem = dao.getReviewItem(inPuzzleId)
+		if (inResult == PuzzleResult.Failure) {
+			dao.upsertReviewItem(ReviewItemEntity(inPuzzleId, 0, dueIn(inNow, 0), vItem?.addedAt ?: inNow))
+			return
+		}
+		if (vItem == null || vItem.dueAt > inNow) {
+			return
+		}
+		val vNext = vItem.level + 1
+		if (vNext >= kReviewIntervalsDays.size) {
+			dao.deleteReviewItem(inPuzzleId)
+		} else {
+			dao.upsertReviewItem(vItem.copy(level = vNext, dueAt = dueIn(inNow, vNext)))
+		}
+	}
+
+	/**
+	 * Retourne l'échéance du palier [inLevel] : début du jour local, plus l'intervalle du palier.
+	 */
+	private fun dueIn(inNow: Long, inLevel: Int): Long = dayStart(inNow) + kReviewIntervalsDays[inLevel] * kDayMs
+
+	/**
 	 * Convertit la ligne de cote en cote du modèle.
 	 */
 	private fun PlayerEntity.toRating(): PlayerRating = PlayerRating(rating, deviation, volatility)
+
+	companion object {
+		/** Intervalles de révision, en jours, palier par palier ; réussi au dernier, le puzzle est maîtrisé. */
+		val kReviewIntervalsDays = listOf(1L, 3L, 7L, 14L, 30L)
+
+		/** Durée d'un jour en millisecondes. */
+		private const val kDayMs = 24L * 60 * 60 * 1000
+	}
 }

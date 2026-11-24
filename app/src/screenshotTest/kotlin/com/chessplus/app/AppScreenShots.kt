@@ -49,6 +49,7 @@ private val kHomeState = HomeUiState(
 	rushBest = 28,
 	offlineCount = 12_400,
 	goal = com.chessplus.app.goal.GoalProgress(3, 5),
+	dueReviews = 4,
 )
 
 /** Accueil. */

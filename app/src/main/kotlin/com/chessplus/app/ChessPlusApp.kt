@@ -103,6 +103,7 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inOnDaily = { vNavigation.navigate(Destination.Game(GameMode.Daily(it.day, it.puzzleId))) },
 						inOnArcade = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
 						inOnTraining = { vNavigation.navigate(Destination.Targeted) },
+						inOnReview = { vNavigation.navigate(Destination.Game(GameMode.Review)) },
 						inOnChallenge = { vNavigation.navigate(Destination.Game(GameMode.Challenge(it))) },
 						inOnTab = vNavigation::selectTab,
 					)
@@ -142,6 +143,7 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 						inTitle = stringResource(
 							when (vDestination.mode) {
 								GameMode.Continuous -> R.string.game_title
+								GameMode.Review -> R.string.game_title_review
 								is GameMode.Targeted -> R.string.game_title_targeted
 								is GameMode.Replay -> R.string.game_title_replay
 								is GameMode.Daily -> R.string.game_title_daily

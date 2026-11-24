@@ -115,6 +115,7 @@ data class DailyInfo(val day: String, val puzzleId: String, val pieces: Map<Squa
  * @property offlineCount nombre de puzzles de la base hors ligne, ou null pendant le chargement.
  * @property solvedDays jours dont le puzzle du jour a été réussi.
  * @property goal avancement de l'objectif quotidien, ou null pendant le chargement.
+ * @property dueReviews puzzles à réviser maintenant.
  */
 data class HomeUiState(
 	val rating: Int = 0,
@@ -125,6 +126,7 @@ data class HomeUiState(
 	val offlineCount: Int? = null,
 	val solvedDays: Set<String> = emptySet(),
 	val goal: GoalProgress? = null,
+	val dueReviews: Int = 0,
 ) {
 	/** Vrai si le puzzle du jour affiché a déjà été réussi. */
 	val dailySolved: Boolean
@@ -184,7 +186,8 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 	 */
 	private suspend fun refreshGoal() {
 		val vGoal = container.goalProgress()
-		mutableState.update { it.copy(goal = vGoal) }
+		val vDue = container.dueReviewCount()
+		mutableState.update { it.copy(goal = vGoal, dueReviews = vDue) }
 	}
 
 	/**
@@ -228,10 +231,11 @@ fun HomeScreen(
 	inOnTraining: () -> Unit,
 	inOnChallenge: (ChallengeKind) -> Unit,
 	inOnTab: (NavTab) -> Unit,
+	inOnReview: () -> Unit,
 ) {
 	val vState by inViewModel.state.collectAsStateWithLifecycle()
 	LaunchedEffect(Unit) { inViewModel.refresh() }
-	HomeContent(vState, System.currentTimeMillis(), inOnDaily, inOnArcade, inOnTraining, inOnChallenge, inOnTab)
+	HomeContent(vState, System.currentTimeMillis(), inOnDaily, inOnArcade, inOnTraining, inOnChallenge, inOnTab, inOnReview)
 }
 
 /**
@@ -246,6 +250,7 @@ fun HomeContent(
 	inOnTraining: () -> Unit,
 	inOnChallenge: (ChallengeKind) -> Unit,
 	inOnTab: (NavTab) -> Unit,
+	inOnReview: () -> Unit = {},
 ) {
 	val vColors = ChessPlusTheme.colors
 	val vSpacing = ChessPlusTheme.spacing
@@ -277,6 +282,7 @@ fun HomeContent(
 				ListGroup(
 					inRows = listOf(
 						{ ModeRow(R.drawable.ic_ln_target, stringResource(R.string.mode_arcade), stringResource(R.string.mode_arcade_detail), formatRating(inState.rating), inOnArcade) },
+						{ ModeRow(R.drawable.ic_ln_replay, stringResource(R.string.mode_review), stringResource(R.string.mode_review_detail), formatRating(inState.dueReviews), inOnReview) },
 						{ ModeRow(R.drawable.ic_ln_clock, stringResource(R.string.mode_rush), stringResource(R.string.mode_rush_detail), inState.rushBest?.let { formatRating(it) } ?: "–") { inOnChallenge(ChallengeKind.Rush) } },
 						{ ModeRow(R.drawable.ic_ln_heart, stringResource(R.string.mode_survival), stringResource(R.string.mode_survival_detail), inState.survivalBest?.let { formatRating(it) } ?: "–") { inOnChallenge(ChallengeKind.Survival) } },
 						{ ModeRow(R.drawable.ic_ln_grid, stringResource(R.string.mode_training), stringResource(R.string.mode_training_detail), "${Theme.entries.size}", inOnTraining) },
