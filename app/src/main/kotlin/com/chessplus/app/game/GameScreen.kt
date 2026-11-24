@@ -297,7 +297,10 @@ private fun PuzzleHeader(inState: GameUiState) {
 				)
 			}
 		}
-		mainTheme(inState.puzzleThemes)?.let { Tag(stringResource(themeLabel(it))) }
+		// Le thème n'est montré qu'en Entraînement, où il a été choisi : ailleurs, ce serait un indice.
+		if (inState.showThemeTag) {
+			mainTheme(inState.puzzleThemes)?.let { Tag(stringResource(themeLabel(it))) }
+		}
 	}
 }
 

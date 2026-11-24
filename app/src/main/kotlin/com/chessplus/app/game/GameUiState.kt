@@ -191,6 +191,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property skipEnabled vrai si « Passer » est disponible.
  * @property challengeBest record du défi, ou null.
  * @property daily puzzle du jour et calendrier, ou null hors puzzle du jour.
+ * @property showThemeTag vrai si le thème principal est affiché pendant le puzzle (Entraînement seulement).
  */
 data class GameUiState(
 	val header: GameHeader = GameHeader.Loading,
@@ -225,4 +226,5 @@ data class GameUiState(
 	val skipEnabled: Boolean = false,
 	val challengeBest: Int? = null,
 	val daily: DailyUi? = null,
+	val showThemeTag: Boolean = false,
 )

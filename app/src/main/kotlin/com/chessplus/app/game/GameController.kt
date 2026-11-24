@@ -1004,6 +1004,7 @@ class GameController(
 			puzzleId = vSession?.puzzle?.id,
 			puzzleRating = vSession?.puzzle?.rating,
 			puzzleThemes = vSession?.puzzle?.themes ?: com.chessplus.core.model.ThemeSet.kEmpty,
+			showThemeTag = mode is GameMode.Targeted,
 			notation = vSession?.let { notationOf(it) } ?: emptyList(),
 			remainingMoves = vSession?.let { it.puzzle.playerMoveCount - it.solutionPly / 2 } ?: 0,
 			clockStart = clockStart,

@@ -76,6 +76,12 @@ private fun Shot(inState: GameUiState, inTitle: String = "Arcade") = ChessPlusTh
 @Composable
 fun RealGameShot() = Shot(kMockupState)
 
+/** Entraînement : seul mode où le thème principal est affiché pendant le puzzle. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameTrainingShot() = Shot(kMockupState.copy(showThemeTag = true), "Entraînement")
+
 /** Indice : la pièce à jouer est cerclée d'`accent`. */
 @PreviewTest
 @DesignPreviews

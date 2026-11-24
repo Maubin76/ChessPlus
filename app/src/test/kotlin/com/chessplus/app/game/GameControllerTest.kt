@@ -209,6 +209,7 @@ class GameControllerTest {
 		val vState = vController.state.value
 		assertEquals(GameHeader.ToMove(Color.White, afterCorrect = false), vState.header)
 		assertEquals(Color.White, vState.orientation)
+		assertFalse(vState.showThemeTag, "pas de thème en Arcade")
 		assertEquals(Move.fromUci("e8d7"), vState.lastMove)
 		assertTrue(vState.animateMove)
 		assertTrue(vState.interactive)
@@ -441,6 +442,7 @@ class GameControllerTest {
 		vController.awaitIdle()
 		assertEquals(ChallengeUi(ChallengeKind.Survival, 0, 3, null, null), vController.state.value.challenge)
 		assertFalse(vController.state.value.hintEnabled)
+		assertFalse(vController.state.value.showThemeTag, "pas de thème en Survie")
 		vController.tapMove("a2", "e6")
 		vController.tapMove("f7", "f8")
 		assertEquals(1, vController.state.value.challenge?.score)
@@ -583,6 +585,7 @@ class GameControllerTest {
 		vController.awaitIdle()
 		assertEquals(Move.fromUci("b8c7"), vController.state.value.lastMove)
 		assertEquals(listOf<GameMode>(GameMode.Targeted(vCriteria)), vPuzzles.modes)
+		assertTrue(vController.state.value.showThemeTag, "thème affiché en Entraînement")
 	}
 
 	/** Vérifie que le rejeu charge le problème demandé, sans effet sur la cote. */
