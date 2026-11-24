@@ -1,5 +1,12 @@
 package com.chessplus.app.settings
 
+import androidx.compose.foundation.Image
+import androidx.compose.ui.window.DialogProperties
+import com.chessplus.app.ui.board.PieceStyle
+import com.chessplus.app.ui.board.rememberPiecePainter
+import com.chessplus.core.model.Piece
+import com.chessplus.core.model.PieceType
+import com.chessplus.core.model.Color as Side
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -78,6 +85,9 @@ private const val kSectionGap = 20
 
 /** Octets par mégaoctet. */
 private const val kBytesPerMegabyte = 1_000_000.0
+
+/** Côté d'une case de l'aperçu des styles de pièces. */
+private const val kPieceSampleSize = 32
 
 /** Hauteur du bouton compact « Gérer ». */
 private const val kCompactButtonHeight = 32
@@ -171,7 +181,7 @@ fun SettingsContent(
 				}
 				ListGroup(
 					inRows = listOf(
-						{ LinkRow(stringResource(R.string.set_pieces), stringResource(R.string.set_pieces_classic), { vDialog = SettingsDialog.Pieces }) },
+						{ LinkRow(stringResource(R.string.set_pieces), pieceStyleLabel(inSettings.pieceStyle), { vDialog = SettingsDialog.Pieces }) },
 						{ ToggleRow(stringResource(R.string.set_coordinates), null, inSettings.coordinates, { inOn -> inOnUpdate { it.copy(coordinates = inOn) } }) },
 						{
 							ToggleRow(
@@ -243,7 +253,7 @@ fun SettingsContent(
 		FloatingNavBar(NavTab.Settings, inOnTab)
 	}
 	when (vDialog) {
-		SettingsDialog.Pieces -> PiecesDialog { vDialog = null }
+		SettingsDialog.Pieces -> PiecesDialog(inSettings.pieceStyle, { inStyle -> inOnUpdate { it.copy(pieceStyle = inStyle) } }) { vDialog = null }
 		SettingsDialog.Base -> InfoDialog(stringResource(R.string.set_base_dialog_title), baseDialogText(inBaseInfo), inOnDismiss = { vDialog = null })
 		SettingsDialog.Goal -> GoalDialog(inSettings.dailyGoal, { inGoal -> inOnUpdate { it.copy(dailyGoal = inGoal) } }) { vDialog = null }
 		SettingsDialog.ReminderTime -> ReminderTimeDialog(inSettings.reminderMinutes, { inMinutes -> inOnUpdate { it.copy(reminderMinutes = inMinutes) } }) { vDialog = null }
@@ -409,24 +419,57 @@ private fun ReminderTimeDialog(inMinutes: Int, inOnChoose: (Int) -> Unit, inOnDi
 }
 
 /**
- * Choix du style des pièces : un seul style disponible (cburnett), avec le crédit de son auteur.
+ * Retourne le nom d'un style de pièces.
  */
 @Composable
-private fun PiecesDialog(inOnDismiss: () -> Unit) {
+private fun pieceStyleLabel(inStyle: PieceStyle): String = stringResource(
+	when (inStyle) {
+		PieceStyle.Classic -> R.string.set_pieces_classic
+		PieceStyle.Geometric -> R.string.set_pieces_geometric
+		PieceStyle.Letters -> R.string.set_pieces_letters
+	}
+)
+
+/**
+ * Choix du style des pièces : chaque style avec un aperçu (roi blanc, dame noire, cavalier blanc,
+ * fou noir), le choix actif en `accentSoft` ; crédits en dessous.
+ */
+@Composable
+private fun PiecesDialog(inStyle: PieceStyle, inOnChoose: (PieceStyle) -> Unit, inOnDismiss: () -> Unit) {
 	val vColors = ChessPlusTheme.colors
-	InfoDialog(stringResource(R.string.set_pieces), stringResource(R.string.set_pieces_dialog_detail), inOnDismiss, inExtra = {
-		val vShape = RoundedCornerShape(ChessPlusTheme.radius.radiusMd)
-		Row(
-			Modifier
-				.fillMaxWidth()
-				.clip(vShape)
-				.background(vColors.accentSoft)
-				.padding(horizontal = ChessPlusTheme.spacing.space4, vertical = ChessPlusTheme.spacing.space3),
-			verticalAlignment = Alignment.CenterVertically,
-		) {
-			Text(stringResource(R.string.set_pieces_classic), style = ChessPlusTheme.typography.body, color = vColors.accent, modifier = Modifier.weight(1f))
-			Icon(painterResource(R.drawable.ic_ln_check), contentDescription = null, tint = vColors.accent, modifier = Modifier.size(kIconSize))
+	val vSample = listOf(Piece(Side.White, PieceType.King), Piece(Side.Black, PieceType.Queen), Piece(Side.White, PieceType.Knight), Piece(Side.Black, PieceType.Bishop))
+	Dialog(onDismissRequest = inOnDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
+			Text(stringResource(R.string.set_pieces), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space3))
+			ListGroup(
+				inRows = PieceStyle.entries.map { vStyle ->
+					{
+						val vOn = vStyle == inStyle
+						ListRow(Modifier.background(if (vOn) vColors.accentSoft else vColors.surfaceRaised), inOnClick = {
+							inOnChoose(vStyle)
+							inOnDismiss()
+						}) {
+							Column(Modifier.weight(1f)) {
+								Text(pieceStyleLabel(vStyle), style = ChessPlusTheme.typography.body, color = if (vOn) vColors.accent else vColors.ink)
+								Spacer(Modifier.height(ChessPlusTheme.spacing.space1))
+								Row(Modifier.clip(RoundedCornerShape(ChessPlusTheme.radius.radiusXs))) {
+									vSample.forEachIndexed { inIndex, inPiece ->
+										Box(Modifier.size(kPieceSampleSize.dp).background(if (inIndex % 2 == 0) vColors.boardLight else vColors.boardDark)) {
+											Image(rememberPiecePainter(inPiece, vStyle), contentDescription = null, modifier = Modifier.fillMaxSize())
+										}
+									}
+								}
+							}
+							if (vOn) {
+								Icon(painterResource(R.drawable.ic_ln_check), contentDescription = null, tint = vColors.accent, modifier = Modifier.size(kIconSize))
+							}
+						}
+					}
+				},
+			)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space3))
+			Text(stringResource(R.string.set_pieces_dialog_detail), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
 		}
-		Spacer(Modifier.height(ChessPlusTheme.spacing.space3))
-	})
+	}
 }

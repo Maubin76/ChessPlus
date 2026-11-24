@@ -307,7 +307,7 @@ fun ChessBoard(
 		for ((vSquare, vPiece) in vPlan.fading) {
 			val vPosition = vGeometry.topLeft(vSquare)
 			Image(
-				painterResource(pieceDrawable(vPiece)),
+				rememberPiecePainter(vPiece),
 				contentDescription = null,
 				modifier = Modifier
 					.size(vSquareDp)
@@ -322,7 +322,7 @@ fun ChessBoard(
 			val vTarget = vGeometry.topLeft(vSquare)
 			val vStart = vPlan.motions[vSquare]?.let { vGeometry.topLeft(it) }
 			Image(
-				painterResource(pieceDrawable(vPiece)),
+				rememberPiecePainter(vPiece),
 				contentDescription = null,
 				modifier = Modifier
 					.size(vSquareDp)
@@ -350,7 +350,7 @@ fun ChessBoard(
 		vDragFrom?.let { inFrom ->
 			inPieces[inFrom]?.let { inPiece ->
 				Image(
-					painterResource(pieceDrawable(inPiece)),
+					rememberPiecePainter(inPiece),
 					contentDescription = null,
 					modifier = Modifier
 						.offset { IntOffset((vDragPosition.x - vSquarePx / 2).roundToInt(), (vDragPosition.y - vSquarePx * 0.8f).roundToInt()) }

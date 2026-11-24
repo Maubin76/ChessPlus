@@ -123,10 +123,11 @@ Commande : `./gradlew :puzzle-builder:run --args="C:/Users/mau/Downloads/lichess
 
 Icône « Halo » intégrée le 2026-11-23 (choix de Mathieu parmi dix propositions, `docs/design/icones/`) ; palette verte B appliquée le même jour (accents et échiquier verts, `docs/design/vert/propositions-vert.png`).
 
+Décisions du 2026-11-24 : la famille « Évaluation et origine » est gardée dans l'Entraînement ; les anciennes maquettes de la phase 4 (`design/preview`) et les icônes Material sont supprimées ; trois styles de pièces.
+
 Points en suspens (à rappeler à Mathieu) :
 
-- sons (réglage affiché « Bientôt disponible » ; trouver des sons libres de droits ou retirer le réglage) ;
-- famille de thèmes « Évaluation et origine » : garder, renommer ou masquer ;
+- sons (réglage retiré avec la refonte ; à réintroduire avec des sons libres de droits) ;
 - paramètres Glicko-2 (tau 0,75, écart des problèmes 75, écart du joueur entre 45 et 350) à confirmer à l'usage.
 
 Évolutions envisagées après la V1 (spécification) : séries chronométrées, objectif quotidien, packs de problèmes téléchargeables par tranche de cote, application desktop (`:core` et `:data` sont déjà multiplateformes).

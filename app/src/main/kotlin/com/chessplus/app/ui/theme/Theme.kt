@@ -17,6 +17,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.chessplus.app.R
+import com.chessplus.app.ui.board.PieceStyle
+import com.chessplus.app.ui.board.kLocalPieceStyle
 
 /*
  * Thème de ChessPlus d'après le design system (chessplus-design/, docs/DESIGN.md) : couleurs générées
@@ -131,13 +133,14 @@ object ChessPlusTheme {
 }
 
 /**
- * Thème Compose de ChessPlus, clair ou sombre, avec le thème d'échiquier choisi. Un `MaterialTheme`
+ * Thème Compose de ChessPlus, clair ou sombre, avec le thème d'échiquier et le style des pièces choisis. Un `MaterialTheme`
  * minimal dérivé garde les composants Material cohérents.
  */
 @Composable
 fun ChessPlusTheme(
 	inDarkTheme: Boolean = isSystemInDarkTheme(),
 	inBoard: BoardTheme = BoardTheme.Sage,
+	inPieces: PieceStyle = PieceStyle.Classic,
 	inContent: @Composable () -> Unit,
 ) {
 	val vBase = if (inDarkTheme) DarkChessPlusColors else LightChessPlusColors
@@ -156,7 +159,7 @@ fun ChessPlusTheme(
 			onSurface = vColors.ink, onBackground = vColors.ink, outline = vColors.lineStrong, error = vColors.danger,
 		)
 	}
-	CompositionLocalProvider(kLocalChessPlusColors provides vColors, kLocalDarkTheme provides inDarkTheme) {
+	CompositionLocalProvider(kLocalChessPlusColors provides vColors, kLocalDarkTheme provides inDarkTheme, kLocalPieceStyle provides inPieces) {
 		MaterialTheme(colorScheme = vScheme, content = inContent)
 	}
 }

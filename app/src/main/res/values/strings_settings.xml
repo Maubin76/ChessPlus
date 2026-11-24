@@ -11,7 +11,9 @@
 	<string name="set_board_grey">Gris</string>
 	<string name="set_pieces">Style des pièces</string>
 	<string name="set_pieces_classic">Classique</string>
-	<string name="set_pieces_dialog_detail">Jeu cburnett, de Colin M.L. Burnett, sous licence BSD.</string>
+	<string name="set_pieces_geometric">Géométrique</string>
+	<string name="set_pieces_letters">Lettres</string>
+	<string name="set_pieces_dialog_detail">Classique : jeu cburnett de Colin M.L. Burnett (licence BSD). Géométrique et Lettres : créations ChessPlus.</string>
 	<string name="set_coordinates">Coordonnées</string>
 	<string name="set_confirm">Confirmer les coups</string>
 	<string name="set_confirm_detail">Évite les coups joués par erreur</string>

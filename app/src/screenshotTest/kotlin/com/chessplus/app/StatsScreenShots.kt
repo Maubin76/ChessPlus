@@ -4,7 +4,7 @@ import android.content.res.Configuration
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.tools.screenshot.PreviewTest
-import com.chessplus.app.design.preview.DesignPreviews
+
 import com.chessplus.app.stats.StatsCalculator
 import com.chessplus.app.stats.StatsContent
 import com.chessplus.app.stats.StatsData

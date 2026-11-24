@@ -56,12 +56,12 @@ Création d'une clé : `keytool -genkeypair -v -keystore chessplus.jks -alias ch
 | Ressource | Auteur | Licence |
 | --- | --- | --- |
 | Problèmes d'échecs (base générée, non versionnée) | Lichess | CC0 |
-| Pièces « cburnett » (`app/src/main/res/drawable/piece_*.xml`) | Colin M.L. Burnett, via lichess-org/lila | GPLv2+ |
+| Pièces « cburnett », style Classique (`app/src/main/res/drawable/piece_w*.xml`, `piece_b*.xml`) | Colin M.L. Burnett, via lichess-org/lila | GPLv2+ / BSD |
+| Pièces des styles Géométrique (`piece_geo_*.xml`) et Lettres | création ChessPlus | — |
 | Police Inter (`app/src/main/res/font/inter.ttf`) | The Inter Project Authors | SIL Open Font License 1.1 |
 | Police Space Grotesk (`app/src/main/res/font/space_grotesk.ttf`) | The Space Grotesk Project Authors | SIL Open Font License 1.1 |
 | Police JetBrains Mono (`app/src/main/res/font/jetbrains_mono.ttf`) | The JetBrains Mono Project Authors | SIL Open Font License 1.1 |
 | Icônes au trait (`app/src/main/res/drawable/ic_ln_*.xml`) | design system ChessPlus | — |
-| Icônes Material Symbols des anciennes maquettes (`app/src/main/res/drawable/ic_*.xml` hors `ic_ln_*`) | Google | Apache 2.0 |
 | chesslib (dépendance) | Ben-Hur Carlos Vieira Langoni Junior | Apache 2.0 |
 
 Le code de ChessPlus n'est publié sous aucune licence : tous droits réservés.

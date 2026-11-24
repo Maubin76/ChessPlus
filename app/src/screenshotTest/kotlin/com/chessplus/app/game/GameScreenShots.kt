@@ -3,8 +3,9 @@ package com.chessplus.app.game
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.tooling.preview.Preview
 import com.android.tools.screenshot.PreviewTest
-import com.chessplus.app.design.preview.DesignPreviews
-import com.chessplus.app.design.preview.kDevice
+import com.chessplus.app.DesignPreviews
+import com.chessplus.app.kDevice
+import com.chessplus.app.ui.board.PieceStyle
 import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.core.model.Color
 import com.chessplus.core.model.Move
@@ -66,9 +67,21 @@ private val kMockupState = GameUiState(
  * Affiche l'écran de jeu pour un état donné, sans actions ; [inExitStep] montre une fenêtre de sortie.
  */
 @Composable
-private fun Shot(inState: GameUiState, inTitle: String = "Arcade", inExitStep: ExitStep = ExitStep.None) = ChessPlusTheme {
+private fun Shot(inState: GameUiState, inTitle: String = "Arcade", inExitStep: ExitStep = ExitStep.None, inPieces: PieceStyle = PieceStyle.Classic) = ChessPlusTheme(inPieces = inPieces) {
 	GameContent(inState, inTitle, true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, inExitStep = inExitStep, inClock = { kClock })
 }
+
+/** Style de pièces Géométrique. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameGeometricShot() = Shot(kMockupState, inPieces = PieceStyle.Geometric)
+
+/** Style de pièces Lettres. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameLettersShot() = Shot(kMockupState, inPieces = PieceStyle.Letters)
 
 /** Arcade : confirmation avant de quitter la session. */
 @PreviewTest

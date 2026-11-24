@@ -53,7 +53,7 @@ import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chessplus.app.R
 import com.chessplus.app.ui.board.ChessBoard
-import com.chessplus.app.ui.board.pieceDrawable
+import com.chessplus.app.ui.board.rememberPiecePainter
 import com.chessplus.app.ui.components.Chip
 import com.chessplus.app.ui.components.IconButtonOutlined
 import com.chessplus.app.ui.components.PrimaryButton
@@ -699,7 +699,7 @@ private fun PromotionDialog(inColor: Color, inOnChoose: (PieceType) -> Unit, inO
 						Modifier.then(vPress.scale).size(64.dp).clip(RoundedCornerShape(ChessPlusTheme.radius.radiusSm)).background(vColors.boardLight).pressClickable(vPress) { inOnChoose(vType) },
 						contentAlignment = Alignment.Center,
 					) {
-						Image(painterResource(pieceDrawable(Piece(inColor, vType))), contentDescription = null, modifier = Modifier.size(58.dp))
+						Image(rememberPiecePainter(Piece(inColor, vType)), contentDescription = null, modifier = Modifier.size(58.dp))
 					}
 				}
 			}

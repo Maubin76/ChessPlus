@@ -46,7 +46,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.chessplus.app.R
-import com.chessplus.app.ui.board.pieceDrawable
+import com.chessplus.app.ui.board.rememberPiecePainter
 import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.app.ui.theme.kLocalDarkTheme
 import com.chessplus.core.model.Piece
@@ -574,7 +574,7 @@ fun MiniBoard(inPieces: Map<Square, Piece>, inOrientation: Side, inModifier: Mod
 		for (vColor in Side.entries) {
 			for (vType in PieceType.entries) {
 				val vPiece = Piece(vColor, vType)
-				put(vPiece, painterResource(pieceDrawable(vPiece)))
+				put(vPiece, rememberPiecePainter(vPiece))
 			}
 		}
 	}

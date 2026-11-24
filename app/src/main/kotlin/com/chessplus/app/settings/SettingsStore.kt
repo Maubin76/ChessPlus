@@ -2,6 +2,7 @@ package com.chessplus.app.settings
 
 import android.content.Context
 import com.chessplus.app.goal.DailyGoal
+import com.chessplus.app.ui.board.PieceStyle
 import com.chessplus.app.ui.theme.BoardTheme
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,7 @@ enum class PuzzleDifficulty(val offset: Int) {
  * @property vibration courte vibration à chaque coup.
  * @property coordinates coordonnées dans les cases.
  * @property boardTheme couleurs de l'échiquier.
+ * @property pieceStyle style des pièces.
  * @property confirmMoves un coup doit être confirmé avant d'être joué.
  * @property difficulty difficulté des puzzles Arcade.
  * @property autoNext puzzle suivant automatiquement après une réussite.
@@ -51,6 +53,7 @@ data class Settings(
 	val vibration: Boolean = true,
 	val coordinates: Boolean = true,
 	val boardTheme: BoardTheme = BoardTheme.Sage,
+	val pieceStyle: PieceStyle = PieceStyle.Classic,
 	val confirmMoves: Boolean = false,
 	val difficulty: PuzzleDifficulty = PuzzleDifficulty.Normal,
 	val autoNext: Boolean = true,
@@ -84,6 +87,7 @@ class SettingsStore(context: Context) {
 			.putBoolean(kVibrationKey, vNew.vibration)
 			.putBoolean(kCoordinatesKey, vNew.coordinates)
 			.putString(kBoardKey, vNew.boardTheme.name)
+			.putString(kPiecesKey, vNew.pieceStyle.name)
 			.putBoolean(kConfirmKey, vNew.confirmMoves)
 			.putString(kDifficultyKey, vNew.difficulty.name)
 			.putBoolean(kAutoNextKey, vNew.autoNext)
@@ -104,6 +108,7 @@ class SettingsStore(context: Context) {
 			vibration = preferences.getBoolean(kVibrationKey, vDefaults.vibration),
 			coordinates = preferences.getBoolean(kCoordinatesKey, vDefaults.coordinates),
 			boardTheme = runCatching { BoardTheme.valueOf(preferences.getString(kBoardKey, null) ?: "") }.getOrDefault(vDefaults.boardTheme),
+			pieceStyle = runCatching { PieceStyle.valueOf(preferences.getString(kPiecesKey, null) ?: "") }.getOrDefault(vDefaults.pieceStyle),
 			confirmMoves = preferences.getBoolean(kConfirmKey, vDefaults.confirmMoves),
 			difficulty = runCatching { PuzzleDifficulty.valueOf(preferences.getString(kDifficultyKey, null) ?: "") }.getOrDefault(vDefaults.difficulty),
 			autoNext = preferences.getBoolean(kAutoNextKey, vDefaults.autoNext),
@@ -128,6 +133,9 @@ class SettingsStore(context: Context) {
 
 		/** Clé du thème d'échiquier. */
 		private const val kBoardKey = "board"
+
+		/** Clé du style des pièces. */
+		private const val kPiecesKey = "pieces"
 
 		/** Clé de la confirmation des coups. */
 		private const val kConfirmKey = "confirmMoves"
