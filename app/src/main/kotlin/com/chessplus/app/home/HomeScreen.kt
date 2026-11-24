@@ -226,13 +226,16 @@ fun HomeContent(
 					Overline(SimpleDateFormat(kDatePattern, Locale.FRANCE).format(Date(inNow)))
 					PageTitle(stringResource(R.string.app_name))
 				}
-				val vStreakDescription = stringResource(R.string.home_streak_description, inState.dayStreak)
-				Chip(
-					stringResource(R.string.home_streak_chip, inState.dayStreak),
-					Modifier.semantics { contentDescription = vStreakDescription },
-					inIcon = R.drawable.ic_ln_flame,
-					inIconTint = vColors.streak,
-				)
+				// Série de jours : rien à afficher tant qu'elle est à zéro.
+				if (inState.dayStreak > 0) {
+					val vStreakDescription = stringResource(R.string.home_streak_description, inState.dayStreak)
+					Chip(
+						stringResource(R.string.home_streak_chip, inState.dayStreak),
+						Modifier.semantics { contentDescription = vStreakDescription },
+						inIcon = R.drawable.ic_ln_flame,
+						inIconTint = vColors.streak,
+					)
+				}
 			}
 			DailyCard(inState.daily, inOnDaily)
 			Column(verticalArrangement = Arrangement.spacedBy(vSpacing.space2)) {

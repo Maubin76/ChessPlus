@@ -56,6 +56,12 @@ private val kHomeState = HomeUiState(
 @Composable
 fun RealHomeShot() = ChessPlusTheme { HomeContent(kHomeState, kNow, {}, {}, {}, {}, {}) }
 
+/** Accueil d'un nouveau joueur : pas de série, donc pas de flamme. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHomeNoStreakShot() = ChessPlusTheme { HomeContent(kHomeState.copy(dayStreak = 0, survivalBest = null, rushBest = null), kNow, {}, {}, {}, {}, {}) }
+
 /** Accueil avec une police agrandie de 30 % (réglage d'accessibilité du téléphone). */
 @PreviewTest
 @Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f, uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
