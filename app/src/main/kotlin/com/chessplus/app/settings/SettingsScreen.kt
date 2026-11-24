@@ -195,6 +195,12 @@ fun SettingsContent(
 								{ inOn -> inOnUpdate { it.copy(vibration = inOn) } },
 							)
 						},
+						{
+							ToggleRow(
+								stringResource(R.string.set_sounds), stringResource(R.string.set_sounds_detail), inSettings.sounds,
+								{ inOn -> inOnUpdate { it.copy(sounds = inOn) } },
+							)
+						},
 					),
 				)
 			}

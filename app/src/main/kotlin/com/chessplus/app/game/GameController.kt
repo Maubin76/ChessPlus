@@ -123,6 +123,9 @@ class GameController(
 	/** Dernier retour haptique. */
 	private var haptic: HapticEvent? = null
 
+	/** Dernier son demandé. */
+	private var sound: SoundEvent? = null
+
 	/** Coup de l'adversaire programmé, ou chargement en cours. */
 	private var pending: Job? = null
 
@@ -329,7 +332,9 @@ class GameController(
 			return
 		}
 		noteFailure(vSession)
+		val vRevealCapture = vSession.expectedMove()?.let { isCapture(vSession, it) } ?: false
 		val vMove = vSession.revealNextMove()
+		requestSound(if (vRevealCapture) SoundKind.Capture else SoundKind.Move)
 		showMove(inAnimate = true)
 		badge = null
 		selected = null
@@ -685,7 +690,9 @@ class GameController(
 				publish()
 				return@launch
 			}
+			val vOpponentCapture = isCapture(vSession, vSession.puzzle.moves[vSession.solutionPly])
 			vSession.playOpponentMove()
+			requestSound(if (vOpponentCapture) SoundKind.Capture else SoundKind.Move)
 			if (vSession.solutionPly == 1 && playerStartedAt == null && !resultRecorded) {
 				playerStartedAt = clock()
 			}
@@ -730,9 +737,11 @@ class GameController(
 	private fun submit(inMove: Move, inAnimate: Boolean) {
 		val vSession = session ?: return
 		selected = null
+		val vCapture = isCapture(vSession, inMove)
 		when (val vVerdict = vSession.submitMove(inMove)) {
 			MoveVerdict.Illegal -> publish()
 			MoveVerdict.Correct -> {
+				requestSound(if (vCapture) SoundKind.Capture else SoundKind.Move)
 				showMove(inAnimate)
 				badge = inMove.to to BadgeKind.Success
 				header = GameHeader.Correct(vSession.puzzle.opponentColor)
@@ -742,6 +751,7 @@ class GameController(
 				scheduleOpponent(opponentDelayMs)
 			}
 			is MoveVerdict.Solved -> {
+				requestSound(SoundKind.Success)
 				showMove(inAnimate)
 				badge = inMove.to to BadgeKind.Success
 				requestHaptic(vSession.result == PuzzleResult.Success || vVerdict.alternativeMate)
@@ -770,6 +780,7 @@ class GameController(
 		vShown.remove(inMove.from)?.let { inPiece -> vShown[inMove.to] = inMove.promotion?.let { Piece(inPiece.color, it) } ?: inPiece }
 		displayOverride = vShown
 		showMove(inAnimate)
+		requestSound(SoundKind.Error)
 		badge = inMove.to to BadgeKind.Error
 		header = GameHeader.Wrong
 		requestHaptic(false)
@@ -1015,6 +1026,24 @@ class GameController(
 	}
 
 	/**
+	 * Demande un son.
+	 */
+	private fun requestSound(inKind: SoundKind) {
+		sound = SoundEvent((sound?.id ?: 0) + 1, inKind)
+	}
+
+	/**
+	 * Indique si un coup prend une pièce (prise en passant comprise), avant qu'il soit joué.
+	 */
+	private fun isCapture(inSession: PuzzleSession, inMove: Move): Boolean {
+		if (inSession.board.pieceAt(inMove.to) != null) {
+			return true
+		}
+		val vPiece = inSession.board.pieceAt(inMove.from) ?: return false
+		return vPiece.type == PieceType.Pawn && inMove.from.file != inMove.to.file
+	}
+
+	/**
 	 * Demande un retour haptique.
 	 */
 	private fun requestHaptic(inSuccess: Boolean) {
@@ -1120,6 +1149,7 @@ class GameController(
 			promotion = promotion,
 			summary = vSummary,
 			haptic = haptic,
+			sound = sound,
 			challenge = run?.let { ChallengeUi(it.kind, it.score, it.lives, endsAt, challengeResult) },
 		)
 	}

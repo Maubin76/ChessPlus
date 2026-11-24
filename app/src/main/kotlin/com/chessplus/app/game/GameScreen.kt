@@ -116,10 +116,16 @@ private data class Feedback(val title: String?, val detail: String, val tone: To
  * Écran de jeu : échiquier bord à bord, retour immédiat sous les coups, actions à portée de pouce.
  */
 @Composable
-fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean, inCoordinates: Boolean, inOnBack: () -> Unit) {
+fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean, inCoordinates: Boolean, inOnBack: () -> Unit, inSounds: Boolean = false) {
 	val vState by inViewModel.state.collectAsStateWithLifecycle()
 	val vController = inViewModel.controller
 	val vHaptics = LocalHapticFeedback.current
+	val vSoundPlayer = rememberSoundPlayer()
+	LaunchedEffect(vState.sound?.id) {
+		if (inSounds) {
+			vState.sound?.let { vSoundPlayer.play(it.kind) }
+		}
+	}
 	LaunchedEffect(vState.haptic?.id) {
 		if (inVibration) {
 			vState.haptic?.let { vHaptics.performHapticFeedback(if (it.success) HapticFeedbackType.Confirm else HapticFeedbackType.Reject) }

@@ -184,6 +184,31 @@ enum class ExitStep {
 data class DailyUi(val day: String, val today: String, val solvedDays: Set<String>)
 
 /**
+ * Son de jeu.
+ */
+enum class SoundKind {
+	/** Pièce posée. */
+	Move,
+
+	/** Prise. */
+	Capture,
+
+	/** Mauvais coup. */
+	Error,
+
+	/** Puzzle réussi. */
+	Success,
+}
+
+/**
+ * Son ponctuel demandé à l'interface.
+ *
+ * @property id identifiant croissant, pour ne jouer chaque son qu'une fois.
+ * @property kind son à jouer.
+ */
+data class SoundEvent(val id: Int, val kind: SoundKind)
+
+/**
  * Retour haptique ponctuel demandé à l'interface.
  *
  * @property id identifiant croissant, pour ne déclencher chaque retour qu'une fois.
@@ -211,6 +236,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property promotion promotion en attente.
  * @property summary bilan de fin de problème, affiché sous l'échiquier.
  * @property haptic dernier retour haptique demandé.
+ * @property sound dernier son demandé.
  * @property challenge partie de défi en cours, ou null hors défi.
  * @property sideToMove camp du joueur, au trait.
  * @property puzzleId identifiant Lichess du puzzle, ou null.
@@ -252,6 +278,7 @@ data class GameUiState(
 	val promotion: PendingPromotion? = null,
 	val summary: GameSummary? = null,
 	val haptic: HapticEvent? = null,
+	val sound: SoundEvent? = null,
 	val challenge: ChallengeUi? = null,
 	val sideToMove: Color = Color.White,
 	val puzzleId: String? = null,

@@ -58,6 +58,7 @@ Création d'une clé : `keytool -genkeypair -v -keystore chessplus.jks -alias ch
 | Problèmes d'échecs (base générée, non versionnée) | Lichess | CC0 |
 | Pièces « cburnett », style Classique (`app/src/main/res/drawable/piece_w*.xml`, `piece_b*.xml`) | Colin M.L. Burnett, via lichess-org/lila | GPLv2+ / BSD |
 | Pièces des styles Géométrique (`piece_geo_*.xml`) et Lettres | création ChessPlus | — |
+| Sons (`app/src/main/res/raw/sound_*.wav`) | création ChessPlus (synthèse) | — |
 | Police Inter (`app/src/main/res/font/inter.ttf`) | The Inter Project Authors | SIL Open Font License 1.1 |
 | Police Space Grotesk (`app/src/main/res/font/space_grotesk.ttf`) | The Space Grotesk Project Authors | SIL Open Font License 1.1 |
 | Police JetBrains Mono (`app/src/main/res/font/jetbrains_mono.ttf`) | The JetBrains Mono Project Authors | SIL Open Font License 1.1 |

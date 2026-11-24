@@ -103,6 +103,12 @@ private fun fakeAttempts(): List<AttemptEntity> {
 	return vResult
 }
 
+/** Scores factices des parties de Survie, de la plus ancienne à la plus récente. */
+private val kSurvivalScores = listOf(12, 18, 9, 22, 25, 19, 31, 27, 35, 30, 41, 33)
+
+/** Scores factices des parties de Rush. */
+private val kRushScores = listOf(14, 17, 16, 21, 19, 24, 22, 28, 25)
+
 /** Calcul des captures, en UTC pour des images stables. */
 private val kCalculator = StatsCalculator(TimeZone.getTimeZone("UTC"))
 
@@ -114,7 +120,7 @@ private val kAttempts by lazy { fakeAttempts() }
 @DesignPreviews
 @Composable
 fun StatsTopShot() = ChessPlusTheme {
-	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41), kNow, {}, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41, survivalScores = kSurvivalScores, rushScores = kRushScores), kNow, {}, {}, {}, {})
 }
 
 /** Statistiques, écran entier (clair). */
@@ -122,7 +128,7 @@ fun StatsTopShot() = ChessPlusTheme {
 @Preview(name = "ClairLong", device = kTallDevice, showSystemUi = false, uiMode = Configuration.UI_MODE_NIGHT_NO or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 fun StatsFullLightShot() = ChessPlusTheme(inDarkTheme = false) {
-	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41), kNow, {}, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41, survivalScores = kSurvivalScores, rushScores = kRushScores), kNow, {}, {}, {}, {})
 }
 
 /** Statistiques, écran entier (sombre). */
@@ -130,7 +136,7 @@ fun StatsFullLightShot() = ChessPlusTheme(inDarkTheme = false) {
 @Preview(name = "SombreLong", device = kTallDevice, showSystemUi = false, uiMode = Configuration.UI_MODE_NIGHT_YES or Configuration.UI_MODE_TYPE_NORMAL)
 @Composable
 fun StatsFullDarkShot() = ChessPlusTheme(inDarkTheme = true) {
-	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41), kNow, {}, {}, {}, {})
+	StatsContent(StatsData(kCalculator.report(kAttempts, kNow), rushBest = 28, survivalBest = 41, survivalScores = kSurvivalScores, rushScores = kRushScores), kNow, {}, {}, {}, {})
 }
 
 /** Statistiques sans aucune tentative. */

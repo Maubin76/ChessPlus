@@ -62,4 +62,6 @@
 	<string name="set_reminder_time">Heure du rappel</string>
 	<string name="set_cancel">Annuler</string>
 	<string name="set_validate">Valider</string>
+	<string name="set_sounds">Sons</string>
+	<string name="set_sounds_detail">Coups, prises, erreurs et réussites</string>
 </resources>

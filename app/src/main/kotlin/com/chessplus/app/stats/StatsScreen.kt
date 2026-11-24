@@ -60,6 +60,7 @@ import com.chessplus.app.ui.components.Overline
 import com.chessplus.app.ui.components.PageTitle
 import com.chessplus.app.ui.components.PrimaryButton
 import com.chessplus.app.ui.components.Section
+import com.chessplus.app.ui.components.SurfaceCard
 import com.chessplus.app.ui.components.SegmentedControl
 import com.chessplus.app.ui.components.StatTiles
 import com.chessplus.app.ui.components.formatDelta
@@ -107,14 +108,28 @@ private val kComparedFamilies = setOf(ThemeFamily.Tactics, ThemeFamily.Mates, Th
 /** Durée d'un jour en millisecondes. */
 private const val kDayMs = 24L * 60 * 60 * 1000
 
+/** Nombre de parties de défi sur la courbe des scores. */
+private const val kChallengeRuns = 30
+
+/** Hauteur de la courbe des scores d'un défi. */
+private const val kChallengeChartHeight = 80
+
 /**
- * Données de l'écran : rapport calculé et records des défis.
+ * Données de l'écran : rapport calculé, records et scores des défis.
  *
  * @property report rapport des tentatives.
  * @property rushBest meilleur score en Rush, ou null.
  * @property survivalBest meilleur score en Survie, ou null.
+ * @property survivalScores scores des parties de Survie, de la plus ancienne à la plus récente.
+ * @property rushScores scores des parties de Rush, de la plus ancienne à la plus récente.
  */
-data class StatsData(val report: StatsReport, val rushBest: Int? = null, val survivalBest: Int? = null)
+data class StatsData(
+	val report: StatsReport,
+	val rushBest: Int? = null,
+	val survivalBest: Int? = null,
+	val survivalScores: List<Int> = emptyList(),
+	val rushScores: List<Int> = emptyList(),
+)
 
 /**
  * ViewModel des statistiques : recalcule le rapport à chaque nouvelle tentative et suit les records
@@ -132,8 +147,8 @@ class StatsViewModel(private val container: AppContainer) : ViewModel() {
 	/** Calcul des statistiques. */
 	private val calculator = StatsCalculator()
 
-	/** Records des défis, par clé de défi. */
-	private var bests: Map<String, Int> = emptyMap()
+	/** Scores des parties de défi, par clé de défi, dans l'ordre chronologique. */
+	private var scores: Map<String, List<Int>> = emptyMap()
 
 	/** Dernier rapport calculé. */
 	private var report: StatsReport? = null
@@ -142,8 +157,8 @@ class StatsViewModel(private val container: AppContainer) : ViewModel() {
 		viewModelScope.launch {
 			val vDao = container.ready().second.userDao()
 			launch {
-				vDao.observeChallengeBests().collect { inBests ->
-					bests = inBests.associate { it.kind to it.score }
+				vDao.observeChallengeRuns().collect { inRuns ->
+					scores = inRuns.groupBy({ it.kind }, { it.score })
 					publish()
 				}
 			}
@@ -159,7 +174,9 @@ class StatsViewModel(private val container: AppContainer) : ViewModel() {
 	 */
 	private fun publish() {
 		val vReport = report ?: return
-		mutableData.value = StatsData(vReport, bests[ChallengeKind.Rush.key], bests[ChallengeKind.Survival.key])
+		val vSurvival = scores[ChallengeKind.Survival.key].orEmpty()
+		val vRush = scores[ChallengeKind.Rush.key].orEmpty()
+		mutableData.value = StatsData(vReport, vRush.maxOrNull(), vSurvival.maxOrNull(), vSurvival, vRush)
 	}
 
 	companion object {
@@ -224,6 +241,7 @@ fun StatsContent(
 				TimeSection(vReport)
 				ErrorsSection(vReport)
 				RecordsSection(inData)
+				ChallengesSection(inData)
 				CoverageSection(vReport)
 			}
 			if (inData != null) {
@@ -550,6 +568,56 @@ private fun ErrorsSection(inReport: StatsReport) {
  */
 @Composable
 private fun RecordsSection(inData: StatsData) {
+	RecordsContent(inData)
+}
+
+/**
+ * Évolution des scores de Survie et de Rush : une courbe par défi sur les dernières parties, avec
+ * le record et le nombre de parties.
+ */
+@Composable
+private fun ChallengesSection(inData: StatsData) {
+	if (inData.survivalScores.isEmpty() && inData.rushScores.isEmpty()) {
+		return
+	}
+	Section(stringResource(R.string.stats_challenges)) {
+		ChallengeCurve(stringResource(R.string.stats_challenge_survival), inData.survivalScores)
+		ChallengeCurve(stringResource(R.string.stats_challenge_rush), inData.rushScores)
+	}
+}
+
+/**
+ * Courbe des scores d'un défi : titre, record et nombre de parties, puis la courbe des
+ * [kChallengeRuns] dernières parties (ou une invitation à jouer s'il y en a moins de deux).
+ */
+@Composable
+private fun ChallengeCurve(inTitle: String, inScores: List<Int>) {
+	val vColors = ChessPlusTheme.colors
+	SurfaceCard {
+		Row(verticalAlignment = Alignment.Bottom) {
+			Text(inTitle, style = ChessPlusTheme.typography.headingSmall, color = vColors.ink, modifier = Modifier.weight(1f))
+			if (inScores.isNotEmpty()) {
+				Text(
+					stringResource(R.string.stats_challenge_detail, inScores.max(), pluralStringResource(R.plurals.stats_challenge_runs, inScores.size, inScores.size)),
+					style = ChessPlusTheme.typography.movesSmall,
+					color = vColors.inkMuted,
+				)
+			}
+		}
+		Spacer(Modifier.height(ChessPlusTheme.spacing.space2))
+		if (inScores.size < 2) {
+			Text(stringResource(R.string.stats_challenge_empty), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+		} else {
+			LineChart(inScores.takeLast(kChallengeRuns).map { it.toFloat() }, Modifier.fillMaxWidth().height(kChallengeChartHeight.dp), 0f..(inScores.max().toFloat() * 1.1f).coerceAtLeast(1f))
+		}
+	}
+}
+
+/**
+ * Contenu de la section des records.
+ */
+@Composable
+private fun RecordsContent(inData: StatsData) {
 	val vReport = inData.report
 	Section(stringResource(R.string.stats_records)) {
 		StatTiles(

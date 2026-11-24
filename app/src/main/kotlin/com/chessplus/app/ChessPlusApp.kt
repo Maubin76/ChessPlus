@@ -154,6 +154,7 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 							}
 						),
 						inVibration = vSettings.vibration,
+						inSounds = vSettings.sounds,
 						inCoordinates = vSettings.coordinates,
 						inOnBack = vBack,
 					)

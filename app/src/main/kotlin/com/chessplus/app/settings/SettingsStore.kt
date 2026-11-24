@@ -38,6 +38,7 @@ enum class PuzzleDifficulty(val offset: Int) {
  *
  * @property themeMode apparence : système, clair ou sombre.
  * @property vibration courte vibration à chaque coup.
+ * @property sounds sons des coups, des erreurs et des réussites.
  * @property coordinates coordonnées dans les cases.
  * @property boardTheme couleurs de l'échiquier.
  * @property pieceStyle style des pièces.
@@ -51,6 +52,7 @@ enum class PuzzleDifficulty(val offset: Int) {
 data class Settings(
 	val themeMode: ThemeMode = ThemeMode.System,
 	val vibration: Boolean = true,
+	val sounds: Boolean = true,
 	val coordinates: Boolean = true,
 	val boardTheme: BoardTheme = BoardTheme.Sage,
 	val pieceStyle: PieceStyle = PieceStyle.Classic,
@@ -85,6 +87,7 @@ class SettingsStore(context: Context) {
 		preferences.edit()
 			.putString(kThemeKey, vNew.themeMode.name)
 			.putBoolean(kVibrationKey, vNew.vibration)
+			.putBoolean(kSoundsKey, vNew.sounds)
 			.putBoolean(kCoordinatesKey, vNew.coordinates)
 			.putString(kBoardKey, vNew.boardTheme.name)
 			.putString(kPiecesKey, vNew.pieceStyle.name)
@@ -106,6 +109,7 @@ class SettingsStore(context: Context) {
 		return Settings(
 			themeMode = runCatching { ThemeMode.valueOf(preferences.getString(kThemeKey, null) ?: "") }.getOrDefault(vDefaults.themeMode),
 			vibration = preferences.getBoolean(kVibrationKey, vDefaults.vibration),
+			sounds = preferences.getBoolean(kSoundsKey, vDefaults.sounds),
 			coordinates = preferences.getBoolean(kCoordinatesKey, vDefaults.coordinates),
 			boardTheme = runCatching { BoardTheme.valueOf(preferences.getString(kBoardKey, null) ?: "") }.getOrDefault(vDefaults.boardTheme),
 			pieceStyle = runCatching { PieceStyle.valueOf(preferences.getString(kPiecesKey, null) ?: "") }.getOrDefault(vDefaults.pieceStyle),
@@ -127,6 +131,9 @@ class SettingsStore(context: Context) {
 
 		/** Clé de la vibration. */
 		private const val kVibrationKey = "vibration"
+
+		/** Clé des sons (nouvelle clé : l'ancien réglage « Bientôt disponible » est ignoré). */
+		private const val kSoundsKey = "gameSounds"
 
 		/** Clé des coordonnées. */
 		private const val kCoordinatesKey = "coordinates"

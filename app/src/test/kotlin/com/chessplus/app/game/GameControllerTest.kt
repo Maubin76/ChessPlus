@@ -340,6 +340,31 @@ class GameControllerTest {
 		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
 	}
 
+	/** Vérifie les sons demandés : coup de l'adversaire, bon coup, erreur, prise, réussite. */
+	@Test
+	fun sounds() = runBlocking<Unit> {
+		val vController = controller(FakePuzzles(listOf(kMateIn2)))
+		vController.start()
+		vController.awaitIdle()
+		assertEquals(SoundKind.Move, vController.state.value.sound?.kind, "coup de l'adversaire")
+		vController.tapMove("f7", "f6")
+		assertEquals(SoundKind.Error, vController.state.value.sound?.kind)
+		vController.tapMove("a2", "e6")
+		assertEquals(SoundKind.Move, vController.state.value.sound?.kind, "réponse de l'adversaire après le bon coup")
+		val vBefore = vController.state.value.sound!!.id
+		vController.tapMove("f7", "f8")
+		assertEquals(SoundKind.Success, vController.state.value.sound?.kind)
+		assertTrue(vController.state.value.sound!!.id > vBefore)
+		val vTake = Puzzle("take", "4k3/8/8/3p4/4P3/8/8/4K3 b - - 0 1", Move.listFromUci("e8e7 e4d5 e7d6 e1e2"), 900, ThemeSet.kEmpty)
+		val vCapture = controller(FakePuzzles(listOf(vTake)))
+		vCapture.start()
+		vCapture.awaitIdle()
+		vCapture.onSquareTap(sq("e4"))
+		vCapture.onSquareTap(sq("d5"))
+		assertEquals(SoundKind.Capture, vCapture.state.value.sound?.kind, "exd5 prend un pion")
+		vCapture.awaitIdle()
+	}
+
 	/** Vérifie la revue de la solution : indisponible pendant le puzzle, puis coup par coup une fois terminé. */
 	@Test
 	fun solutionReview() = runBlocking<Unit> {

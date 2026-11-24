@@ -199,4 +199,10 @@ interface UserDao {
 	 */
 	@Query("SELECT COUNT(*) FROM review_item WHERE dueAt <= :inNow")
 	suspend fun countDueReviews(inNow: Long): Int
+
+	/**
+	 * Observe toutes les parties de défi, de la plus ancienne à la plus récente (évolution des scores).
+	 */
+	@Query("SELECT * FROM challenge_run ORDER BY playedAt, id")
+	fun observeChallengeRuns(): Flow<List<ChallengeRunEntity>>
 }

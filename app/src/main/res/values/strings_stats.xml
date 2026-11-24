@@ -114,4 +114,14 @@
 	<string name="theme_stats_replay">Rejouer le puzzle</string>
 
 	<!-- Accueil -->
+	<!-- Évolution des défis -->
+	<string name="stats_challenges">Défis</string>
+	<string name="stats_challenge_survival">Survie</string>
+	<string name="stats_challenge_rush">Rush</string>
+	<string name="stats_challenge_detail">record %1$d · %2$s</string>
+	<plurals name="stats_challenge_runs">
+		<item quantity="one">%d partie</item>
+		<item quantity="other">%d parties</item>
+	</plurals>
+	<string name="stats_challenge_empty">Joue au moins deux parties pour voir l’évolution.</string>
 </resources>
