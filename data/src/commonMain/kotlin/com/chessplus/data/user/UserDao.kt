@@ -2,6 +2,7 @@ package com.chessplus.data.user
 
 import androidx.room.Dao
 import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
@@ -130,4 +131,34 @@ interface UserDao {
 	 */
 	@Query("SELECT kind, MAX(score) AS score FROM challenge_run GROUP BY kind")
 	fun observeChallengeBests(): Flow<List<ChallengeBest>>
+
+	/**
+	 * Retourne le puzzle du jour attribué à une date, ou null s'il n'a pas encore été tiré.
+	 */
+	@Query("SELECT * FROM daily_puzzle WHERE day = :inDay")
+	suspend fun getDailyPuzzle(inDay: String): DailyPuzzleEntity?
+
+	/**
+	 * Enregistre le puzzle du jour d'une date (sans remplacer un tirage existant).
+	 */
+	@Insert(onConflict = OnConflictStrategy.IGNORE)
+	suspend fun insertDailyPuzzle(inDaily: DailyPuzzleEntity)
+
+	/**
+	 * Retourne les puzzles déjà attribués à une date, pour ne pas les tirer deux fois.
+	 */
+	@Query("SELECT puzzleId FROM daily_puzzle")
+	suspend fun getDailyPuzzleIds(): List<String>
+
+	/**
+	 * Retourne les jours dont le puzzle du jour a été réussi au moins une fois.
+	 */
+	@Query("SELECT d.day FROM daily_puzzle d INNER JOIN puzzle_state s ON s.puzzleId = d.puzzleId WHERE s.solved = 1")
+	suspend fun getSolvedDailyDays(): List<String>
+
+	/**
+	 * Observe les jours dont le puzzle du jour a été réussi au moins une fois.
+	 */
+	@Query("SELECT d.day FROM daily_puzzle d INNER JOIN puzzle_state s ON s.puzzleId = d.puzzleId WHERE s.solved = 1")
+	fun observeSolvedDailyDays(): Flow<List<String>>
 }

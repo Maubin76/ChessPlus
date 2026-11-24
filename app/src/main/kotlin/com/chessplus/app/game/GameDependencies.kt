@@ -55,6 +55,29 @@ interface GamePreferences {
 }
 
 /**
+ * Puzzles du jour : un puzzle attribué à chaque date, et les jours déjà résolus.
+ */
+interface DailyStore {
+	/**
+	 * Retourne le puzzle du jour [inDay] (« yyyyMMdd »), tiré et conservé à la première demande.
+	 */
+	suspend fun puzzleFor(inDay: String): Puzzle?
+
+	/**
+	 * Retourne les jours dont le puzzle a été réussi au moins une fois.
+	 */
+	suspend fun solvedDays(): Set<String>
+
+	companion object {
+		/** Aucun puzzle du jour (tests des autres modes). */
+		val kNone = object : DailyStore {
+			override suspend fun puzzleFor(inDay: String): Puzzle? = null
+			override suspend fun solvedDays(): Set<String> = emptySet()
+		}
+	}
+}
+
+/**
  * Enregistrement des parties de défi.
  */
 interface ChallengeStore {

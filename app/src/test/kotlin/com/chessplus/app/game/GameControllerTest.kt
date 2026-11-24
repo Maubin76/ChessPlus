@@ -152,11 +152,24 @@ class GameControllerTest {
 		inChallenges: ChallengeStore = FakeChallenges(),
 		inRushDurationMs: Long = ChallengeRun.kRushDurationMs,
 		inPreferences: GamePreferences = GamePreferences.kDefault,
+		inDaily: DailyStore = DailyStore.kNone,
 	) = GameController(
-		this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, inChallenges, clock = { 42L }, preferences = inPreferences,
+		this, inMode, defaultChessRules(), inPuzzles, inProgress, inSessions, inChallenges, clock = { 42L }, preferences = inPreferences, daily = inDaily,
 		opponentDelayMs = 0, startDelayMs = 0, wrongMoveDelayMs = 0, challengeNextDelayMs = 0, solutionDelayMs = 0, rushDurationMs = inRushDurationMs,
 		autoNextDelayMs = 0,
 	)
+
+	/**
+	 * Puzzles du jour en mémoire : un puzzle par jour ; un jour est résolu si son puzzle a été réussi.
+	 */
+	private class FakeDaily(val byDay: Map<String, Puzzle>, val progress: FakeProgress) : DailyStore {
+		/** Puzzle du jour. */
+		override suspend fun puzzleFor(inDay: String): Puzzle? = byDay[inDay]
+
+		/** Jours dont le puzzle a été réussi. */
+		override suspend fun solvedDays(): Set<String> =
+			byDay.filter { (_, vPuzzle) -> progress.records.any { it.first == vPuzzle.id && it.second == PuzzleResult.Success } }.keys
+	}
 
 	/**
 	 * Réglages de jeu modifiables pour les tests.
@@ -382,6 +395,38 @@ class GameControllerTest {
 		assertEquals(2, vPuzzles.ratings.size)
 		assertEquals(1700.0, vPuzzles.ratings[0], "classement 1 500 + 200 (plus dur)")
 		assertTrue(vPuzzles.ratings[1] > 1700.0, "le classement a monté après la réussite")
+	}
+
+	/** Vérifie le puzzle du jour : pas d'enchaînement, calendrier à jour, choix d'un autre jour, Arcade intacte. */
+	@Test
+	fun dailyPuzzle() = runBlocking<Unit> {
+		val vProgress = FakeProgress()
+		val vSessions = FakeSessions()
+		val vDaily = FakeDaily(mapOf("20261124" to kMateIn2, "20261120" to kShort), vProgress)
+		val vController = controller(
+			FakePuzzles(listOf(kMateIn2, kShort)), vProgress, vSessions, GameMode.Daily("20261124", "00sHx"),
+			inPreferences = FakePreferences(autoNext = true), inDaily = vDaily,
+		)
+		vController.start()
+		vController.awaitIdle()
+		assertEquals("20261124", vController.state.value.daily?.day)
+		assertTrue(vController.state.value.daily?.solvedDays.orEmpty().isEmpty())
+		assertFalse(vController.state.value.skipEnabled)
+		vController.tapMove("a2", "e6")
+		vController.tapMove("f7", "f8")
+		vController.awaitIdle()
+		assertIs<GameHeader.Finished>(vController.state.value.header, "pas d'enchaînement automatique")
+		assertEquals("00sHx", vController.state.value.puzzleId)
+		assertEquals(setOf("20261124"), vController.state.value.daily?.solvedDays)
+		vController.onNext()
+		vController.onSkip()
+		vController.awaitIdle()
+		assertEquals("00sHx", vController.state.value.puzzleId, "ni Suivant ni Passer pour le puzzle du jour")
+		vController.onDailyDay("20261120")
+		vController.awaitIdle()
+		assertEquals("00sO1", vController.state.value.puzzleId)
+		assertEquals("20261120", vController.state.value.daily?.day)
+		assertNull(vSessions.saved, "le puzzle en cours de l'Arcade n'est pas touché")
 	}
 
 	/** Vérifie la Survie : difficulté croissante, une vie par erreur, fin à zéro vie, rien dans la progression. */

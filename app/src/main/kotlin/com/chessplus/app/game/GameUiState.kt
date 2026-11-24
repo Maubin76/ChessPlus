@@ -140,6 +140,15 @@ data class NotationToken(val text: String, val kind: NotationKind)
 data class SessionTally(val solved: Int, val failed: Int, val ratingDelta: Int?)
 
 /**
+ * Puzzle du jour en cours et calendrier des jours résolus.
+ *
+ * @property day jour du puzzle affiché (« yyyyMMdd »).
+ * @property today aujourd'hui (« yyyyMMdd »).
+ * @property solvedDays jours dont le puzzle a été réussi.
+ */
+data class DailyUi(val day: String, val today: String, val solvedDays: Set<String>)
+
+/**
  * Retour haptique ponctuel demandé à l'interface.
  *
  * @property id identifiant croissant, pour ne déclencher chaque retour qu'une fois.
@@ -181,6 +190,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property solutionEnabled vrai si « Solution » est disponible.
  * @property skipEnabled vrai si « Passer » est disponible.
  * @property challengeBest record du défi, ou null.
+ * @property daily puzzle du jour et calendrier, ou null hors puzzle du jour.
  */
 data class GameUiState(
 	val header: GameHeader = GameHeader.Loading,
@@ -214,4 +224,5 @@ data class GameUiState(
 	val solutionEnabled: Boolean = false,
 	val skipEnabled: Boolean = false,
 	val challengeBest: Int? = null,
+	val daily: DailyUi? = null,
 )

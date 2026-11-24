@@ -115,6 +115,23 @@ fun RealGameSolvedShot() = Shot(
 	)
 )
 
+/** Puzzle du jour résolu : calendrier des jours résolus à la place de l'enchaînement. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameDailyShot() = Shot(
+	kMockupState.copy(
+		header = GameHeader.Finished(success = true, mate = false, hintsUsed = false),
+		selected = null,
+		targets = emptySet(),
+		interactive = false,
+		clockEnd = kClock,
+		summary = GameSummary(PuzzleResult.Success, 0, 0, 1630.0, 1642.0, true, 1580, ThemeSet.parse("fork middlegame short")),
+		daily = DailyUi("20261123", "20261123", setOf("20261102", "20261103", "20261105", "20261110", "20261111", "20261112", "20261117", "20261120", "20261123")),
+	),
+	"Puzzle du jour",
+)
+
 /** Réglage « Confirmer les coups » : coup en attente. */
 @PreviewTest
 @DesignPreviews

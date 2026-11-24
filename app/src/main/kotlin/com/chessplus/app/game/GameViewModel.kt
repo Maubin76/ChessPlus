@@ -24,6 +24,7 @@ class GameViewModel(inContainer: AppContainer, inMode: GameMode) : ViewModel() {
 		progress = inContainer.progressStore,
 		sessions = inContainer.sessionStore,
 		challenges = inContainer.challengeStore,
+		daily = inContainer.dailyStore,
 		preferences = object : GamePreferences {
 			override val confirmMoves: Boolean
 				get() = inContainer.settingsStore.settings.value.confirmMoves

@@ -3,6 +3,8 @@ package com.chessplus.app
 import android.content.Context
 import com.chessplus.app.game.ChallengeKind
 import com.chessplus.app.game.ChallengeStore
+import com.chessplus.app.game.DailyDays
+import com.chessplus.app.game.DailyStore
 import com.chessplus.app.game.GameMode
 import com.chessplus.app.game.ProgressStore
 import com.chessplus.app.game.PuzzleProvider
@@ -25,6 +27,7 @@ import com.chessplus.data.selection.PuzzleSelector
 import com.chessplus.data.selection.SelectionCriteria
 import com.chessplus.data.user.ActiveSessionEntity
 import com.chessplus.data.user.ChallengeRunEntity
+import com.chessplus.data.user.DailyPuzzleEntity
 import com.chessplus.data.user.PlayerEntity
 import com.chessplus.data.user.ProgressRepository
 import com.chessplus.data.user.UserDatabase
@@ -32,9 +35,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 import kotlin.math.roundToInt
 import kotlin.random.Random
 
@@ -110,20 +110,36 @@ class AppContainer(private val context: Context) {
 	}
 
 	/**
-	 * Retourne le puzzle du jour : tiré une fois par jour (graine = date), autour du classement du
-	 * joueur, puis mémorisé pour que le choix ne change pas dans la journée.
+	 * Retourne le puzzle du jour d'aujourd'hui.
 	 */
-	suspend fun dailyPuzzle(inNow: Long = System.currentTimeMillis()): Puzzle? {
-		val vDay = SimpleDateFormat(kDayPattern, Locale.FRANCE).format(Date(inNow))
-		val vPreferences = context.getSharedPreferences(kDailyFile, Context.MODE_PRIVATE)
-		val (vPuzzles, vUser) = ready()
-		if (vPreferences.getString(kDailyDayKey, null) == vDay) {
-			vPreferences.getString(kDailyIdKey, null)?.let { inId -> vPuzzles.puzzleDao().getById(inId)?.let { return it.toPuzzle() } }
+	suspend fun dailyPuzzle(inNow: Long = System.currentTimeMillis()): Puzzle? = dailyStore.puzzleFor(DailyDays.keyOf(inNow))
+
+	/** Puzzles du jour : un par date, tiré une fois (graine = date) autour du classement, puis conservé. */
+	val dailyStore: DailyStore = object : DailyStore {
+		/** Lit ou tire le puzzle du jour [inDay]. */
+		override suspend fun puzzleFor(inDay: String): Puzzle? {
+			val (vPuzzles, vUser) = ready()
+			val vDao = vUser.userDao()
+			vDao.getDailyPuzzle(inDay)?.let { inDaily -> vPuzzles.puzzleDao().getById(inDaily.puzzleId)?.let { return it.toPuzzle() } }
+			val vChosen = legacyDailyId(inDay)?.let { vPuzzles.puzzleDao().getById(it)?.toPuzzle() }
+				?: PuzzleSelector(vPuzzles.puzzleDao(), vDao, Random(inDay.toLong())).nextPuzzle(
+					ProgressRepository(vUser, ratingSystem).currentRating().rating, SelectionCriteria(), null, System.currentTimeMillis(), vDao.getDailyPuzzleIds().toSet(),
+				)
+				?: return null
+			vDao.insertDailyPuzzle(DailyPuzzleEntity(inDay, vChosen.id, System.currentTimeMillis()))
+			return vDao.getDailyPuzzle(inDay)?.let { vPuzzles.puzzleDao().getById(it.puzzleId)?.toPuzzle() } ?: vChosen
 		}
-		val vRating = ProgressRepository(vUser, ratingSystem).currentRating().rating
-		val vPuzzle = PuzzleSelector(vPuzzles.puzzleDao(), vUser.userDao(), Random(vDay.toLong())).nextPuzzle(vRating, SelectionCriteria(), null, inNow) ?: return null
-		vPreferences.edit().putString(kDailyDayKey, vDay).putString(kDailyIdKey, vPuzzle.id).apply()
-		return vPuzzle
+
+		/** Jours dont le puzzle a été réussi. */
+		override suspend fun solvedDays(): Set<String> = ready().second.userDao().getSolvedDailyDays().toSet()
+	}
+
+	/**
+	 * Retourne le puzzle du jour mémorisé par la version précédente (préférences) pour ce jour, ou null.
+	 */
+	private fun legacyDailyId(inDay: String): String? {
+		val vPreferences = context.getSharedPreferences(kDailyFile, Context.MODE_PRIVATE)
+		return vPreferences.getString(kDailyIdKey, null).takeIf { vPreferences.getString(kDailyDayKey, null) == inDay }
 	}
 
 	/**
@@ -221,7 +237,7 @@ class AppContainer(private val context: Context) {
 	}
 }
 
-/** Fichier des préférences du puzzle du jour. */
+/** Fichier des préférences du puzzle du jour (version précédente, lu pour ne pas changer le puzzle du jour en cours). */
 private const val kDailyFile = "daily"
 
 /** Clé du jour du puzzle mémorisé. */
@@ -229,9 +245,6 @@ private const val kDailyDayKey = "day"
 
 /** Clé de l'identifiant du puzzle mémorisé. */
 private const val kDailyIdKey = "id"
-
-/** Format du jour, aussi graine du tirage. */
-private const val kDayPattern = "yyyyMMdd"
 
 /**
  * État de la base de puzzles embarquée.

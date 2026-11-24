@@ -32,7 +32,7 @@ class NavigationTest {
 			Destination.Targeted,
 			Destination.Game(GameMode.Continuous),
 			Destination.Game(GameMode.Replay("00sHx")),
-			Destination.Game(GameMode.Daily("00sJ9")),
+			Destination.Game(GameMode.Daily("20261124", "00sJ9")),
 			Destination.Game(GameMode.Challenge(ChallengeKind.Survival)),
 			Destination.Game(GameMode.Challenge(ChallengeKind.Rush)),
 			Destination.Game(GameMode.Targeted(TrainingCriteria(ThemeSet.parse("fork zugzwang smotheredMate"), Difficulty.Range, 900..1300))),

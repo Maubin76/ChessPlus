@@ -41,6 +41,7 @@ import kotlin.math.roundToInt
  * @property sessions sauvegarde du problème en cours.
  * @property challenges enregistrement des parties de défi.
  * @property preferences réglages de jeu (confirmation, enchaînement, difficulté).
+ * @property daily puzzles du jour et jours résolus.
  * @property clock horloge (millisecondes).
  * @property opponentDelayMs pause avant la réponse de l'adversaire.
  * @property startDelayMs pause avant le premier coup de l'adversaire.
@@ -59,6 +60,7 @@ class GameController(
 	private val challenges: ChallengeStore,
 	private val clock: () -> Long,
 	private val preferences: GamePreferences = GamePreferences.kDefault,
+	private val daily: DailyStore = DailyStore.kNone,
 	private val opponentDelayMs: Long = kOpponentDelayMs,
 	private val startDelayMs: Long = kStartDelayMs,
 	private val wrongMoveDelayMs: Long = kWrongMoveDelayMs,
@@ -172,6 +174,15 @@ class GameController(
 	/** Fin du chronomètre du puzzle en cours (puzzle terminé), ou null. */
 	private var clockEnd: Long? = null
 
+	/** Jour du puzzle du jour affiché, ou null hors puzzle du jour. */
+	private var dailyDay: String? = (mode as? GameMode.Daily)?.day
+
+	/** Jours dont le puzzle du jour a été réussi. */
+	private var dailySolved: Set<String> = emptySet()
+
+	/** Vrai si le mode garde le puzzle en cours pour la reprise (Arcade seulement). */
+	private val keepsSession = mode == GameMode.Continuous
+
 	/**
 	 * Démarre l'écran : en entraînement continu, reprend le problème sauvegardé s'il existe ;
 	 * sinon (ou dans les autres modes) charge un nouveau problème.
@@ -184,6 +195,9 @@ class GameController(
 				challengeBest = challenges.best(challengeKind)
 				startRun(challengeKind)
 				return@launch
+			}
+			if (mode is GameMode.Daily) {
+				dailySolved = daily.solvedDays()
 			}
 			val vRestored = mode == GameMode.Continuous && restore()
 			if (!vRestored) {
@@ -328,6 +342,9 @@ class GameController(
 	 * Passer : puzzle suivant. Un puzzle non terminé compte comme raté ; en défi, comme une erreur.
 	 */
 	fun onSkip() {
+		if (mode is GameMode.Daily) {
+			return
+		}
 		val vSession = session
 		if (challengeKind != null) {
 			if (vSession != null && run?.end == null && isInteractive()) {
@@ -359,6 +376,28 @@ class GameController(
 				}
 			}
 			loadNext(vSession.puzzle.id)
+		}
+	}
+
+	/**
+	 * Puzzle du jour : charge le puzzle d'un autre jour choisi dans le calendrier.
+	 */
+	fun onDailyDay(inDay: String) {
+		if (mode !is GameMode.Daily || header == GameHeader.Loading) {
+			return
+		}
+		pending?.cancel()
+		busy = true
+		publish()
+		pending = scope.launch {
+			val vPuzzle = daily.puzzleFor(inDay)
+			if (vPuzzle == null) {
+				busy = false
+				publish()
+				return@launch
+			}
+			dailyDay = inDay
+			load(vPuzzle)
 		}
 	}
 
@@ -397,6 +436,8 @@ class GameController(
 		busy = false
 		displayOverride = null
 		vSession.restart()
+		clockStart = clock()
+		clockEnd = null
 		showMove(inAnimate = true)
 		selected = null
 		badge = null
@@ -412,7 +453,7 @@ class GameController(
 	 */
 	fun onNext() {
 		val vSession = session
-		if (challengeKind != null || vSession == null && header != GameHeader.NoPuzzle) {
+		if (challengeKind != null || mode is GameMode.Daily || vSession == null && header != GameHeader.NoPuzzle) {
 			return
 		}
 		if (vSession != null && vSession.status != PuzzleStatus.Solved) {
@@ -507,7 +548,9 @@ class GameController(
 	 * Charge le prochain problème du mode et programme le premier coup de l'adversaire.
 	 */
 	private suspend fun loadNext(inExcludeId: String?) {
-		sessions.clear()
+		if (keepsSession) {
+			sessions.clear()
+		}
 		val vOffset = if (mode == GameMode.Continuous || mode is GameMode.Daily) preferences.difficultyOffset else 0
 		val vPuzzle: Puzzle? = puzzles.next(rating + vOffset, inExcludeId, mode)
 		if (vPuzzle == null) {
@@ -524,7 +567,7 @@ class GameController(
 	 * Démarre un problème donné et programme le premier coup de l'adversaire.
 	 */
 	private suspend fun load(inPuzzle: Puzzle) {
-		if (challengeKind == null) {
+		if (keepsSession) {
 			sessions.clear()
 		}
 		val vPuzzle = inPuzzle
@@ -798,7 +841,7 @@ class GameController(
 		header = finishedHeader(vSession)
 		publish()
 		persist()
-		if (preferences.autoNext && vSession.result == PuzzleResult.Success) {
+		if (preferences.autoNext && vSession.result == PuzzleResult.Success && mode !is GameMode.Daily) {
 			pending = scope.launch {
 				delay(autoNextDelayMs)
 				onNext()
@@ -843,9 +886,14 @@ class GameController(
 					recorded = vRecorded
 					resultRecorded = true
 					countResult(vRecorded)
+					if (mode is GameMode.Daily) {
+						dailySolved = daily.solvedDays()
+					}
 					publish()
 				}
-				sessions.save(SavedSession(vSession.snapshot(), rated, resultRecorded, startedAt))
+				if (keepsSession) {
+					sessions.save(SavedSession(vSession.snapshot(), rated, resultRecorded, startedAt))
+				}
 			}
 		}
 		synchronized(persistJobs) {
@@ -943,8 +991,9 @@ class GameController(
 			tally = run?.let { SessionTally(it.score, it.misses, null) } ?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt()),
 			pendingConfirm = pendingMove != null,
 			solutionEnabled = isInteractive() && challengeKind == null,
-			skipEnabled = (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,
+			skipEnabled = mode !is GameMode.Daily && (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,
 			challengeBest = challengeBest,
+			daily = dailyDay?.let { DailyUi(it, DailyDays.keyOf(clock()), dailySolved) },
 			lastMove = vSession?.lastMove,
 			moveId = moveId,
 			animateMove = animate,

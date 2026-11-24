@@ -4,6 +4,7 @@ import androidx.sqlite.driver.bundled.BundledSQLiteDriver
 import androidx.sqlite.execSQL
 import com.chessplus.core.puzzle.PuzzleResult
 import com.chessplus.data.user.ChallengeRunEntity
+import com.chessplus.data.user.DailyPuzzleEntity
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import java.io.File
@@ -49,6 +50,7 @@ class UserMigrationTest {
 				"INSERT INTO attempt (puzzleId, playedAt, result, rated, puzzleRating, themesLow, themesHigh, mistakeCount, revealedCount, playerRatingBefore, playerRatingAfter) " +
 					"VALUES ('00sHx', 1000, 'Success', 1, 1760, 0, 0, 0, 0, 1500.0, 1512.0)"
 			)
+			vConnection.execSQL("INSERT INTO puzzle_state (puzzleId, solved, attemptCount, failureCount, lastResult, lastPlayedAt) VALUES ('00sHx', 1, 1, 0, 'Success', 1000)")
 			vConnection.execSQL("PRAGMA user_version = 1")
 			vConnection.close()
 
@@ -64,6 +66,10 @@ class UserMigrationTest {
 				vDatabase.userDao().insertChallengeRun(ChallengeRunEntity(kind = "rush", playedAt = 2000, score = 12, bestPuzzleRating = 1650, durationMs = 300_000))
 				assertEquals(12, vDatabase.userDao().getBestChallengeScore("rush"))
 				assertNull(vDatabase.userDao().getBestChallengeScore("survival"))
+				vDatabase.userDao().insertDailyPuzzle(DailyPuzzleEntity("20261123", "00sHx", 3000))
+				assertEquals(listOf("20261123"), vDatabase.userDao().getSolvedDailyDays(), "00sHx est réussi dans la base migrée")
+				vDatabase.userDao().insertDailyPuzzle(DailyPuzzleEntity("20261123", "autre", 4000))
+				assertEquals("00sHx", vDatabase.userDao().getDailyPuzzle("20261123")?.puzzleId, "un tirage existant n'est pas remplacé")
 			} finally {
 				vDatabase.close()
 			}

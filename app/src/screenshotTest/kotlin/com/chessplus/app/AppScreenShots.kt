@@ -44,7 +44,7 @@ private fun piecesOf(inFen: String) = defaultChessRules().positionFromFen(inFen)
 private val kHomeState = HomeUiState(
 	rating = 1642,
 	dayStreak = 9,
-	daily = DailyInfo("4821", piecesOf("6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1"), Color.White, 1210, Theme.MateIn1),
+	daily = DailyInfo("20261123", "4821", piecesOf("6k1/5ppp/8/8/8/8/5PPP/3R2K1 w - - 0 1"), Color.White, 1210, Theme.MateIn1),
 	survivalBest = 41,
 	rushBest = 28,
 	offlineCount = 12_400,
@@ -55,6 +55,12 @@ private val kHomeState = HomeUiState(
 @DesignPreviews
 @Composable
 fun RealHomeShot() = ChessPlusTheme { HomeContent(kHomeState, kNow, {}, {}, {}, {}, {}) }
+
+/** Accueil : puzzle du jour déjà résolu, à rejouer. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealHomeDailySolvedShot() = ChessPlusTheme { HomeContent(kHomeState.copy(solvedDays = setOf("20261123")), kNow, {}, {}, {}, {}, {}) }
 
 /** Accueil d'un nouveau joueur : pas de série, donc pas de flamme. */
 @PreviewTest

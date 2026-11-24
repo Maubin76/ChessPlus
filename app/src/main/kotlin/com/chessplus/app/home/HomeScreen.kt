@@ -42,6 +42,7 @@ import androidx.lifecycle.viewmodel.viewModelFactory
 import com.chessplus.app.AppContainer
 import com.chessplus.app.R
 import com.chessplus.app.game.ChallengeKind
+import com.chessplus.app.game.DailyDays
 import com.chessplus.app.stats.StatsCalculator
 import com.chessplus.app.ui.components.Chip
 import com.chessplus.app.ui.components.FloatingNavBar
@@ -52,6 +53,7 @@ import com.chessplus.app.ui.components.NavTab
 import com.chessplus.app.ui.components.Overline
 import com.chessplus.app.ui.components.PageTitle
 import com.chessplus.app.ui.components.PrimaryButton
+import com.chessplus.app.ui.components.SecondaryButton
 import com.chessplus.app.ui.components.SurfaceCard
 import com.chessplus.app.ui.components.formatRating
 import com.chessplus.app.ui.components.kIconSize
@@ -90,13 +92,14 @@ private const val kDatePattern = "EEEE d MMMM"
 /**
  * Puzzle du jour affiché sur l'accueil.
  *
+ * @property day jour du puzzle (« yyyyMMdd »).
  * @property puzzleId identifiant Lichess.
  * @property pieces position à résoudre (après le premier coup de l'adversaire).
  * @property side camp du joueur, au trait.
  * @property rating classement du puzzle.
  * @property theme thème principal, ou null.
  */
-data class DailyInfo(val puzzleId: String, val pieces: Map<Square, Piece>, val side: Color, val rating: Int, val theme: Theme?)
+data class DailyInfo(val day: String, val puzzleId: String, val pieces: Map<Square, Piece>, val side: Color, val rating: Int, val theme: Theme?)
 
 /**
  * État de l'accueil.
@@ -107,6 +110,7 @@ data class DailyInfo(val puzzleId: String, val pieces: Map<Square, Piece>, val s
  * @property survivalBest record en Survie, ou null.
  * @property rushBest record en Rush, ou null.
  * @property offlineCount nombre de puzzles de la base hors ligne, ou null pendant le chargement.
+ * @property solvedDays jours dont le puzzle du jour a été réussi.
  */
 data class HomeUiState(
 	val rating: Int = 0,
@@ -115,7 +119,12 @@ data class HomeUiState(
 	val survivalBest: Int? = null,
 	val rushBest: Int? = null,
 	val offlineCount: Int? = null,
-)
+	val solvedDays: Set<String> = emptySet(),
+) {
+	/** Vrai si le puzzle du jour affiché a déjà été réussi. */
+	val dailySolved: Boolean
+		get() = daily?.day?.let { it in solvedDays } ?: false
+}
 
 /**
  * ViewModel de l'accueil : classement, série, puzzle du jour, records, base hors ligne.
@@ -151,6 +160,9 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 				}
 			}
 			launch {
+				vDao.observeSolvedDailyDays().collect { inDays -> mutableState.update { it.copy(solvedDays = inDays.toSet()) } }
+			}
+			launch {
 				val vCount = container.offlineBaseInfo().puzzleCount
 				mutableState.update { it.copy(offlineCount = vCount) }
 			}
@@ -162,10 +174,12 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 	 */
 	fun refresh() {
 		viewModelScope.launch {
-			val vPuzzle = container.dailyPuzzle() ?: return@launch
+			val vDay = DailyDays.keyOf(System.currentTimeMillis())
+			val vPuzzle = container.dailyStore.puzzleFor(vDay) ?: return@launch
 			val vPosition = container.rules.positionFromFen(vPuzzle.fen)
 			vPuzzle.moves.firstOrNull()?.let { vPosition.play(it) }
 			val vDaily = DailyInfo(
+				day = vDay,
 				puzzleId = vPuzzle.id,
 				pieces = Square.kAll.mapNotNull { vSquare -> vPosition.pieceAt(vSquare)?.let { vSquare to it } }.toMap(),
 				side = vPuzzle.playerColor,
@@ -190,7 +204,7 @@ class HomeViewModel(private val container: AppContainer) : ViewModel() {
 @Composable
 fun HomeScreen(
 	inViewModel: HomeViewModel,
-	inOnDaily: (String) -> Unit,
+	inOnDaily: (DailyInfo) -> Unit,
 	inOnArcade: () -> Unit,
 	inOnTraining: () -> Unit,
 	inOnChallenge: (ChallengeKind) -> Unit,
@@ -208,7 +222,7 @@ fun HomeScreen(
 fun HomeContent(
 	inState: HomeUiState,
 	inNow: Long,
-	inOnDaily: (String) -> Unit,
+	inOnDaily: (DailyInfo) -> Unit,
 	inOnArcade: () -> Unit,
 	inOnTraining: () -> Unit,
 	inOnChallenge: (ChallengeKind) -> Unit,
@@ -237,7 +251,7 @@ fun HomeContent(
 					)
 				}
 			}
-			DailyCard(inState.daily, inOnDaily)
+			DailyCard(inState.daily, inState.dailySolved, inOnDaily)
 			Column(verticalArrangement = Arrangement.spacedBy(vSpacing.space2)) {
 				Overline(stringResource(R.string.home_modes))
 				ListGroup(
@@ -263,10 +277,11 @@ fun HomeContent(
 
 /**
  * Carte du puzzle du jour : vignette sans coordonnées, thème, camp au trait et classement, bouton
- * principal « Résoudre » (seul bouton `accent` de l'écran).
+ * principal « Résoudre » (seul bouton `accent` de l'écran). Une fois réussi, la carte le signale et
+ * propose « Rejouer » en bouton secondaire.
  */
 @Composable
-private fun DailyCard(inDaily: DailyInfo?, inOnDaily: (String) -> Unit) {
+private fun DailyCard(inDaily: DailyInfo?, inSolved: Boolean, inOnDaily: (DailyInfo) -> Unit) {
 	val vColors = ChessPlusTheme.colors
 	SurfaceCard {
 		Row(Modifier.height(kDailyBoardSize.dp), horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space4)) {
@@ -274,7 +289,15 @@ private fun DailyCard(inDaily: DailyInfo?, inOnDaily: (String) -> Unit) {
 				inDaily?.let { MiniBoard(it.pieces, it.side, Modifier.fillMaxSize()) }
 			}
 			Column(Modifier.weight(1f)) {
-				Overline(stringResource(R.string.home_daily))
+				Row(verticalAlignment = Alignment.CenterVertically) {
+					Overline(stringResource(R.string.home_daily), Modifier.weight(1f, fill = false))
+					if (inSolved) {
+						Spacer(Modifier.width(ChessPlusTheme.spacing.space2))
+						Icon(painterResource(R.drawable.ic_ln_check), contentDescription = null, tint = vColors.success, modifier = Modifier.size(16.dp))
+						Spacer(Modifier.width(2.dp))
+						Text(stringResource(R.string.home_daily_solved), style = ChessPlusTheme.typography.tag, color = vColors.success, maxLines = 1)
+					}
+				}
 				Spacer(Modifier.height(2.dp))
 				Text(
 					inDaily?.theme?.let { stringResource(themeLabel(it)) } ?: stringResource(R.string.home_daily_default),
@@ -296,13 +319,17 @@ private fun DailyCard(inDaily: DailyInfo?, inOnDaily: (String) -> Unit) {
 					)
 				}
 				Spacer(Modifier.weight(1f))
-				PrimaryButton(
-					stringResource(R.string.home_daily_solve),
-					{ inDaily?.let { inOnDaily(it.puzzleId) } },
-					Modifier.fillMaxWidth(),
-					inEnabled = inDaily != null,
-					inHeight = 36.dp,
-				)
+				if (inSolved && inDaily != null) {
+					SecondaryButton(stringResource(R.string.home_daily_replay), { inOnDaily(inDaily) }, Modifier.fillMaxWidth(), inIcon = R.drawable.ic_ln_replay, inHeight = 36.dp)
+				} else {
+					PrimaryButton(
+						stringResource(R.string.home_daily_solve),
+						{ inDaily?.let { inOnDaily(it) } },
+						Modifier.fillMaxWidth(),
+						inEnabled = inDaily != null,
+						inHeight = 36.dp,
+					)
+				}
 			}
 		}
 	}

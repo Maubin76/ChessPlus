@@ -24,6 +24,8 @@
 	<string name="home_daily">Puzzle du jour</string>
 	<string name="home_daily_default">Puzzle</string>
 	<string name="home_daily_solve">Résoudre</string>
+	<string name="home_daily_solved">Résolu</string>
+	<string name="home_daily_replay">Rejouer</string>
 	<string name="home_daily_side_white">Trait aux blancs</string>
 	<string name="home_daily_side_black">Trait aux noirs</string>
 	<string name="home_modes">Modes de jeu</string>
@@ -44,6 +46,16 @@
 	<string name="game_title_targeted">Entraînement</string>
 	<string name="game_title_replay">Rejouer</string>
 	<string name="game_title_daily">Puzzle du jour</string>
+	<string name="game_title_daily_past">Puzzle du %1$s</string>
+
+	<!-- Calendrier des puzzles du jour -->
+	<string name="daily_calendar">Puzzles du jour</string>
+	<string name="daily_calendar_hint">Touche un jour pour résoudre son puzzle.</string>
+	<string name="daily_weekdays">L M M J V S D</string>
+	<string name="daily_previous_month">Mois précédent</string>
+	<string name="daily_next_month">Mois suivant</string>
+	<string name="daily_day_solved">%1$s, résolu</string>
+	<string name="daily_day_today">%1$s, aujourd’hui</string>
 	<string name="game_title_survival">Survie</string>
 	<string name="game_title_rush">Rush</string>
 

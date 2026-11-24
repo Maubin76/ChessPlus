@@ -75,7 +75,7 @@ object DestinationCodec {
 			GameMode.Continuous -> "game${kSeparator}continuous"
 			is GameMode.Replay -> "game${kSeparator}replay$kSeparator${vMode.puzzleId}"
 			is GameMode.Challenge -> "game${kSeparator}challenge$kSeparator${vMode.kind.key}"
-			is GameMode.Daily -> "game${kSeparator}daily$kSeparator${vMode.puzzleId}"
+			is GameMode.Daily -> "game${kSeparator}daily$kSeparator${vMode.day}$kSeparator${vMode.puzzleId}"
 			is GameMode.Targeted -> listOf(
 				"game", "targeted", vMode.criteria.themes.low, vMode.criteria.themes.high, vMode.criteria.difficulty.name,
 				vMode.criteria.range.first, vMode.criteria.range.last,
@@ -99,7 +99,7 @@ object DestinationCodec {
 			"game" -> when (vParts[1]) {
 				"continuous" -> Destination.Game(GameMode.Continuous)
 				"replay" -> Destination.Game(GameMode.Replay(vParts[2]))
-				"daily" -> Destination.Game(GameMode.Daily(vParts[2]))
+				"daily" -> Destination.Game(GameMode.Daily(vParts[2], vParts[3]))
 				"challenge" -> ChallengeKind.entries.firstOrNull { it.key == vParts[2] }?.let { Destination.Game(GameMode.Challenge(it)) }
 				"targeted" -> Destination.Game(
 					GameMode.Targeted(

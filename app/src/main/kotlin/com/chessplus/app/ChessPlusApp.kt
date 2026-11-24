@@ -100,7 +100,7 @@ fun ChessPlusApp(inContainer: AppContainer, inVersion: String, inOnExit: () -> U
 					)
 					Destination.Home -> HomeScreen(
 						inViewModel = viewModel(factory = HomeViewModel.factory(inContainer)),
-						inOnDaily = { vNavigation.navigate(Destination.Game(GameMode.Daily(it))) },
+						inOnDaily = { vNavigation.navigate(Destination.Game(GameMode.Daily(it.day, it.puzzleId))) },
 						inOnArcade = { vNavigation.navigate(Destination.Game(GameMode.Continuous)) },
 						inOnTraining = { vNavigation.navigate(Destination.Targeted) },
 						inOnChallenge = { vNavigation.navigate(Destination.Game(GameMode.Challenge(it))) },

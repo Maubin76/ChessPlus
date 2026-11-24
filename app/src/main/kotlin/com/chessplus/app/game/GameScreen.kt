@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -137,6 +139,8 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		inOnConfirm = vController::onConfirmMove,
 		inOnCancel = vController::onCancelMove,
 		inOnPlayAgain = vController::onPlayAgain,
+		inOnRestart = vController::onRestart,
+		inOnDailyDay = vController::onDailyDay,
 	)
 }
 
@@ -161,13 +165,18 @@ fun GameContent(
 	inOnConfirm: () -> Unit = {},
 	inOnCancel: () -> Unit = {},
 	inOnPlayAgain: () -> Unit = {},
+	inOnRestart: () -> Unit = {},
+	inOnDailyDay: (String) -> Unit = {},
 	inClock: () -> Long = System::currentTimeMillis,
 ) {
 	val vColors = ChessPlusTheme.colors
 	val vSpacing = ChessPlusTheme.spacing
+	val vDaily = inState.daily
+	// Puzzle du jour terminé : le calendrier remplace le bilan de session et l'enchaînement.
+	val vShowCalendar = vDaily != null && inState.header is GameHeader.Finished
 	Box(Modifier.fillMaxSize().background(vColors.surface)) {
 		Column(Modifier.fillMaxSize().statusBarsPadding().navigationBarsPadding()) {
-			TopBar(inTitle, inOnBack) { TopChip(inState, inClock) }
+			TopBar(vDaily?.let { dailyTitle(it) } ?: inTitle, inOnBack) { TopChip(inState, inClock) }
 			PuzzleHeader(inState)
 			ChessBoard(
 				inPieces = inState.pieces,
@@ -186,12 +195,31 @@ fun GameContent(
 				inOnDrop = inOnDrop,
 				inModifier = Modifier.fillMaxWidth(),
 			)
-			Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = vSpacing.space4, vertical = vSpacing.space3), verticalArrangement = Arrangement.spacedBy(vSpacing.space3)) {
-				Notation(inState.notation)
-				FeedbackCard(feedbackOf(inState))
-				SessionLine(inState)
-				Spacer(Modifier.weight(1f))
-				Actions(inState, inOnBack, inOnHint, inOnSolution, inOnFlip, inOnSkip, inOnConfirm, inOnCancel, inOnPlayAgain)
+			if (vDaily != null && vShowCalendar) {
+				// Le calendrier dépasse souvent l'espace sous l'échiquier : il s'ouvre défilé jusqu'en bas
+				// (la valeur est ramenée au maximum à la mise en page).
+				val vScroll = remember(vDaily.day) { ScrollState(Int.MAX_VALUE) }
+				Column(
+					Modifier.weight(1f).fillMaxWidth().verticalScroll(vScroll).padding(horizontal = vSpacing.space4, vertical = vSpacing.space3),
+					verticalArrangement = Arrangement.spacedBy(vSpacing.space3),
+				) {
+					FeedbackCard(feedbackOf(inState))
+					DailyCalendar(vDaily, inOnDailyDay)
+				}
+				Row(Modifier.fillMaxWidth().padding(start = vSpacing.space4, end = vSpacing.space4, bottom = vSpacing.space4), horizontalArrangement = Arrangement.spacedBy(vSpacing.space2)) {
+					SecondaryButton(stringResource(R.string.action_play_again), inOnRestart, Modifier.weight(1f), inIcon = R.drawable.ic_ln_replay)
+					IconButtonOutlined(R.drawable.ic_ln_flip, stringResource(R.string.action_flip), inOnFlip)
+				}
+			} else {
+				Column(Modifier.weight(1f).fillMaxWidth().padding(horizontal = vSpacing.space4, vertical = vSpacing.space3), verticalArrangement = Arrangement.spacedBy(vSpacing.space3)) {
+					Notation(inState.notation)
+					FeedbackCard(feedbackOf(inState))
+					if (vDaily == null) {
+						SessionLine(inState)
+					}
+					Spacer(Modifier.weight(1f))
+					Actions(inState, inOnBack, inOnHint, inOnSolution, inOnFlip, inOnSkip, inOnConfirm, inOnCancel, inOnPlayAgain)
+				}
 			}
 		}
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
@@ -469,6 +497,11 @@ private fun Actions(
 			}
 			vFinished && vChallenge == null -> {
 				PrimaryButton(stringResource(R.string.action_next), inOnSkip, Modifier.weight(1f), inIcon = R.drawable.ic_ln_skip, inEnabled = inState.skipEnabled)
+				IconButtonOutlined(R.drawable.ic_ln_flip, stringResource(R.string.action_flip), inOnFlip)
+			}
+			inState.daily != null -> {
+				SecondaryButton(stringResource(R.string.action_hint), inOnHint, Modifier.weight(1f), inIcon = R.drawable.ic_ln_bulb, inEnabled = inState.hintEnabled)
+				SecondaryButton(stringResource(R.string.action_solution), inOnSolution, Modifier.weight(1f), inIcon = R.drawable.ic_ln_eye, inEnabled = inState.solutionEnabled)
 				IconButtonOutlined(R.drawable.ic_ln_flip, stringResource(R.string.action_flip), inOnFlip)
 			}
 			else -> {

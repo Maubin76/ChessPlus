@@ -149,6 +149,20 @@ data class ChallengeRunEntity(
 )
 
 /**
+ * Puzzle du jour attribué à une date (tiré une fois, puis conservé pour pouvoir le rejouer depuis le calendrier).
+ *
+ * @property day jour, au format « yyyyMMdd ».
+ * @property puzzleId identifiant Lichess du puzzle.
+ * @property assignedAt date du tirage (millisecondes).
+ */
+@Entity(tableName = "daily_puzzle")
+data class DailyPuzzleEntity(
+	@PrimaryKey val day: String,
+	val puzzleId: String,
+	val assignedAt: Long,
+)
+
+/**
  * Meilleur score d'un défi.
  *
  * @property kind défi.
