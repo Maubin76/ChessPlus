@@ -198,6 +198,23 @@ fun RealGameChallengeOverShot() = Shot(
 	"Rush",
 )
 
+/** Fin de Survie : récapitulatif (réussis, ratés, temps moyen, record). */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameSurvivalRecapShot() = Shot(
+	kMockupState.copy(
+		header = GameHeader.ChallengeOver(ChallengeEnd.NoLives),
+		selected = null,
+		targets = emptySet(),
+		interactive = false,
+		challenge = ChallengeUi(ChallengeKind.Survival, 17, 0, null, ChallengeResult(ChallengeEnd.NoLives, 17, 41, false, 1745, failed = 3, averageDurationMs = 38_000L)),
+		challengeBest = 41,
+		tally = SessionTally(17, 3, null),
+	),
+	"Survie",
+)
+
 /** Joueur noir : échiquier retourné, trait aux noirs. */
 @PreviewTest
 @DesignPreviews

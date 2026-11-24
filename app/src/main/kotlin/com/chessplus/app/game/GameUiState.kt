@@ -54,8 +54,18 @@ sealed interface GameHeader {
  * @property best meilleur score, partie comprise.
  * @property newRecord vrai si la partie bat le record précédent.
  * @property bestPuzzleRating cote du problème le plus difficile réussi, ou null.
+ * @property failed problèmes manqués.
+ * @property averageDurationMs temps moyen d'un problème terminé, ou null s'il est inconnu.
  */
-data class ChallengeResult(val end: ChallengeEnd, val score: Int, val best: Int, val newRecord: Boolean, val bestPuzzleRating: Int?)
+data class ChallengeResult(
+	val end: ChallengeEnd,
+	val score: Int,
+	val best: Int,
+	val newRecord: Boolean,
+	val bestPuzzleRating: Int?,
+	val failed: Int = 0,
+	val averageDurationMs: Long? = null,
+)
 
 /**
  * État d'une partie de défi affiché à l'écran.

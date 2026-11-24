@@ -55,6 +55,16 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 	var misses = 0
 		private set
 
+	/** Somme des durées connues des problèmes terminés. */
+	private var timedTotalMs = 0L
+
+	/** Nombre de problèmes terminés dont la durée est connue. */
+	private var timedCount = 0
+
+	/** Temps moyen d'un problème terminé (réussi ou manqué), ou null si aucune durée n'est connue. */
+	val averageDurationMs: Long?
+		get() = if (timedCount == 0) null else timedTotalMs / timedCount
+
 	/** Cote du problème le plus difficile réussi, ou null. */
 	var bestPuzzleRating: Int? = null
 		private set
@@ -83,6 +93,16 @@ class ChallengeRun(val kind: ChallengeKind, val playerRating: Int, val startedAt
 	fun onServed(inPuzzleId: String) {
 		played.add(inPuzzleId)
 		served++
+	}
+
+	/**
+	 * Note la durée d'un problème terminé (ignorée si elle est inconnue).
+	 */
+	fun addDuration(inDurationMs: Long?) {
+		if (inDurationMs != null) {
+			timedTotalMs += inDurationMs
+			timedCount++
+		}
 	}
 
 	/**

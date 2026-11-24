@@ -454,7 +454,7 @@ class GameControllerTest {
 		vController.tapMove("f7", "f6")
 		val vState = vController.state.value
 		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.NoLives), vState.header)
-		assertEquals(ChallengeResult(ChallengeEnd.NoLives, 1, 5, false, 1760), vState.challenge?.result)
+		assertEquals(ChallengeResult(ChallengeEnd.NoLives, 1, 5, false, 1760, failed = 3, averageDurationMs = 0L), vState.challenge?.result)
 		assertEquals(Move.fromUci("a2e6"), vState.lastMove)
 		assertFalse(vState.interactive)
 		assertEquals(listOf(ChallengeKind.Survival to 1), vChallenges.saved)
@@ -486,7 +486,7 @@ class GameControllerTest {
 		delay(500)
 		vController.awaitIdle()
 		assertEquals(GameHeader.ChallengeOver(ChallengeEnd.TimeUp), vController.state.value.header)
-		assertEquals(ChallengeResult(ChallengeEnd.TimeUp, 1, 1, true, 1760), vController.state.value.challenge?.result)
+		assertEquals(ChallengeResult(ChallengeEnd.TimeUp, 1, 1, true, 1760, failed = 1, averageDurationMs = 0L), vController.state.value.challenge?.result)
 		assertEquals(listOf(ChallengeKind.Rush to 1), vChallenges.saved)
 		assertEquals(listOf(Triple("m1", PuzzleResult.Failure, false), Triple("m2", PuzzleResult.Success, false)), vProgress.records)
 	}

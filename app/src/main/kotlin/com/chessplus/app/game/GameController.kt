@@ -784,6 +784,7 @@ class GameController(
 	 */
 	private fun recordChallengeResult(inSession: PuzzleSession, inResult: PuzzleResult) {
 		val vDuration = durationMs()
+		run?.addDuration(vDuration)
 		val vFailedAt = if (inResult == PuzzleResult.Failure) failedAtMove ?: (inSession.solutionPly / 2 + 1) else null
 		val vMistakes = inSession.mistakeCount
 		val vRevealed = inSession.revealedCount
@@ -814,7 +815,7 @@ class GameController(
 		val vPrevious = challengeBest ?: 0
 		val vBest = maxOf(vPrevious, vRun.score)
 		challengeBest = vBest
-		challengeResult = ChallengeResult(inEnd, vRun.score, vBest, vRun.score > vPrevious, vRun.bestPuzzleRating)
+		challengeResult = ChallengeResult(inEnd, vRun.score, vBest, vRun.score > vPrevious, vRun.bestPuzzleRating, vRun.misses, vRun.averageDurationMs)
 		header = GameHeader.ChallengeOver(inEnd)
 		publish()
 		if (inEnd != ChallengeEnd.Abandoned || vRun.score > 0) {

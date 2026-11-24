@@ -134,6 +134,17 @@
 	<string name="challenge_new_record">%1$s · nouveau record</string>
 	<string name="challenge_record">%1$s · record %2$d</string>
 
+	<!-- Récapitulatif de fin de Survie -->
+	<string name="recap_title">Survie terminée</string>
+	<string name="recap_subtitle">Trois erreurs, la partie s’arrête.</string>
+	<string name="recap_new_record">Nouveau record.</string>
+	<string name="recap_no_puzzle">Plus de puzzles disponibles.</string>
+	<string name="recap_solved">Réussis</string>
+	<string name="recap_failed">Ratés</string>
+	<string name="recap_average">Temps moyen</string>
+	<string name="recap_best">Record</string>
+	<string name="recap_close">Fermer</string>
+
 	<!-- Écran de jeu : actions -->
 	<string name="action_hint">Indice</string>
 	<string name="action_solution">Solution</string>

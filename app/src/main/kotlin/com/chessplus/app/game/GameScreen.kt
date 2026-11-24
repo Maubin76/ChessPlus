@@ -29,6 +29,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -46,6 +47,8 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.chessplus.app.R
 import com.chessplus.app.ui.board.ChessBoard
@@ -54,6 +57,8 @@ import com.chessplus.app.ui.components.Chip
 import com.chessplus.app.ui.components.IconButtonOutlined
 import com.chessplus.app.ui.components.PrimaryButton
 import com.chessplus.app.ui.components.SecondaryButton
+import com.chessplus.app.ui.components.StatTiles
+import com.chessplus.app.ui.components.SurfaceCard
 import com.chessplus.app.ui.components.Tag
 import com.chessplus.app.ui.components.TopBar
 import com.chessplus.app.ui.components.formatClock
@@ -61,6 +66,7 @@ import com.chessplus.app.ui.components.formatDelta
 import com.chessplus.app.ui.components.formatRating
 import com.chessplus.app.ui.components.pressClickable
 import com.chessplus.app.ui.components.rememberPressFeedback
+import com.chessplus.app.stats.duration
 import com.chessplus.app.ui.mainTheme
 import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.app.ui.theme.kMonoFamily
@@ -223,6 +229,55 @@ fun GameContent(
 			}
 		}
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
+		val vResult = inState.challenge?.result
+		if (inState.challenge?.kind == ChallengeKind.Survival && vResult != null) {
+			// Récapitulatif à la fin d'une Survie, une fois par partie ; fermé, l'écran garde Accueil / Rejouer.
+			var vRecapOpen by remember(vResult) { mutableStateOf(true) }
+			if (vRecapOpen) {
+				SurvivalRecapDialog(vResult, { vRecapOpen = false }, inOnPlayAgain)
+			}
+		}
+	}
+}
+
+/**
+ * Récapitulatif d'une partie de Survie : puzzles réussis et ratés, temps moyen, record absolu.
+ */
+@Composable
+private fun SurvivalRecapDialog(inResult: ChallengeResult, inOnClose: () -> Unit, inOnPlayAgain: () -> Unit) {
+	val vColors = ChessPlusTheme.colors
+	Dialog(onDismissRequest = inOnClose, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
+			Text(stringResource(R.string.recap_title), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Text(
+				stringResource(
+					when {
+						inResult.newRecord -> R.string.recap_new_record
+						inResult.end == ChallengeEnd.NoPuzzle -> R.string.recap_no_puzzle
+						else -> R.string.recap_subtitle
+					}
+				),
+				style = ChessPlusTheme.typography.small,
+				color = if (inResult.newRecord) vColors.success else vColors.inkMuted,
+			)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			StatTiles(
+				listOf(
+					stringResource(R.string.recap_solved) to formatRating(inResult.score),
+					stringResource(R.string.recap_failed) to formatRating(inResult.failed),
+					stringResource(R.string.recap_average) to (inResult.averageDurationMs?.let { duration(it) } ?: "–"),
+					stringResource(R.string.recap_best) to formatRating(inResult.best),
+				)
+			)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
+				SecondaryButton(stringResource(R.string.recap_close), inOnClose, Modifier.weight(1f))
+				PrimaryButton(stringResource(R.string.action_play_again), {
+					inOnClose()
+					inOnPlayAgain()
+				}, Modifier.weight(1f), inIcon = R.drawable.ic_ln_replay)
+			}
+		}
 	}
 }
 
