@@ -78,7 +78,8 @@ scroll_to()
 adb install -r "$kApk"
 adb logcat -c
 adb shell am start -W -n "$kPackage/.MainActivity"
-wait_for 'text="Quel est ton niveau ?"'
+# Début du titre seulement : une espace insécable précède le point d'interrogation.
+wait_for 'text="Quel est ton niveau'
 check_alive
 tap "Commencer"
 wait_for 'text="Puzzles adaptés à ton classement"'
