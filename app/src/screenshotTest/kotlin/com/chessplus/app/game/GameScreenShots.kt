@@ -80,7 +80,7 @@ fun RealGameExitConfirmShot() = Shot(kMockupState.copy(isArcade = true), inExitS
 @PreviewTest
 @DesignPreviews
 @Composable
-fun RealGameSessionRecapShot() = Shot(kMockupState.copy(isArcade = true, tally = SessionTally(7, 2, 18, 41_000L)), inExitStep = ExitStep.Recap)
+fun RealGameSessionRecapShot() = Shot(kMockupState.copy(isArcade = true, tally = SessionTally(7, 2, 18, 41_000L), sessionStartedAt = kClock - 12 * 60_000L), inExitStep = ExitStep.Recap)
 
 /** Maquette : bon coup, il reste un coup, fou f3 sélectionné et coups possibles. */
 @PreviewTest

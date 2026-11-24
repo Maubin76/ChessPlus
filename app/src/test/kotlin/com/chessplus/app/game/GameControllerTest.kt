@@ -334,6 +334,7 @@ class GameControllerTest {
 		vController.tapMove("f7", "f8")
 		assertEquals(SessionTally(1, 0, vController.state.value.tally.ratingDelta, 0L), vController.state.value.tally)
 		assertTrue(vController.state.value.isArcade, "l'Arcade demande confirmation avant de quitter")
+		assertEquals(42L, vController.state.value.sessionStartedAt, "début de la session à l'ouverture de l'écran")
 		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
 	}
 

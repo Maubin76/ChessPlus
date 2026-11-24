@@ -243,7 +243,7 @@ fun GameContent(
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
 		when (inExitStep) {
 			ExitStep.Confirm -> ConfirmExitDialog({ inOnExitStep(ExitStep.None) }) { inOnExitStep(ExitStep.Recap) }
-			ExitStep.Recap -> ArcadeRecapDialog(inState) {
+			ExitStep.Recap -> ArcadeRecapDialog(inState, inClock) {
 				inOnExitStep(ExitStep.None)
 				inOnLeave()
 			}
@@ -280,13 +280,15 @@ private fun ConfirmExitDialog(inOnCancel: () -> Unit, inOnConfirm: () -> Unit) {
 }
 
 /**
- * Récapitulatif d'une session d'Arcade : classement et sa variation, puzzles réussis et ratés,
- * temps moyen, taux de réussite ; « Accueil » quitte l'écran.
+ * Récapitulatif d'une session d'Arcade : classement et sa variation, durée de la session, puzzles
+ * joués, réussis et ratés, taux de réussite, temps moyen ; « Accueil » quitte l'écran.
  */
 @Composable
-private fun ArcadeRecapDialog(inState: GameUiState, inOnLeave: () -> Unit) {
+private fun ArcadeRecapDialog(inState: GameUiState, inClock: () -> Long, inOnLeave: () -> Unit) {
 	val vColors = ChessPlusTheme.colors
 	val vTally = inState.tally
+	// Durée figée à l'ouverture du récapitulatif (au moment où le joueur a choisi « Terminer »).
+	val vDurationMs = remember(inState.sessionStartedAt) { inState.sessionStartedAt?.let { inClock() - it } }
 	val vDelta = vTally.ratingDelta ?: 0
 	Dialog(onDismissRequest = inOnLeave, properties = DialogProperties(usePlatformDefaultWidth = false)) {
 		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
@@ -305,15 +307,30 @@ private fun ArcadeRecapDialog(inState: GameUiState, inOnLeave: () -> Unit) {
 			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
 			StatTiles(
 				listOf(
+					stringResource(R.string.session_duration) to (vDurationMs?.let { sessionDuration(it) } ?: "–"),
+					stringResource(R.string.session_played) to formatRating(vTally.played),
 					stringResource(R.string.recap_solved) to formatRating(vTally.solved),
 					stringResource(R.string.recap_failed) to formatRating(vTally.failed),
-					stringResource(R.string.recap_average) to (vTally.averageDurationMs?.let { duration(it) } ?: "–"),
 					stringResource(R.string.session_success) to (if (vTally.played > 0) percent(vTally.solved.toFloat() / vTally.played) else "–"),
+					stringResource(R.string.recap_average) to (vTally.averageDurationMs?.let { duration(it) } ?: "–"),
 				)
 			)
 			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
 			PrimaryButton(stringResource(R.string.action_home), inOnLeave, Modifier.fillMaxWidth(), inIcon = R.drawable.ic_ln_home)
 		}
+	}
+}
+
+/**
+ * Formate la durée d'une session, courte pour tenir dans une tuile : « 45 s », « 12 min », « 1 h 05 ».
+ */
+@Composable
+private fun sessionDuration(inMs: Long): String {
+	val vSeconds = (inMs / 1000).coerceAtLeast(0)
+	return when {
+		vSeconds < 60 -> stringResource(R.string.session_duration_seconds, vSeconds.toInt())
+		vSeconds < 3600 -> stringResource(R.string.session_duration_minutes, (vSeconds / 60).toInt())
+		else -> stringResource(R.string.session_duration_hours, (vSeconds / 3600).toInt(), ((vSeconds % 3600) / 60).toInt())
 	}
 }
 

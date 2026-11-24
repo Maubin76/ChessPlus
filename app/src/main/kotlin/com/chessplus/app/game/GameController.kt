@@ -168,6 +168,9 @@ class GameController(
 	/** Variation du classement pendant la session. */
 	private var sessionDelta = 0.0
 
+	/** Début de la session (ouverture de l'écran), ou null avant [start]. */
+	private var sessionStartedAt: Long? = null
+
 	/** Somme des durées connues des puzzles terminés pendant la session. */
 	private var sessionTimedMs = 0L
 
@@ -194,6 +197,7 @@ class GameController(
 	 * sinon (ou dans les autres modes) charge un nouveau problème.
 	 */
 	fun start() {
+		sessionStartedAt = clock()
 		busy = true
 		pending = scope.launch {
 			rating = progress.currentRating().rating
@@ -1025,6 +1029,7 @@ class GameController(
 			tally = run?.let { SessionTally(it.score, it.misses, null, it.averageDurationMs) }
 				?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt(), if (sessionTimedCount == 0) null else sessionTimedMs / sessionTimedCount),
 			isArcade = mode == GameMode.Continuous,
+			sessionStartedAt = sessionStartedAt,
 			pendingConfirm = pendingMove != null,
 			solutionEnabled = isInteractive() && challengeKind == null,
 			skipEnabled = mode !is GameMode.Daily && (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,

@@ -222,6 +222,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property daily puzzle du jour et calendrier, ou null hors puzzle du jour.
  * @property showThemeTag vrai si le thème principal est affiché pendant le puzzle (Entraînement seulement).
  * @property isArcade vrai en Arcade : quitter demande confirmation et affiche le récapitulatif de la session.
+ * @property sessionStartedAt début de la session (ouverture de l'écran, millisecondes), ou null avant le démarrage.
  */
 data class GameUiState(
 	val header: GameHeader = GameHeader.Loading,
@@ -258,4 +259,5 @@ data class GameUiState(
 	val daily: DailyUi? = null,
 	val showThemeTag: Boolean = false,
 	val isArcade: Boolean = false,
+	val sessionStartedAt: Long? = null,
 )

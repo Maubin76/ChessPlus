@@ -142,6 +142,11 @@
 	<string name="session_title">Session terminée</string>
 	<string name="session_rating">Classement</string>
 	<string name="session_success">Réussite</string>
+	<string name="session_duration">Durée</string>
+	<string name="session_played">Puzzles</string>
+	<string name="session_duration_seconds">%1$d\u202Fs</string>
+	<string name="session_duration_minutes">%1$d\u202Fmin</string>
+	<string name="session_duration_hours">%1$d\u202Fh\u202F%2$02d</string>
 
 	<!-- Récapitulatif de fin de Survie -->
 	<string name="recap_title">Survie terminée</string>
