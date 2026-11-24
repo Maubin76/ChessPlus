@@ -71,6 +71,18 @@ private const val kNavHeight = 60
 /** Élévation de l'ombre de la barre de navigation (shadow-float). */
 private const val kNavElevation = 6
 
+/** Largeur de l'interrupteur carré. */
+private const val kToggleWidth = 40f
+
+/** Hauteur de l'interrupteur carré. */
+private const val kToggleHeight = 22f
+
+/** Côté du curseur de l'interrupteur. */
+private const val kToggleThumb = 14f
+
+/** Écart entre le curseur et le bord extérieur de l'interrupteur (bordure comprise). */
+private const val kToggleInset = 4f
+
 /** Hauteur d'une barre du haut d'écran secondaire. */
 private const val kTopBarHeight = 52
 
@@ -393,14 +405,18 @@ fun Tag(inText: String, inModifier: Modifier = Modifier) {
 fun SquareToggle(inChecked: Boolean, inEnabled: Boolean = true) {
 	val vColors = ChessPlusTheme.colors
 	val vShape = RoundedCornerShape(ChessPlusTheme.radius.radiusSm)
-	val vOffset by animateFloatAsState(if (inChecked) 21f else 3f, tween(150), label = "interrupteur")
+	// Curseur à 4 dp des bords (bordure de 1 dp + 3 dp d'écart), centré verticalement : 4 dp éteint, 40 − 14 − 4 = 22 dp allumé.
+	val vOffset by animateFloatAsState(if (inChecked) kToggleWidth - kToggleThumb - kToggleInset else kToggleInset, tween(150), label = "interrupteur")
 	val vTrack = if (inChecked) vColors.accent else vColors.surfaceSunken
 	val vBorder = if (inChecked) vColors.accent else vColors.lineStrong
-	Box(Modifier.size(40.dp, 22.dp).clip(vShape).background(if (inEnabled) vTrack else vColors.surfaceSunken).border(1.dp, if (inEnabled) vBorder else vColors.line, vShape)) {
+	Box(
+		Modifier.size(kToggleWidth.dp, kToggleHeight.dp).clip(vShape).background(if (inEnabled) vTrack else vColors.surfaceSunken).border(1.dp, if (inEnabled) vBorder else vColors.line, vShape),
+		contentAlignment = Alignment.CenterStart,
+	) {
 		Box(
 			Modifier
-				.offset(x = vOffset.dp - 1.dp, y = 3.dp - 1.dp)
-				.size(14.dp)
+				.offset(x = vOffset.dp)
+				.size(kToggleThumb.dp)
 				.clip(RoundedCornerShape(ChessPlusTheme.radius.radiusXs))
 				.background(if (inChecked && inEnabled) vColors.accentInk else vColors.lineStrong),
 		)
