@@ -86,6 +86,14 @@ fun RealHomeNoStreakShot() = ChessPlusTheme { HomeContent(kHomeState.copy(dayStr
 @Composable
 fun RealHomeLargeFontShot() = ChessPlusTheme(inDarkTheme = true) { HomeContent(kHomeState, kNow, {}, {}, {}, {}, {}) }
 
+/** Accueil avec une police agrandie de 30 % et le puzzle du jour résolu (en-tête « ✓ Résolu » le plus long). */
+@PreviewTest
+@Preview(name = "Grande police", device = kDevice, showSystemUi = true, fontScale = 1.3f)
+@Composable
+fun RealHomeDailySolvedLargeFontShot() = ChessPlusTheme(inDarkTheme = false) {
+	HomeContent(kHomeState.copy(solvedDays = setOf("20261123")), kNow, {}, {}, {}, {}, {})
+}
+
 /** Réglages de la maquette. */
 @PreviewTest
 @DesignPreviews

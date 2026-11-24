@@ -21,7 +21,7 @@
 	<!-- Accueil -->
 	<string name="home_streak_chip">%1$d\u202Fj</string>
 	<string name="home_streak_description">Série de %1$d jours</string>
-	<string name="home_daily">Puzzle du jour</string>
+	<string name="home_daily">Aujourd’hui</string>
 	<string name="home_daily_default">Puzzle</string>
 	<string name="home_daily_solve">Résoudre</string>
 	<string name="home_daily_solved">Résolu</string>
@@ -50,7 +50,7 @@
 	<string name="game_title_daily">Puzzle du jour</string>
 	<string name="game_title_review">Révision</string>
 	<string name="review_done">Rien à réviser.</string>
-	<string name="review_done_detail">Reviens demain : tes puzzles ratés reviendront à intervalles croissants.</string>
+	<string name="review_done_detail">Reviens plus tard.</string>
 	<string name="game_title_daily_past">Puzzle du %1$s</string>
 
 	<!-- Objectif quotidien -->
