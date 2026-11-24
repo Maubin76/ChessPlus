@@ -134,6 +134,15 @@
 	<string name="challenge_new_record">%1$s · nouveau record</string>
 	<string name="challenge_record">%1$s · record %2$d</string>
 
+	<!-- Fin d'une session d'Arcade -->
+	<string name="exit_title">Mettre fin à la session ?</string>
+	<string name="exit_detail">Ton puzzle en cours est gardé pour la prochaine fois.</string>
+	<string name="exit_continue">Continuer</string>
+	<string name="exit_confirm">Terminer</string>
+	<string name="session_title">Session terminée</string>
+	<string name="session_rating">Classement</string>
+	<string name="session_success">Réussite</string>
+
 	<!-- Récapitulatif de fin de Survie -->
 	<string name="recap_title">Survie terminée</string>
 	<string name="recap_subtitle">Trois erreurs, la partie s’arrête.</string>

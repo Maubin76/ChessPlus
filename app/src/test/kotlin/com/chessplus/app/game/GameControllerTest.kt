@@ -332,7 +332,8 @@ class GameControllerTest {
 		vController.tapMove("a2", "e6")
 		assertEquals(listOf("17…", "Kd7", "18.", "Be6+", "Kd8", "19.", "?"), vController.state.value.notation.map { it.text })
 		vController.tapMove("f7", "f8")
-		assertEquals(SessionTally(1, 0, vController.state.value.tally.ratingDelta), vController.state.value.tally)
+		assertEquals(SessionTally(1, 0, vController.state.value.tally.ratingDelta, 0L), vController.state.value.tally)
+		assertTrue(vController.state.value.isArcade, "l'Arcade demande confirmation avant de quitter")
 		assertTrue((vController.state.value.tally.ratingDelta ?: 0) > 0)
 	}
 
@@ -347,7 +348,7 @@ class GameControllerTest {
 		vController.awaitIdle()
 		assertEquals(listOf(Triple("00sHx", PuzzleResult.Failure, true)), vProgress.records)
 		assertEquals("00sO1", vController.state.value.puzzleId)
-		assertEquals(SessionTally(0, 1, vController.state.value.tally.ratingDelta), vController.state.value.tally)
+		assertEquals(SessionTally(0, 1, vController.state.value.tally.ratingDelta, 0L), vController.state.value.tally)
 	}
 
 	/** Vérifie Retourner : l'orientation change, pas le camp au trait. */

@@ -63,12 +63,24 @@ private val kMockupState = GameUiState(
 )
 
 /**
- * Affiche l'écran de jeu pour un état donné, sans actions.
+ * Affiche l'écran de jeu pour un état donné, sans actions ; [inExitStep] montre une fenêtre de sortie.
  */
 @Composable
-private fun Shot(inState: GameUiState, inTitle: String = "Arcade") = ChessPlusTheme {
-	GameContent(inState, inTitle, true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, inClock = { kClock })
+private fun Shot(inState: GameUiState, inTitle: String = "Arcade", inExitStep: ExitStep = ExitStep.None) = ChessPlusTheme {
+	GameContent(inState, inTitle, true, {}, {}, {}, { _, _ -> }, {}, {}, {}, {}, {}, {}, inExitStep = inExitStep, inClock = { kClock })
 }
+
+/** Arcade : confirmation avant de quitter la session. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameExitConfirmShot() = Shot(kMockupState.copy(isArcade = true), inExitStep = ExitStep.Confirm)
+
+/** Arcade : récapitulatif de la session. */
+@PreviewTest
+@DesignPreviews
+@Composable
+fun RealGameSessionRecapShot() = Shot(kMockupState.copy(isArcade = true, tally = SessionTally(7, 2, 18, 41_000L)), inExitStep = ExitStep.Recap)
 
 /** Maquette : bon coup, il reste un coup, fou f3 sélectionné et coups possibles. */
 @PreviewTest

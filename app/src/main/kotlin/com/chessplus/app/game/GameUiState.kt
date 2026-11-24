@@ -146,8 +146,27 @@ data class NotationToken(val text: String, val kind: NotationKind)
  * @property solved puzzles réussis.
  * @property failed puzzles ratés.
  * @property ratingDelta variation du classement, ou null en défi.
+ * @property averageDurationMs temps moyen d'un puzzle terminé, ou null s'il est inconnu.
  */
-data class SessionTally(val solved: Int, val failed: Int, val ratingDelta: Int?)
+data class SessionTally(val solved: Int, val failed: Int, val ratingDelta: Int?, val averageDurationMs: Long? = null) {
+	/** Nombre de puzzles terminés. */
+	val played: Int
+		get() = solved + failed
+}
+
+/**
+ * Étape de la sortie d'une session d'Arcade : confirmation, puis récapitulatif.
+ */
+enum class ExitStep {
+	/** Aucune fenêtre. */
+	None,
+
+	/** « Mettre fin à la session ? » */
+	Confirm,
+
+	/** Récapitulatif de la session. */
+	Recap,
+}
 
 /**
  * Puzzle du jour en cours et calendrier des jours résolus.
@@ -202,6 +221,7 @@ data class HapticEvent(val id: Int, val success: Boolean)
  * @property challengeBest record du défi, ou null.
  * @property daily puzzle du jour et calendrier, ou null hors puzzle du jour.
  * @property showThemeTag vrai si le thème principal est affiché pendant le puzzle (Entraînement seulement).
+ * @property isArcade vrai en Arcade : quitter demande confirmation et affiche le récapitulatif de la session.
  */
 data class GameUiState(
 	val header: GameHeader = GameHeader.Loading,
@@ -237,4 +257,5 @@ data class GameUiState(
 	val challengeBest: Int? = null,
 	val daily: DailyUi? = null,
 	val showThemeTag: Boolean = false,
+	val isArcade: Boolean = false,
 )

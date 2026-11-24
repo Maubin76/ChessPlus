@@ -168,6 +168,12 @@ class GameController(
 	/** Variation du classement pendant la session. */
 	private var sessionDelta = 0.0
 
+	/** Somme des durées connues des puzzles terminés pendant la session. */
+	private var sessionTimedMs = 0L
+
+	/** Nombre de puzzles terminés pendant la session dont la durée est connue. */
+	private var sessionTimedCount = 0
+
 	/** Début du chronomètre du puzzle en cours. */
 	private var clockStart: Long? = null
 
@@ -367,12 +373,13 @@ class GameController(
 		pending = scope.launch {
 			persistMutex.withLock {
 				if (!resultRecorded) {
+					val vDuration = durationMs()
 					val vRecorded = progress.record(
 						vSession.puzzle, PuzzleResult.Failure, vSession.mistakeCount, vSession.revealedCount, rated,
-						durationMs(), failedAtMove ?: (vSession.solutionPly / 2 + 1),
+						vDuration, failedAtMove ?: (vSession.solutionPly / 2 + 1),
 					)
 					resultRecorded = true
-					countResult(vRecorded)
+					countResult(vRecorded, vDuration)
 				}
 			}
 			loadNext(vSession.puzzle.id)
@@ -871,10 +878,14 @@ class GameController(
 	}
 
 	/**
-	 * Compte un résultat enregistré dans le bilan de la session.
+	 * Compte un résultat enregistré, et sa durée si elle est connue, dans le bilan de la session.
 	 */
-	private fun countResult(inRecorded: RecordedResult) {
+	private fun countResult(inRecorded: RecordedResult, inDurationMs: Long?) {
 		if (inRecorded.result == PuzzleResult.Success) sessionSolved++ else sessionFailed++
+		if (inDurationMs != null) {
+			sessionTimedMs += inDurationMs
+			sessionTimedCount++
+		}
 		sessionDelta += inRecorded.ratingAfter - inRecorded.ratingBefore
 		rating = inRecorded.ratingAfter
 	}
@@ -900,13 +911,14 @@ class GameController(
 			persistMutex.withLock {
 				val vResult = vSession.result
 				if (!resultRecorded && vResult != null) {
+					val vDuration = durationMs()
 					val vRecorded = progress.record(
 						vSession.puzzle, vResult, vSession.mistakeCount, vSession.revealedCount, rated,
-						durationMs(), if (vResult == PuzzleResult.Failure) failedAtMove else null,
+						vDuration, if (vResult == PuzzleResult.Failure) failedAtMove else null,
 					)
 					recorded = vRecorded
 					resultRecorded = true
-					countResult(vRecorded)
+					countResult(vRecorded, vDuration)
 					if (mode is GameMode.Daily) {
 						dailySolved = daily.solvedDays()
 					}
@@ -1010,7 +1022,9 @@ class GameController(
 			remainingMoves = vSession?.let { it.puzzle.playerMoveCount - it.solutionPly / 2 } ?: 0,
 			clockStart = clockStart,
 			clockEnd = clockEnd,
-			tally = run?.let { SessionTally(it.score, it.misses, null) } ?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt()),
+			tally = run?.let { SessionTally(it.score, it.misses, null, it.averageDurationMs) }
+				?: SessionTally(sessionSolved, sessionFailed, sessionDelta.roundToInt(), if (sessionTimedCount == 0) null else sessionTimedMs / sessionTimedCount),
+			isArcade = mode == GameMode.Continuous,
 			pendingConfirm = pendingMove != null,
 			solutionEnabled = isInteractive() && challengeKind == null,
 			skipEnabled = mode !is GameMode.Daily && (vSession != null && (vSession.status == PuzzleStatus.Solved || isInteractive()) && run?.end == null) || header == GameHeader.NoPuzzle,

@@ -31,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -67,6 +68,7 @@ import com.chessplus.app.ui.components.formatRating
 import com.chessplus.app.ui.components.pressClickable
 import com.chessplus.app.ui.components.rememberPressFeedback
 import com.chessplus.app.stats.duration
+import com.chessplus.app.stats.percent
 import com.chessplus.app.ui.mainTheme
 import com.chessplus.app.ui.theme.ChessPlusTheme
 import com.chessplus.app.ui.theme.kMonoFamily
@@ -127,12 +129,16 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		vController.onLeave()
 		inOnBack()
 	}
-	BackHandler(enabled = vState.challenge != null, onBack = vBack)
+	// Arcade : quitter une session où au moins un puzzle est terminé demande confirmation, puis affiche le récapitulatif.
+	var vExitStep by rememberSaveable { mutableStateOf(ExitStep.None) }
+	val vConfirmExit = vState.isArcade && vState.tally.played > 0
+	val vRequestBack: () -> Unit = { if (vConfirmExit) vExitStep = ExitStep.Confirm else vBack() }
+	BackHandler(enabled = vState.challenge != null || vConfirmExit, onBack = vRequestBack)
 	GameContent(
 		inState = vState,
 		inTitle = inTitle,
 		inCoordinates = inCoordinates,
-		inOnBack = vBack,
+		inOnBack = vRequestBack,
 		inOnTap = vController::onSquareTap,
 		inOnDragStart = vController::onDragStart,
 		inOnDrop = vController::onDrop,
@@ -147,6 +153,9 @@ fun GameScreen(inViewModel: GameViewModel, inTitle: String, inVibration: Boolean
 		inOnPlayAgain = vController::onPlayAgain,
 		inOnRestart = vController::onRestart,
 		inOnDailyDay = vController::onDailyDay,
+		inExitStep = vExitStep,
+		inOnExitStep = { vExitStep = it },
+		inOnLeave = vBack,
 	)
 }
 
@@ -173,6 +182,9 @@ fun GameContent(
 	inOnPlayAgain: () -> Unit = {},
 	inOnRestart: () -> Unit = {},
 	inOnDailyDay: (String) -> Unit = {},
+	inExitStep: ExitStep = ExitStep.None,
+	inOnExitStep: (ExitStep) -> Unit = {},
+	inOnLeave: () -> Unit = inOnBack,
 	inClock: () -> Long = System::currentTimeMillis,
 ) {
 	val vColors = ChessPlusTheme.colors
@@ -229,6 +241,14 @@ fun GameContent(
 			}
 		}
 		inState.promotion?.let { PromotionDialog(it.color, inOnPromotion, inOnPromotionDismiss) }
+		when (inExitStep) {
+			ExitStep.Confirm -> ConfirmExitDialog({ inOnExitStep(ExitStep.None) }) { inOnExitStep(ExitStep.Recap) }
+			ExitStep.Recap -> ArcadeRecapDialog(inState) {
+				inOnExitStep(ExitStep.None)
+				inOnLeave()
+			}
+			ExitStep.None -> Unit
+		}
 		val vResult = inState.challenge?.result
 		if (inState.challenge?.kind == ChallengeKind.Survival && vResult != null) {
 			// Récapitulatif à la fin d'une Survie, une fois par partie ; fermé, l'écran garde Accueil / Rejouer.
@@ -236,6 +256,63 @@ fun GameContent(
 			if (vRecapOpen) {
 				SurvivalRecapDialog(vResult, { vRecapOpen = false }, inOnPlayAgain)
 			}
+		}
+	}
+}
+
+/**
+ * Confirmation avant de quitter une session d'Arcade : « Continuer » ou « Terminer ».
+ */
+@Composable
+private fun ConfirmExitDialog(inOnCancel: () -> Unit, inOnConfirm: () -> Unit) {
+	val vColors = ChessPlusTheme.colors
+	Dialog(onDismissRequest = inOnCancel, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
+			Text(stringResource(R.string.exit_title), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Text(stringResource(R.string.exit_detail), style = ChessPlusTheme.typography.small, color = vColors.inkMuted)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			Row(horizontalArrangement = Arrangement.spacedBy(ChessPlusTheme.spacing.space2)) {
+				SecondaryButton(stringResource(R.string.exit_continue), inOnCancel, Modifier.weight(1f))
+				PrimaryButton(stringResource(R.string.exit_confirm), inOnConfirm, Modifier.weight(1f))
+			}
+		}
+	}
+}
+
+/**
+ * Récapitulatif d'une session d'Arcade : classement et sa variation, puzzles réussis et ratés,
+ * temps moyen, taux de réussite ; « Accueil » quitte l'écran.
+ */
+@Composable
+private fun ArcadeRecapDialog(inState: GameUiState, inOnLeave: () -> Unit) {
+	val vColors = ChessPlusTheme.colors
+	val vTally = inState.tally
+	val vDelta = vTally.ratingDelta ?: 0
+	Dialog(onDismissRequest = inOnLeave, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+		SurfaceCard(Modifier.padding(horizontal = ChessPlusTheme.spacing.space6)) {
+			Text(stringResource(R.string.session_title), style = ChessPlusTheme.typography.heading, color = vColors.ink)
+			Text(
+				buildAnnotatedString {
+					append(stringResource(R.string.session_rating))
+					append(" ")
+					withStyle(SpanStyle(fontFamily = kMonoFamily, color = vColors.ink)) { append(formatRating(inState.rating)) }
+					append(" ")
+					withStyle(SpanStyle(fontFamily = kMonoFamily, color = if (vDelta >= 0) vColors.success else vColors.danger)) { append(formatDelta(vDelta)) }
+				},
+				style = ChessPlusTheme.typography.small,
+				color = vColors.inkMuted,
+			)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			StatTiles(
+				listOf(
+					stringResource(R.string.recap_solved) to formatRating(vTally.solved),
+					stringResource(R.string.recap_failed) to formatRating(vTally.failed),
+					stringResource(R.string.recap_average) to (vTally.averageDurationMs?.let { duration(it) } ?: "–"),
+					stringResource(R.string.session_success) to (if (vTally.played > 0) percent(vTally.solved.toFloat() / vTally.played) else "–"),
+				)
+			)
+			Spacer(Modifier.height(ChessPlusTheme.spacing.space4))
+			PrimaryButton(stringResource(R.string.action_home), inOnLeave, Modifier.fillMaxWidth(), inIcon = R.drawable.ic_ln_home)
 		}
 	}
 }
